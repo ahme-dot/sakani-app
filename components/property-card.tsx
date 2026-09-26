@@ -21,23 +21,16 @@ export default function PropertyCard({
   property,
   locale,
 }: PropertyCardProps) {
+  const genderLabels: Record<string, string> = {
+    male: locale === "ar" ? "شباب" : "Male",
+    female: locale === "ar" ? "بنات" : "Female",
+    mixed: locale === "ar" ? "مختلط" : "Mixed",
+  };
+
   const genderColors: Record<string, string> = {
     male: "bg-blue-100 text-blue-700",
     female: "bg-pink-100 text-pink-700",
     mixed: "bg-purple-100 text-purple-700",
-  };
-
-  const genderLabels: Record<string, string> = {
-    ar: {
-      male: "شباب",
-      female: "بنات",
-      mixed: "مختلط",
-    },
-    en: {
-      male: "Male",
-      female: "Female",
-      mixed: "Mixed",
-    },
   };
 
   return (
@@ -45,7 +38,7 @@ export default function PropertyCard({
       {/* Image */}
       <div className="relative h-56 overflow-hidden bg-slate-200">
         <img
-          src={property.images[0]}
+          src={property.images[0] as string}
           alt={locale === "ar" ? property.title_ar : property.title_en}
           className="h-full w-full object-cover transition group-hover:scale-110"
         />
@@ -61,12 +54,10 @@ export default function PropertyCard({
 
           <div
             className={`rounded-full px-3 py-1 text-xs font-bold ${
-              genderColors[property.gender]
+              genderColors[property.gender as string]
             }`}
           >
-            {locale === "ar"
-              ? genderLabels["ar"][property.gender]
-              : genderLabels["en"][property.gender]}
+            {genderLabels[property.gender as string]}
           </div>
         </div>
 
@@ -134,7 +125,7 @@ export default function PropertyCard({
           </div>
 
           <Link
-            href={`/${locale}/listings/${property.id}`}
+            href={`/listings/${property.id}`}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 transition"
           >
             {locale === "ar" ? "التفاصيل" : "View"}
