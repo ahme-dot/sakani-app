@@ -1,0 +1,52 @@
+{
+    "home": {
+      "title": "اعثر على سكنك المثالي",
+      "subtitle": "منصة حديثة وآمنة للعثور على سكن طلابي موثّق بالقرب من جامعتك في الجيزة",
+      "cta_search": "ابدأ البحث",
+      "cta_list": "أضف سكنك",
+      "featured": "السكن المميز",
+      "featured_subtitle": "أفضل العروض الموثقة هذا الأسبوع",
+      "why_sakani": "لماذا سكني؟",
+      "why_sakani_subtitle": "نحن نجعل البحث عن السكن الطلابي سهلًا وآمنًا وموثوقًا"
+    },
+    "listings": {
+      "title": "اعثر على السكن المناسب",
+      "filter": "تصفية البحث",
+      "university": "الجامعة",
+      "area": "المنطقة",
+      "gender": "النوع",
+      "property_type": "نوع السكن",
+      "min_price": "السعر الأدنى",
+      "max_price": "السعر الأعلى",
+      "wifi": "واي فاي",
+      "clear": "مسح",
+      "no_results": "لم نجد نتائج",
+      "no_results_subtitle": "حاول تغيير معايير البحث"
+    },
+    "property": {
+      "description": "الوصف",
+      "details": "تفاصيل العقار",
+      "amenities": "المرافق",
+      "rules": "القواعس",
+      "contact": "تواصل معنا",
+      "whatsapp": "واتساب",
+      "call": "اتصال",
+      "request_viewing": "طلب معاينة",
+      "contact_info": "معلومات الاتصال",
+      "phone": "الهاتف",
+      "property_type": "نوع السكن",
+      "gender": "النوع",
+      "available_beds": "الأسرة المتاحة",
+      "distance": "المسافة من الجامعة",
+      "furnished": "مفروش",
+      "nearby_university": "الجامعة القريبة",
+      "yes": "نعم",
+      "no": "لا",
+      "room": "غرفة",
+      "bed": "سرير",
+      "apartment": "شقة",
+      "male": "شباب",
+      "female": "بنات",
+      "mixed": "مختلط"
+    }
+  }

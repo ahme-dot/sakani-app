@@ -1,0 +1,52 @@
+{
+    "home": {
+      "title": "Find Your Perfect Housing",
+      "subtitle": "A modern and secure platform to find verified student housing near your university in Giza",
+      "cta_search": "Start Searching",
+      "cta_list": "List Your Property",
+      "featured": "Featured Listings",
+      "featured_subtitle": "Best verified offers this week",
+      "why_sakani": "Why Sakani?",
+      "why_sakani_subtitle": "We make finding student housing easy, safe, and reliable"
+    },
+    "listings": {
+      "title": "Find Your Perfect Housing",
+      "filter": "Filters",
+      "university": "University",
+      "area": "Area",
+      "gender": "Gender",
+      "property_type": "Property Type",
+      "min_price": "Min Price",
+      "max_price": "Max Price",
+      "wifi": "Wi-Fi",
+      "clear": "Clear",
+      "no_results": "No results found",
+      "no_results_subtitle": "Try changing your search criteria"
+    },
+    "property": {
+      "description": "Description",
+      "details": "Property Details",
+      "amenities": "Amenities",
+      "rules": "Rules",
+      "contact": "Contact",
+      "whatsapp": "WhatsApp",
+      "call": "Call",
+      "request_viewing": "Request Viewing",
+      "contact_info": "Contact Information",
+      "phone": "Phone",
+      "property_type": "Property Type",
+      "gender": "Gender",
+      "available_beds": "Available Beds",
+      "distance": "Distance",
+      "furnished": "Furnished",
+      "nearby_university": "Nearby University",
+      "yes": "Yes",
+      "no": "No",
+      "room": "Room",
+      "bed": "Bed",
+      "apartment": "Apartment",
+      "male": "Male",
+      "female": "Female",
+      "mixed": "Mixed"
+    }
+  }
