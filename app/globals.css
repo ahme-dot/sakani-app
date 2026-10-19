@@ -2690,3 +2690,160 @@ button {
     justify-content: flex-start;
   }
 }
+.admin-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  margin-bottom: 18px;
+  padding-inline: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--ink-soft);
+}
+
+.admin-search:focus-within {
+  border-color: var(--green);
+}
+
+.admin-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.admin-listing-card.is-editing {
+  grid-column: 1 / -1;
+}
+
+.admin-edit-form h2 {
+  margin: 0;
+}
+
+/* ---- Admin: view switch and team ---- */
+.admin-view-switch {
+  display: inline-flex;
+  gap: 4px;
+  margin: 4px 0 18px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+}
+
+.admin-view-switch button {
+  min-height: 40px;
+  padding-inline: 16px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-view-switch button.is-active {
+  background: var(--green);
+  color: var(--white);
+}
+
+.admin-team {
+  padding: clamp(18px, 4vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+  box-shadow: 0 10px 28px rgb(29 52 41 / 5%);
+}
+
+.admin-team-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.admin-team-heading h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.admin-team-heading p {
+  margin: 2px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.admin-team-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.admin-team-add .owner-field {
+  flex: 1 1 260px;
+}
+
+.admin-team-add .owner-submit {
+  min-height: 43px;
+}
+
+.admin-team-hint {
+  display: block;
+  margin: 8px 0 0;
+  line-height: 1.7;
+}
+
+.admin-team-list {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-team-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  padding-block: 13px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-team-member {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.admin-team-member strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.admin-team-member small {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.admin-team-member .listing-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-team-actions {
+  display: inline-flex;
+  gap: 8px;
+}

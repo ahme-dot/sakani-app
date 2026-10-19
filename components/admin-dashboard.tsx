@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { BadgeCheck, ExternalLink, LoaderCircle, LockKeyhole, LogOut } from "lucide-react";
+import { BadgeCheck, ExternalLink, LoaderCircle, LockKeyhole, LogOut, Pencil, Search } from "lucide-react";
+import AdminListingEditor from "@/components/admin-listing-editor";
+import AdminTeam from "@/components/admin-team";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { PUBLIC_LISTING_COLUMNS, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
@@ -14,10 +16,17 @@ import { listingPath, whatsappLink } from "@/lib/site";
 
 const ADMIN_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},rejection_reason`;
 const STORAGE_BUCKET = "sakani-listings";
+const SEARCH_COLUMNS = ["title_ar", "title_en", "area", "university", "whatsapp_number"];
+const SEARCH_DEBOUNCE_MS = 300;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
 type AdminListing = Omit<MarketplaceListing, "owner_id">;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
+
+/** Strips characters that have meaning in a PostgREST `or` filter so user input stays a plain search term. */
+function searchTerm(value: string) {
+  return value.replace(/[,()*%\\"]/g, " ").replace(/\s+/g, " ").trim();
+}
 
 export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const t = SITE_COPY[locale];
@@ -32,6 +41,10 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [view, setView] = useState<"listings" | "team">("listings");
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -90,12 +103,25 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   }, [supabase, user, t.adminLoadError]);
 
   useEffect(() => {
+    const term = searchTerm(search);
+    if (term === query) return;
+    const timer = window.setTimeout(() => {
+      setLoadingListings(true);
+      setEditingId(null);
+      setQuery(term);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [search, query]);
+
+  useEffect(() => {
     if (!supabase || state !== "ready") return;
     let mounted = true;
-    void supabase
+    let request = supabase
       .from("properties")
       .select(ADMIN_LISTING_COLUMNS)
-      .eq("status", filter)
+      .eq("status", filter);
+    if (query) request = request.or(SEARCH_COLUMNS.map((column) => `${column}.ilike.*${query}*`).join(","));
+    void request
       .order("created_at", { ascending: false })
       .limit(100)
       .then(({ data, error: listingError }) => {
@@ -114,7 +140,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     return () => {
       mounted = false;
     };
-  }, [supabase, state, filter, t.adminLoadError]);
+  }, [supabase, state, filter, query, t.adminLoadError]);
 
   async function updateListing(listingId: string, patch: ListingPatch) {
     if (!supabase) return;
@@ -233,6 +259,18 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           </div>
         </header>
 
+        <nav className="admin-view-switch" aria-label={t.adminNav}>
+          {(["listings", "team"] as const).map((value) => (
+            <button key={value} type="button" className={view === value ? "is-active" : ""} aria-pressed={view === value} onClick={() => setView(value)}>
+              {value === "listings" ? t.adminViewListings : t.adminViewTeam}
+            </button>
+          ))}
+        </nav>
+
+        {view === "team" && supabase && user ? (
+          <AdminTeam locale={locale} supabase={supabase} currentUserId={user.id} />
+        ) : (
+        <>
         <nav className="admin-filter-tabs" aria-label={t.adminDashboardTitle}>
           {tabs.map((tab) => (
             <button
@@ -245,6 +283,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                 setLoadingListings(true);
                 setRejectingId(null);
                 setDeletingId(null);
+                setEditingId(null);
                 setMessage("");
                 setFilter(tab.value);
               }}
@@ -254,19 +293,45 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           ))}
         </nav>
 
+        <label className="admin-search">
+          <Search size={16} aria-hidden="true" />
+          <input type="search" value={search} aria-label={t.adminSearchLabel} placeholder={t.adminSearchPlaceholder} onChange={(event) => setSearch(event.target.value)} />
+        </label>
+
         {message && <p className="owner-feedback owner-feedback-success" role="status">{message}</p>}
         {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
 
         {loadingListings ? (
           <div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.loading}</div>
         ) : listings.length === 0 ? (
-          <section className="admin-empty-state"><p>{t.adminNoListings}</p></section>
+          <section className="admin-empty-state"><p>{query ? t.adminNoSearchResults : t.adminNoListings}</p></section>
         ) : (
           <div className="admin-listing-grid">
             {listings.map((listing) => {
               const title = locale === "ar" ? listing.title_ar : listing.title_en;
               const images = listingImages(listing);
               const busy = updatingId === listing.id;
+              if (editingId === listing.id && supabase) {
+                return (
+                  <article className="admin-listing-card is-editing" key={listing.id}>
+                    <div className="admin-listing-content">
+                      <AdminListingEditor
+                        locale={locale}
+                        supabase={supabase}
+                        listing={listing}
+                        columns={ADMIN_LISTING_COLUMNS}
+                        onCancel={() => setEditingId(null)}
+                        onSaved={(saved) => {
+                          setListings((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+                          setEditingId(null);
+                          setError("");
+                          setMessage(t.adminListingSaved);
+                        }}
+                      />
+                    </div>
+                  </article>
+                );
+              }
               return (
                 <article className="admin-listing-card" key={listing.id}>
                   <Image className="admin-listing-image" src={images[0]} alt={title} width={700} height={420} sizes="(max-width: 640px) 100vw, 520px" />
@@ -346,6 +411,9 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                         {listing.status === "approved" && (
                           <Link className="signout-button admin-view-link" href={listingPath(locale, listing.id)} target="_blank"><ExternalLink size={13} /> {t.adminViewPublic}</Link>
                         )}
+                        <button className="signout-button" type="button" disabled={busy} onClick={() => { setEditingId(listing.id); setRejectingId(null); setDeletingId(null); setMessage(""); }}>
+                          <Pencil size={13} /> {t.adminEdit}
+                        </button>
                         <button className="owner-text-button is-danger" type="button" disabled={busy} onClick={() => setDeletingId(listing.id)}>{t.adminDelete}</button>
                       </div>
                     )}
@@ -354,6 +422,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
               );
             })}
           </div>
+        )}
+        </>
         )}
       </div>
     </main>
