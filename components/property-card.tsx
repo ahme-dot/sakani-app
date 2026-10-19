@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Property } from "@/types";
 import Link from "next/link";
 import {
@@ -37,9 +38,12 @@ export default function PropertyCard({
     <div className="group overflow-hidden rounded-2xl bg-white shadow-md transition hover:shadow-2xl hover:-translate-y-1">
       {/* Image */}
       <div className="relative h-56 overflow-hidden bg-slate-200">
-        <img
-          src={property.images[0] as string}
+        <Image
+          src={property.images[0]}
           alt={locale === "ar" ? property.title_ar : property.title_en}
+          fill
+          sizes="(max-width: 768px) 100vw, 33vw"
+          unoptimized
           className="h-full w-full object-cover transition group-hover:scale-110"
         />
 

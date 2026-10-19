@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Cairo, Inter } from "next/font/google";
 import "./globals.css";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 const cairo = Cairo({
   subsets: ["arabic"],
@@ -16,31 +17,29 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "سكني | Sakani - Student Housing Giza",
-  description:
-    "Find verified student housing near your university in Giza",
-  keywords:
-    "student housing, سكن طلابي, جيزة, الجيزة, سكني, sakani",
+  title: "سكني | سكن طلابي في الجيزة",
+  description: "اكتشف سكنًا طلابيًا في الجيزة يناسب احتياجك وميزانيتك.",
+  keywords: ["سكن طلابي", "الجيزة", "القاهرة", "سكني", "sakani"],
   authors: [{ name: "Sakani Team" }],
-  viewport: "width=device-width, initial-scale=1",
   robots: "index, follow",
 };
 
-export default function RootLayout({
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#fbfaf7",
+};
+
+export default async function RootLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  const locale = (await headers()).get("x-sakani-locale") === "en" ? "en" : "ar";
+
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="theme-color" content="#4f46e5" />
-        <link rel="icon" href="/favicon.ico" />
-      </head>
-      <body
-        className={`${cairo.variable} ${inter.variable} bg-slate-50 text-slate-900`}
-      >
+    <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} data-scroll-behavior="smooth">
+      <body className={`${cairo.variable} ${inter.variable}`}>
         {children}
       </body>
     </html>
