@@ -1,16 +1,38 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowRight, BadgeCheck, Building2, ClipboardCheck, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, ClipboardCheck, Gift, MessageCircle, Smartphone, Users } from "lucide-react";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
-/** Two-panel layout shared by the admin sign-in and password pages. */
-export default function AuthLayout({ locale, children }: { locale: SiteLocale; children: ReactNode }) {
+/** Two-panel layout shared by the admin sign-in, password and owner account pages. */
+export default function AuthLayout({
+  locale,
+  variant = "admin",
+  children,
+}: {
+  locale: SiteLocale;
+  variant?: "admin" | "owner";
+  children: ReactNode;
+}) {
   const t = SITE_COPY[locale];
-  const points = [
-    { icon: ClipboardCheck, label: t.authPointReview },
-    { icon: BadgeCheck, label: t.authPointVerify },
-    { icon: Users, label: t.authPointTeam },
-  ];
+  const brand = variant === "owner"
+    ? {
+        title: t.accountBrandTitle,
+        text: t.accountBrandText,
+        points: [
+          { icon: Gift, label: t.accountPointFree },
+          { icon: Smartphone, label: t.accountPointDevices },
+          { icon: MessageCircle, label: t.accountPointStudents },
+        ],
+      }
+    : {
+        title: t.authBrandTitle,
+        text: t.authBrandText,
+        points: [
+          { icon: ClipboardCheck, label: t.authPointReview },
+          { icon: BadgeCheck, label: t.authPointVerify },
+          { icon: Users, label: t.authPointTeam },
+        ],
+      };
 
   return (
     <main className="auth-page" dir={locale === "ar" ? "rtl" : "ltr"}>
@@ -21,10 +43,10 @@ export default function AuthLayout({ locale, children }: { locale: SiteLocale; c
             <span>{t.brandLabel}</span>
           </Link>
           <div className="auth-brand-copy">
-            <h2>{t.authBrandTitle}</h2>
-            <p>{t.authBrandText}</p>
+            <h2>{brand.title}</h2>
+            <p>{brand.text}</p>
             <ul>
-              {points.map(({ icon: Icon, label }) => <li key={label}><span><Icon size={16} /></span>{label}</li>)}
+              {brand.points.map(({ icon: Icon, label }) => <li key={label}><span><Icon size={16} /></span>{label}</li>)}
             </ul>
           </div>
           <small>© {new Date().getFullYear()} {t.brandLabel}</small>

@@ -341,9 +341,10 @@ export default function OwnerPortal({ locale }: Props) {
               <span className="signin-icon"><ImagePlus size={19} /></span>
               <h3>{t.ownerSignInTitle}</h3>
               <p>{t.ownerSignInText}</p>
+              <Link className="button button-primary owner-submit" href={`/${locale}/account`}>{t.ownerLoginButton}</Link>
               <Captcha locale={locale} onToken={setCaptchaToken} resetKey={captchaReset} />
-              <button className="button button-primary owner-submit" type="button" disabled={submitting} onClick={() => void startEmailFreeSession()}>
-                {submitting ? t.sending : t.startListing}
+              <button className="button button-outline owner-guest-button" type="button" disabled={submitting} onClick={() => void startEmailFreeSession()}>
+                {submitting ? t.sending : t.ownerGuestButton}
               </button>
             </div>
           )}
@@ -351,9 +352,19 @@ export default function OwnerPortal({ locale }: Props) {
           {portalState === "signed-in" && user && (
             <div className="owner-dashboard">
               <div className="owner-dashboard-heading">
-                <div><span className="section-kicker">{t.ownerListings}</span><h3>{editing ? t.editingTitle : t.ownerFormTitle}</h3></div>
+                <div>
+                  <span className="section-kicker">{user.is_anonymous ? t.ownerListings : t.ownerSignedInAs(user.email ?? "")}</span>
+                  <h3>{editing ? t.editingTitle : t.ownerFormTitle}</h3>
+                </div>
                 <button type="button" className="signout-button" onClick={() => void signOutOwner()}>{t.signOut}</button>
               </div>
+
+              {user.is_anonymous && (
+                <div className="owner-guest-notice">
+                  <p>{t.ownerGuestNotice}</p>
+                  <Link className="button button-primary" href={`/${locale}/account?mode=signup`}>{t.ownerGuestCta}</Link>
+                </div>
+              )}
 
               <form className="owner-form" id="owner-form" key={`${editing?.id ?? "new"}-${formVersion}`} onSubmit={submitListing}>
                 <fieldset className="form-section">

@@ -2,7 +2,7 @@
 
 import type { MouseEvent } from "react";
 import Link from "next/link";
-import { ArrowUpLeft, Building2, Menu } from "lucide-react";
+import { ArrowUpLeft, Building2, Menu, UserRound } from "lucide-react";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 type ChromeProps = {
@@ -54,6 +54,10 @@ export function SiteHeader({ locale, sectionBase = "", switchHref }: ChromeProps
         <div className="header-actions">
           <Link className="language-toggle" href={switchHref} hrefLang={locale === "ar" ? "en" : "ar"} aria-label={`${t.languageName} language`}>
             {t.localeLabel}
+          </Link>
+          <Link className="account-link" href={`/${locale}/account`} aria-label={t.navAccount} title={t.navAccount}>
+            <UserRound size={18} />
+            <span>{t.navAccount}</span>
           </Link>
           <a className="header-cta" href={`${sectionBase}#search`} aria-label={t.headerSearch}>
             <span className="header-cta-label">{t.headerSearch}</span>
