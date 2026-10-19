@@ -1,12 +1,21 @@
 import type { NextConfig } from "next";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+function supabaseStoragePattern(): URL[] {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!supabaseUrl) return [];
+  try {
+    return [new URL(`${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/**`)];
+  } catch {
+    console.warn("NEXT_PUBLIC_SUPABASE_URL is not a valid URL; listing photos will not be optimized.");
+    return [];
+  }
+}
 
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       // Listing photos uploaded by owners.
-      ...(supabaseUrl ? [new URL(`${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/**`)] : []),
+      ...supabaseStoragePattern(),
       // Hero and sample images.
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
