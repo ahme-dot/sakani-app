@@ -58,8 +58,10 @@ export default function OwnerPortal({ locale }: Props) {
     async function applySession(currentUser: User | null) {
       if (!mounted) return;
       // Token refreshes report the same user again; only reload when the account changes.
-      if (currentUser?.id === currentUserId) return;
-      currentUserId = currentUser?.id ?? null;
+      // `undefined` means "not checked yet", so a first check with no session (null) still runs.
+      const nextUserId = currentUser?.id ?? null;
+      if (nextUserId === currentUserId) return;
+      currentUserId = nextUserId;
 
       setUser(currentUser);
       setPortalState(currentUser ? "signed-in" : "signed-out");
@@ -254,11 +256,14 @@ export default function OwnerPortal({ locale }: Props) {
       imageUrls = uploadedPaths.map((path) => supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl);
     }
 
+    // Owners write the title and description once, in either language; both language versions show the same text.
+    const title = String(formData.get("title")).trim();
+    const description = String(formData.get("description")).trim();
     const values = {
-      title_ar: String(formData.get("title_ar")).trim(),
-      title_en: String(formData.get("title_en")).trim(),
-      description_ar: String(formData.get("description_ar")).trim(),
-      description_en: String(formData.get("description_en")).trim(),
+      title_ar: title,
+      title_en: title,
+      description_ar: description,
+      description_en: description,
       area: String(formData.get("area")),
       university: String(formData.get("university")),
       gender: String(formData.get("gender")),
@@ -351,33 +356,85 @@ export default function OwnerPortal({ locale }: Props) {
               </div>
 
               <form className="owner-form" id="owner-form" key={`${editing?.id ?? "new"}-${formVersion}`} onSubmit={submitListing}>
-                <div className="owner-form-grid">
-                  <label className="owner-field"><span>{t.titleArabic}</span><input name="title_ar" required minLength={5} maxLength={120} defaultValue={editing?.title_ar} /></label>
-                  <label className="owner-field"><span>{t.titleEnglish}</span><input name="title_en" required minLength={5} maxLength={120} dir="ltr" defaultValue={editing?.title_en} /></label>
-                </div>
-                <div className="owner-form-grid">
-                  <label className="owner-field"><span>{t.descriptionArabic}</span><textarea name="description_ar" required minLength={20} rows={3} maxLength={2000} defaultValue={editing?.description_ar} /></label>
-                  <label className="owner-field"><span>{t.descriptionEnglish}</span><textarea name="description_en" required minLength={20} rows={3} maxLength={2000} dir="ltr" defaultValue={editing?.description_en} /></label>
-                </div>
-                <div className="owner-form-grid owner-form-grid-three">
-                  <label className="owner-field"><span>{t.area}</span><select name="area" required defaultValue={editing?.area ?? ""}><option value="" disabled>{t.chooseArea}</option>{areas.map((area) => <option key={area.id} value={area.name_en}>{locale === "ar" ? area.name : area.name_en}</option>)}</select></label>
-                  <label className="owner-field"><span>{t.university}</span><select name="university" required defaultValue={editing?.university ?? ""}><option value="" disabled>{t.chooseUniversity}</option>{universities.map((university) => <option key={university.id} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}</select></label>
-                  <label className="owner-field"><span>{t.housing}</span><select name="gender" required defaultValue={editing?.gender ?? ""}><option value="" disabled>{t.all}</option><option value="female">{t.female}</option><option value="male">{t.male}</option><option value="mixed">{t.mixed}</option></select></label>
-                </div>
-                <div className="owner-form-grid owner-form-grid-three">
-                  <label className="owner-field"><span>{t.propertyType}</span><select name="property_type" required defaultValue={editing?.property_type ?? "room"}><option value="room">{t.room}</option><option value="apartment">{t.apartment}</option><option value="bed">{t.bed}</option></select></label>
-                  <label className="owner-field"><span>{t.price}</span><input name="monthly_price" type="number" min="1" max="1000000" required defaultValue={editing?.monthly_price} /></label>
-                  <label className="owner-field"><span>{t.deposit}</span><input name="deposit" type="number" min="0" max="1000000" defaultValue={editing?.deposit ?? 0} required /></label>
-                </div>
-                <div className="owner-form-grid owner-form-grid-three">
-                  <label className="owner-field"><span>{t.availableBeds}</span><input name="available_beds" type="number" min="1" max="100" defaultValue={editing?.available_beds ?? 1} required /></label>
-                  <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" type="number" min="1" max="100" defaultValue={editing?.total_beds ?? 1} required /></label>
-                  <label className="owner-field"><span>{t.walkingDistance}</span><input name="walking_distance_minutes" type="number" min="0" max="300" defaultValue={editing?.walking_distance_minutes ?? 0} required /></label>
-                </div>
-                <div className="owner-form-grid">
-                  <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" autoComplete="tel" pattern="[+0-9 ()-]{8,20}" placeholder={t.whatsappHint} required dir="ltr" defaultValue={editing?.whatsapp_number} /></label>
+                <fieldset className="form-section">
+                  <legend><span className="form-step">1</span> {t.formSectionHome}</legend>
                   <label className="owner-field">
-                    <span className="file-field-label"><ImagePlus size={14} /> {t.listingPhotos}</span>
+                    <span>{t.listingTitle}</span>
+                    <input name="title" required minLength={5} maxLength={120} placeholder={t.listingTitlePlaceholder} defaultValue={editing ? (locale === "ar" ? editing.title_ar : editing.title_en) : undefined} />
+                  </label>
+                  <label className="owner-field">
+                    <span>{t.listingDescription}</span>
+                    <textarea name="description" required minLength={20} rows={4} maxLength={2000} placeholder={t.descriptionPlaceholder} defaultValue={editing ? (locale === "ar" ? editing.description_ar : editing.description_en) : undefined} />
+                    <small className="field-hint">{t.anyLanguageHint}</small>
+                  </label>
+                  <div className="owner-form-grid">
+                    <div className="owner-field" role="radiogroup" aria-label={t.propertyType}>
+                      <span>{t.propertyType}</span>
+                      <div className="choice-row">
+                        {(["room", "apartment", "bed"] as const).map((type) => (
+                          <label className="choice" key={type}>
+                            <input type="radio" name="property_type" value={type} required defaultChecked={(editing?.property_type ?? "room") === type} />
+                            <span>{t[type]}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="owner-field" role="radiogroup" aria-label={t.adminDetailsGender}>
+                      <span>{t.adminDetailsGender}</span>
+                      <div className="choice-row">
+                        {(["female", "male", "mixed"] as const).map((gender) => (
+                          <label className="choice" key={gender}>
+                            <input type="radio" name="gender" value={gender} required defaultChecked={editing?.gender === gender} />
+                            <span>{t[gender]}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </fieldset>
+
+                <fieldset className="form-section">
+                  <legend><span className="form-step">2</span> {t.formSectionLocation}</legend>
+                  <div className="owner-form-grid owner-form-grid-three">
+                    <label className="owner-field"><span>{t.area}</span><select name="area" required defaultValue={editing?.area ?? ""}><option value="" disabled>{t.chooseArea}</option>{areas.map((area) => <option key={area.id} value={area.name_en}>{locale === "ar" ? area.name : area.name_en}</option>)}</select></label>
+                    <label className="owner-field"><span>{t.university}</span><select name="university" required defaultValue={editing?.university ?? ""}><option value="" disabled>{t.chooseUniversity}</option>{universities.map((university) => <option key={university.id} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}</select></label>
+                    <label className="owner-field"><span>{t.walkingDistance}</span><input name="walking_distance_minutes" type="number" inputMode="numeric" min="0" max="300" defaultValue={editing?.walking_distance_minutes ?? 0} required /></label>
+                  </div>
+                </fieldset>
+
+                <fieldset className="form-section">
+                  <legend><span className="form-step">3</span> {t.formSectionPrice}</legend>
+                  <div className="owner-form-grid">
+                    <label className="owner-field"><span>{t.price}</span><input name="monthly_price" type="number" inputMode="numeric" min="1" max="1000000" required defaultValue={editing?.monthly_price} /></label>
+                    <label className="owner-field"><span>{t.deposit}</span><input name="deposit" type="number" inputMode="numeric" min="0" max="1000000" defaultValue={editing?.deposit ?? 0} required /></label>
+                    <label className="owner-field"><span>{t.availableBeds}</span><input name="available_beds" type="number" inputMode="numeric" min="1" max="100" defaultValue={editing?.available_beds ?? 1} required /></label>
+                    <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" type="number" inputMode="numeric" min="1" max="100" defaultValue={editing?.total_beds ?? 1} required /></label>
+                  </div>
+                </fieldset>
+
+                <fieldset className="form-section">
+                  <legend><span className="form-step">4</span> {t.amenitiesTitle}</legend>
+                  <div className="choice-row">
+                    {([
+                      ["furnished", t.furnished],
+                      ["wifi", t.wifi],
+                      ["air_conditioning", t.airConditioning],
+                      ["security", t.secure],
+                    ] as const).map(([name, label]) => (
+                      <label className="choice" key={name}>
+                        <input name={name} type="checkbox" defaultChecked={editing?.[name]} />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset className="form-section">
+                  <legend><span className="form-step">5</span> {t.formSectionPhotos}</legend>
+                  <label className="photo-drop">
+                    <ImagePlus size={24} />
+                    <strong>{t.photosDrop}</strong>
+                    <small>{editing ? t.keepPhotosHint : t.photosHint}</small>
                     <input
                       name="images"
                       type="file"
@@ -389,22 +446,19 @@ export default function OwnerPortal({ locale }: Props) {
                         setImagePreviews(files.map((file) => URL.createObjectURL(file)));
                       }}
                     />
-                    <small className="field-hint">{editing ? t.keepPhotosHint : t.photosHint}</small>
                   </label>
-                </div>
-                {(imagePreviews.length > 0 || editing) && (
-                  <div className="owner-image-previews">
-                    {(imagePreviews.length > 0 ? imagePreviews : listingImages(editing!)).map((src, index) => (
-                      <Image key={src} className="owner-image-preview" src={src} alt={t.photoAlt(t.listingPhoto, index + 1)} width={160} height={110} unoptimized={src.startsWith("blob:")} />
-                    ))}
-                  </div>
-                )}
-                <fieldset className="amenity-fieldset">
-                  <legend>{t.amenitiesTitle}</legend>
-                  <label><input name="furnished" type="checkbox" defaultChecked={editing?.furnished} /> {t.furnished}</label>
-                  <label><input name="wifi" type="checkbox" defaultChecked={editing?.wifi} /> {t.wifi}</label>
-                  <label><input name="air_conditioning" type="checkbox" defaultChecked={editing?.air_conditioning} /> {t.airConditioning}</label>
-                  <label><input name="security" type="checkbox" defaultChecked={editing?.security} /> {t.secure}</label>
+                  {(imagePreviews.length > 0 || editing) && (
+                    <div className="owner-image-previews">
+                      {(imagePreviews.length > 0 ? imagePreviews : listingImages(editing!)).map((src, index) => (
+                        <Image key={src} className="owner-image-preview" src={src} alt={t.photoAlt(t.listingPhoto, index + 1)} width={160} height={110} unoptimized={src.startsWith("blob:")} />
+                      ))}
+                    </div>
+                  )}
+                </fieldset>
+
+                <fieldset className="form-section">
+                  <legend><span className="form-step">6</span> {t.formSectionContact}</legend>
+                  <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" autoComplete="tel" pattern="[+0-9 ()-]{8,20}" placeholder={t.whatsappHint} required dir="ltr" defaultValue={editing?.whatsapp_number} /></label>
                 </fieldset>
                 <div className="owner-form-actions">
                   <button className="button button-primary owner-submit" type="submit" disabled={submitting}>

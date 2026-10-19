@@ -4455,3 +4455,155 @@ button.admin-stat:hover {
     padding-top: 40px;
   }
 }
+/* ==== Owner listing form: grouped sections ==== */
+.owner-form {
+  gap: 16px;
+}
+
+.form-section {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fcfdfb;
+}
+
+.form-section > legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding-inline: 6px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.form-step {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--white);
+  font-family: var(--font-latin);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.form-section .owner-form-grid {
+  gap: 14px;
+}
+
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.choice input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.choice span {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  padding-inline: 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.choice:hover span {
+  border-color: #cbd8cd;
+  color: var(--ink);
+}
+
+.choice input:checked + span {
+  border-color: var(--green);
+  background: var(--green-pale);
+  color: var(--green-dark);
+  font-weight: 700;
+}
+
+.choice input[type="checkbox"]:checked + span::before {
+  margin-inline-end: 6px;
+  content: "✓";
+}
+
+.choice input:focus-visible + span {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.photo-drop {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 26px 16px;
+  border: 2px dashed #c7d6ca;
+  border-radius: 14px;
+  background: var(--white);
+  color: var(--green);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.photo-drop:hover,
+.photo-drop:focus-within {
+  border-color: var(--green);
+  background: #f5faf6;
+}
+
+.photo-drop strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.photo-drop small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.photo-drop input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.owner-form-actions .owner-submit {
+  min-height: 50px;
+  font-size: 15px;
+}
+
+@media (max-width: 640px) {
+  .form-section {
+    padding: 14px;
+  }
+
+  .form-section .owner-form-grid,
+  .form-section .owner-form-grid-three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
