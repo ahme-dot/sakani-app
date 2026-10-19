@@ -65,20 +65,35 @@ export function SiteHeader({ locale, sectionBase = "", switchHref }: ChromeProps
   );
 }
 
-export function SiteFooter({ locale, sectionBase = "" }: ChromeProps) {
+export function SiteFooter({ locale, sectionBase = "", switchHref }: ChromeProps & { switchHref?: string }) {
   const t = SITE_COPY[locale];
+  const otherLocale: SiteLocale = locale === "ar" ? "en" : "ar";
   return (
-    <footer className="site-footer">
-      <div className="footer-inner">
-        <div className="footer-brand"><Brand locale={locale} href={sectionBase || "#top"} /><p>{t.footerText}</p></div>
-        <div className="footer-links">
+    <footer className="site-footer footer2">
+      <div className="footer-inner footer2-grid">
+        <div className="footer2-brand">
+          <Brand locale={locale} href={sectionBase || "#top"} />
+          <p>{t.footerText}</p>
+        </div>
+        <nav aria-label={t.footerExplore}>
+          <h3>{t.footerExplore}</h3>
+          <a href={`${sectionBase}#search`}>{t.headerSearch}</a>
           <a href={`${sectionBase}#homes`}>{t.navListings}</a>
           <a href={`${sectionBase}#why-sakani`}>{t.footerAbout}</a>
-          <a href={`${sectionBase}#search`}>{t.headerSearch}</a>
+        </nav>
+        <nav aria-label={t.footerForOwners}>
+          <h3>{t.footerForOwners}</h3>
           <a href={`${sectionBase}#owner`}>{t.navOwner}</a>
           <Link href={`/${locale}/sign-in`} rel="nofollow">{t.adminNav}</Link>
+        </nav>
+        <div>
+          <h3>{t.footerLanguage}</h3>
+          <Link href={switchHref ?? `/${otherLocale}`} hrefLang={otherLocale}>{t.languageName}</Link>
         </div>
-        <p className="copyright">© {new Date().getFullYear()} {t.brandLabel}. {t.allRights}</p>
+      </div>
+      <div className="footer-inner footer2-bottom">
+        <p>© {new Date().getFullYear()} {t.brandLabel}. {t.allRights}</p>
+        <p>{t.city}</p>
       </div>
     </footer>
   );

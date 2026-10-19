@@ -163,7 +163,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
         </div>
       </main>
 
-      <SiteFooter locale={locale} sectionBase={`/${locale}`} />
+      <SiteFooter locale={locale} sectionBase={`/${locale}`} switchHref={listingPath(otherLocale, listing.id)} />
     </div>
   );
 }

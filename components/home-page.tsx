@@ -4,13 +4,13 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowLeft,
   ArrowUpLeft,
   BadgeCheck,
   BedDouble,
   Check,
   ChevronDown,
   Clock3,
+  GraduationCap,
   MapPin,
   MessageCircle,
   Search,
@@ -189,49 +189,22 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
       <SiteHeader locale={locale} switchHref={locale === "ar" ? "/en" : "/ar"} />
 
       <main>
-        <section className="hero-section">
-          <div className="hero-inner">
-            <div className="hero-copy">
-              <span className="eyebrow"><Sparkles size={15} /> {t.heroBadge}</span>
-              <h1>{t.heroFirst}<br /><span>{t.heroSecond}</span></h1>
-              <p className="hero-description">{t.heroDescription}</p>
-              <div className="hero-actions">
-                <a className="button button-primary" href="#search">{t.heroAction} <ArrowLeft size={18} /></a>
-                <a className="text-link" href="#why-sakani">{t.heroLearn}</a>
-              </div>
-              <div className="hero-note">
-                <span className="note-icon"><ShieldCheck size={19} /></span>
-                <span><strong>{t.heroNoteTitle}</strong><small>{t.heroNoteText}</small></span>
-              </div>
-            </div>
+        <section className="hero2" id="search" aria-labelledby="hero-title">
+          <Image
+            className="hero2-photo"
+            src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2000&q=80"
+            alt=""
+            fill
+            sizes="100vw"
+            priority
+          />
+          <div className="hero2-inner section-wrap">
+            <span className="hero2-badge"><Sparkles size={15} /> {t.heroBadge}</span>
+            <h1 id="hero-title">{t.heroFirst} <span>{t.heroSecond}</span></h1>
+            <p className="hero2-text">{t.heroDescription}</p>
 
-            <div className="hero-art" aria-hidden="true">
-              <Image
-                className="hero-photo"
-                src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85"
-                alt=""
-                fill
-                sizes="(max-width: 640px) 90vw, 48vw"
-                priority
-              />
-              <div className="art-card art-card-top"><span className="art-card-icon"><MapPin size={17} /></span><span><b>{t.heroCardTitle}</b><small>{t.heroCardText}</small></span></div>
-              <div className="art-card art-card-bottom"><span className="art-card-icon warm"><BedDouble size={17} /></span><span><b>{t.heroCardAltTitle}</b><small>{t.heroCardAltText}</small></span></div>
-            </div>
-          </div>
-          <div className="hero-foot">
-            <span>{t.heroFoot}</span>
-            <span className="hero-foot-line" />
-            <span>{t.city}</span>
-          </div>
-        </section>
-
-        <section className="search-section" id="search" aria-labelledby="search-title">
-          <div className="search-panel">
-            <div className="search-heading">
-              <span className="search-icon"><SlidersHorizontal size={19} /></span>
-              <div><h2 id="search-title">{t.searchTitle}</h2><p>{t.searchDescription}</p></div>
-            </div>
-            <form className="search-form" onSubmit={handleSearch}>
+          <div className="search-panel hero2-search">
+            <form className="search-form" onSubmit={handleSearch} aria-label={t.searchTitle}>
               <div className="search-main">
               <label className="field">
                 <span>{t.university}</span>
@@ -306,6 +279,13 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
               </div>
             </form>
           </div>
+
+            <ul className="hero2-trust">
+              <li><ShieldCheck size={17} /> {t.trustReviewed}</li>
+              <li><MessageCircle size={17} /> {t.trustDirect}</li>
+              <li><BadgeCheck size={17} /> {t.trustFree}</li>
+            </ul>
+          </div>
         </section>
 
         <section className="listings-section section-wrap" id="homes">
@@ -326,6 +306,22 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
                 <ChevronDown size={16} />
               </span>
             </label>
+          </div>
+          <div className="uni-chips" role="group" aria-label={t.university}>
+            <button type="button" className={!filters.university ? "is-active" : ""} aria-pressed={!filters.university} onClick={() => updateFilters({ university: "" })}>
+              {t.allUniversities}
+            </button>
+            {universities.map((university) => (
+              <button
+                key={university.id}
+                type="button"
+                className={filters.university === university.name_en ? "is-active" : ""}
+                aria-pressed={filters.university === university.name_en}
+                onClick={() => updateFilters({ university: university.name_en })}
+              >
+                <GraduationCap size={15} /> {locale === "ar" ? university.name : university.name_en}
+              </button>
+            ))}
           </div>
           {isDemoMode && <p className="demo-notice">{t.demoNotice}</p>}
           {listingError && <p className="owner-feedback owner-feedback-error" role="alert">{t.feedError}</p>}
@@ -354,17 +350,26 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
           )}
         </section>
 
-        <section className="why-section" id="why-sakani">
+        <section className="why2" id="why-sakani">
           <div className="section-wrap">
-            <div className="why-heading">
+            <div className="why2-heading">
               <span className="section-kicker">{t.whyKicker}</span>
-              <h2>{t.whyTitleFirst}<br />{t.whyTitleSecond}</h2>
+              <h2>{t.whyTitleFirst} {t.whyTitleSecond}</h2>
               <p>{t.whyDescription}</p>
             </div>
-            <div className="benefit-grid">
-              <article className="benefit-card"><span className="benefit-icon mint"><ShieldCheck size={22} /></span><span className="benefit-index">01</span><h3>{t.benefitOneTitle}</h3><p>{t.benefitOneText}</p></article>
-              <article className="benefit-card"><span className="benefit-icon peach"><MapPin size={22} /></span><span className="benefit-index">02</span><h3>{t.benefitTwoTitle}</h3><p>{t.benefitTwoText}</p></article>
-              <article className="benefit-card"><span className="benefit-icon lavender"><MessageCircle size={22} /></span><span className="benefit-index">03</span><h3>{t.benefitThreeTitle}</h3><p>{t.benefitThreeText}</p></article>
+            <div className="why2-grid">
+              {[
+                { icon: ShieldCheck, tone: "mint", title: t.benefitOneTitle, text: t.benefitOneText },
+                { icon: MapPin, tone: "peach", title: t.benefitTwoTitle, text: t.benefitTwoText },
+                { icon: MessageCircle, tone: "lavender", title: t.benefitThreeTitle, text: t.benefitThreeText },
+              ].map(({ icon: Icon, tone, title, text }, index) => (
+                <article className="why2-card" key={title}>
+                  <span className={`why2-icon ${tone}`}><Icon size={24} /></span>
+                  <span className="why2-step">{String(index + 1).padStart(2, "0")}</span>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </article>
+              ))}
             </div>
           </div>
         </section>
@@ -385,7 +390,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
         </section>
       </main>
 
-      <SiteFooter locale={locale} />
+      <SiteFooter locale={locale} switchHref={locale === "ar" ? "/en" : "/ar"} />
     </div>
   );
 }
