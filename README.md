@@ -26,7 +26,10 @@ The site uses Supabase for email-free owner submissions, image uploads, private 
 
 1. Create or open your Supabase project.
 2. In Supabase Authentication settings, enable **Anonymous Sign-Ins**. Owners use an anonymous session to submit and check their listings; they do not provide an email or receive an email. Because anonymous sessions are tied to the user's browser/device, clearing browser data or switching devices means they may not be able to return to that session. Configure Supabase CAPTCHA and sensible auth limits before public launch to reduce anonymous sign-up abuse.
-3. In the Supabase SQL Editor, run [`supabase/migrations/20261018000000_sakani_marketplace.sql`](./supabase/migrations/20261018000000_sakani_marketplace.sql), then [`supabase/migrations/20261018010000_sakani_admin_users.sql`](./supabase/migrations/20261018010000_sakani_admin_users.sql).
+3. In the Supabase SQL Editor, run these files in order:
+   1. [`supabase/migrations/20261018000000_sakani_marketplace.sql`](./supabase/migrations/20261018000000_sakani_marketplace.sql)
+   2. [`supabase/migrations/20261018010000_sakani_admin_users.sql`](./supabase/migrations/20261018010000_sakani_admin_users.sql)
+   3. [`supabase/migrations/20261020000000_sakani_publishing.sql`](./supabase/migrations/20261020000000_sakani_publishing.sql) — multiple photos, the "verified" flag, review notes, owner edits, and a limit of 5 new listings per owner per day.
 4. Create an administrator in Supabase Authentication with an email and password. This email is only for the administrator; listing submitters do not need one.
 5. In the Supabase SQL Editor, add that Auth user's ID to the admin allowlist by running this query after replacing the placeholder with the exact administrator email:
 
@@ -46,6 +49,29 @@ The site uses Supabase for email-free owner submissions, image uploads, private 
 10. Visit `/en/sign-in` or `/ar/sign-in` to sign in as the administrator, then review pending listings at `/en/admin` or `/ar/admin`. Use the Auth user's email/password, not necessarily the password you use to sign in to the Supabase dashboard. If the Auth user has no password or you forgot it, use **Forgot your password?** and follow the emailed link to set one. Approving publishes a listing; rejecting keeps it off the public feed. Owners can only read their own submission statuses.
 
 Until Supabase is configured, the home page explicitly labels its built-in property cards as sample listings; owner submissions show setup instructions instead.
+
+## Reviewing listings
+
+- **Approve and publish** makes a listing public. **Reject** asks for a reason, which the owner sees in their portal; they can then edit and resubmit.
+- **Visited: mark verified** adds the "Verified" badge. Only use it after someone from your team has actually seen the property. Approved but unvisited listings are shown without the badge.
+- **Unpublish** takes a live listing down; **Delete permanently** removes it and its photos.
+
+## Publish to the internet (Vercel)
+
+1. Push this repository to GitHub.
+2. At [vercel.com](https://vercel.com), sign in with GitHub, choose **Add New → Project**, and import the repository. Vercel detects Next.js automatically.
+3. Under **Environment Variables**, add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SITE_URL` (your final address, for example `https://sakani.vercel.app` or your own domain). Optionally add `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+4. Click **Deploy**. Later pushes to `main` redeploy automatically.
+5. In Supabase **Authentication → URL Configuration**, set the **Site URL** to the live address and add `https://your-domain/**` to **Redirect URLs**.
+6. In [Google Search Console](https://search.google.com/search-console), add the site and submit `https://your-domain/sitemap.xml`.
+
+### Spam protection (recommended)
+
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com/?to=/:account/turnstile), create a free **Turnstile** widget for your domain (add `localhost` too for testing). Copy the **site key** and **secret key**.
+2. In Supabase **Authentication → Attack Protection**, enable CAPTCHA, choose **Turnstile**, and paste the **secret key**.
+3. Add the **site key** as `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in Vercel (and `.env.local`), then redeploy.
+
+Do steps 2 and 3 together: once Supabase requires CAPTCHA, every sign-in needs the widget.
 
 ## Test on a phone
 

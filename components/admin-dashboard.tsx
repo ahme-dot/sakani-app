@@ -5,15 +5,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { BadgeCheck, LoaderCircle, LockKeyhole, LogOut } from "lucide-react";
+import { BadgeCheck, ExternalLink, LoaderCircle, LockKeyhole, LogOut } from "lucide-react";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { MarketplaceListing } from "@/lib/supabase/listings";
+import { PUBLIC_LISTING_COLUMNS, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
+import { storagePathFromPublicUrl } from "@/lib/images";
+import { listingPath, whatsappLink } from "@/lib/site";
 
-const ADMIN_LISTING_COLUMNS =
-  "id,title_ar,title_en,description_ar,description_en,area,university,gender,property_type,monthly_price,whatsapp_number,image_url,status,created_at";
+const ADMIN_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},rejection_reason`;
+const STORAGE_BUCKET = "sakani-listings";
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
+type AdminListing = Omit<MarketplaceListing, "owner_id">;
+type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
 
 export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const t = SITE_COPY[locale];
@@ -21,10 +25,13 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [user, setUser] = useState<User | null>(null);
   const [state, setState] = useState<DashboardState>(supabase ? "loading" : "unconfigured");
-  const [listings, setListings] = useState<MarketplaceListing[]>([]);
+  const [listings, setListings] = useState<AdminListing[]>([]);
   const [filter, setFilter] = useState<ReviewFilter>("pending");
   const [loadingListings, setLoadingListings] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -39,8 +46,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
         setError(t.adminLoadError);
       }
       const currentUser = data.session?.user ?? null;
-      setUser(currentUser);
-      setState(currentUser ? "checking" : "signed-out");
+      setUser((previous) => (previous?.id === currentUser?.id ? previous : currentUser));
+      setState((previous) => (currentUser ? (previous === "ready" ? previous : "checking") : "signed-out"));
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -72,10 +79,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           console.error("Could not verify admin access:", adminError);
           setError(t.adminLoadError);
           setState("denied");
-        } else if (!data) {
-          setState("denied");
         } else {
-          setState("ready");
+          setState(data ? "ready" : "denied");
         }
       });
 
@@ -100,7 +105,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           setListings([]);
           setError(t.adminLoadError);
         } else {
-          setListings((data ?? []) as MarketplaceListing[]);
+          setListings((data ?? []) as unknown as AdminListing[]);
           setError("");
         }
         setLoadingListings(false);
@@ -111,7 +116,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     };
   }, [supabase, state, filter, t.adminLoadError]);
 
-  async function updateStatus(listingId: string, status: ReviewFilter) {
+  async function updateListing(listingId: string, patch: ListingPatch) {
     if (!supabase) return;
     setUpdatingId(listingId);
     setError("");
@@ -119,7 +124,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
 
     const { data: updatedRows, error: updateError } = await supabase
       .from("properties")
-      .update({ status })
+      .update(patch)
       .eq("id", listingId)
       .eq("status", filter)
       .select("id");
@@ -132,8 +137,39 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       return;
     }
 
-    setListings((current) => current.filter((listing) => listing.id !== listingId));
+    if (patch.status && patch.status !== filter) {
+      setListings((current) => current.filter((listing) => listing.id !== listingId));
+    } else {
+      setListings((current) => current.map((listing) => (listing.id === listingId ? { ...listing, ...patch } : listing)));
+    }
+    setRejectingId(null);
+    setRejectReason("");
     setMessage(t.adminStatusUpdated);
+    setUpdatingId(null);
+  }
+
+  async function deleteListing(listing: AdminListing) {
+    if (!supabase) return;
+    setUpdatingId(listing.id);
+    setError("");
+    setMessage("");
+
+    const { data, error: deleteError } = await supabase.from("properties").delete().eq("id", listing.id).select("id");
+    if (deleteError || !data?.length) {
+      console.error("Could not delete listing:", deleteError ?? "no rows were deleted");
+      setError(t.adminUpdateError);
+    } else {
+      const paths = listingImages(listing)
+        .map((url) => storagePathFromPublicUrl(url, STORAGE_BUCKET))
+        .filter((path): path is string => Boolean(path));
+      if (paths.length) {
+        const { error: removeError } = await supabase.storage.from(STORAGE_BUCKET).remove(paths);
+        if (removeError) console.warn("Listing images were not removed from storage:", removeError);
+      }
+      setListings((current) => current.filter((item) => item.id !== listing.id));
+      setMessage(t.adminStatusUpdated);
+    }
+    setDeletingId(null);
     setUpdatingId(null);
   }
 
@@ -168,6 +204,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           <p>{unavailableMessage}</p>
           {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
           {state === "signed-out" && <Link className="button button-primary owner-submit" href={`/${locale}/sign-in`}>{t.signIn}</Link>}
+          {state === "denied" && <button className="signout-button" type="button" onClick={() => void signOut()}><LogOut size={15} />{t.adminSignOut}</button>}
           <Link className="admin-home-link" href={locale === "ar" ? "/ar" : "/en"}>{t.adminBackHome}</Link>
         </section>
       </main>
@@ -179,6 +216,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     { value: "approved", label: t.adminApproved },
     { value: "rejected", label: t.adminRejected },
   ];
+  const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-EG");
 
   return (
     <main className="admin-page admin-dashboard-page" dir={locale === "ar" ? "rtl" : "ltr"}>
@@ -203,7 +241,11 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
               key={tab.value}
               aria-pressed={filter === tab.value}
               onClick={() => {
+                if (tab.value === filter) return;
                 setLoadingListings(true);
+                setRejectingId(null);
+                setDeletingId(null);
+                setMessage("");
                 setFilter(tab.value);
               }}
             >
@@ -221,31 +263,96 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           <section className="admin-empty-state"><p>{t.adminNoListings}</p></section>
         ) : (
           <div className="admin-listing-grid">
-            {listings.map((listing) => (
-              <article className="admin-listing-card" key={listing.id}>
-                <Image className="admin-listing-image" src={listing.image_url} alt={locale === "ar" ? listing.title_ar : listing.title_en} width={700} height={420} unoptimized />
-                <div className="admin-listing-content">
-                  <div className="admin-listing-heading">
-                    <span className="listing-status">{tabs.find((tab) => tab.value === listing.status)?.label}</span>
-                    <time dateTime={listing.created_at}>{t.adminSubmitted}: {new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium" }).format(new Date(listing.created_at))}</time>
-                  </div>
-                  <h2>{locale === "ar" ? listing.title_ar : listing.title_en}</h2>
-                  <p>{locale === "ar" ? listing.description_ar : listing.description_en}</p>
-                  <dl className="admin-listing-details">
-                    <div><dt>{t.area}</dt><dd>{listing.area}</dd></div>
-                    <div><dt>{t.university}</dt><dd>{listing.university}</dd></div>
-                    <div><dt>{t.price}</dt><dd>{new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-EG").format(listing.monthly_price)} EGP</dd></div>
-                    <div><dt>{t.adminContact}</dt><dd><a href={`https://wa.me/${listing.whatsapp_number.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">{listing.whatsapp_number}</a></dd></div>
-                  </dl>
-                  {filter === "pending" && (
-                    <div className="admin-listing-actions">
-                      <button className="button button-primary owner-submit" type="button" disabled={updatingId === listing.id} onClick={() => void updateStatus(listing.id, "approved")}>{updatingId === listing.id ? t.sending : t.adminApprove}</button>
-                      <button className="button admin-reject-button" type="button" disabled={updatingId === listing.id} onClick={() => void updateStatus(listing.id, "rejected")}>{t.adminReject}</button>
+            {listings.map((listing) => {
+              const title = locale === "ar" ? listing.title_ar : listing.title_en;
+              const images = listingImages(listing);
+              const busy = updatingId === listing.id;
+              return (
+                <article className="admin-listing-card" key={listing.id}>
+                  <Image className="admin-listing-image" src={images[0]} alt={title} width={700} height={420} sizes="(max-width: 640px) 100vw, 520px" />
+                  {images.length > 1 && (
+                    <div className="admin-listing-thumbs">
+                      {images.slice(1).map((src, index) => (
+                        <a key={src} href={src} target="_blank" rel="noreferrer">
+                          <Image src={src} alt={t.photoAlt(title, index + 2)} width={96} height={72} />
+                        </a>
+                      ))}
                     </div>
                   )}
-                </div>
-              </article>
-            ))}
+                  <div className="admin-listing-content">
+                    <div className="admin-listing-heading">
+                      <span className="admin-listing-badges">
+                        <span className={`listing-status listing-status-${listing.status}`}>{tabs.find((tab) => tab.value === listing.status)?.label}</span>
+                        {listing.verified && <span className="listing-status listing-status-approved"><BadgeCheck size={12} /> {t.adminVerifiedBadge}</span>}
+                      </span>
+                      <time dateTime={listing.created_at}>{t.adminSubmitted}: {new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium" }).format(new Date(listing.created_at))}</time>
+                    </div>
+                    <h2>{title}</h2>
+                    <p>{locale === "ar" ? listing.description_ar : listing.description_en}</p>
+                    <dl className="admin-listing-details">
+                      <div><dt>{t.area}</dt><dd>{listing.area}</dd></div>
+                      <div><dt>{t.university}</dt><dd>{listing.university}</dd></div>
+                      <div><dt>{t.adminDetailsType}</dt><dd>{t[listing.property_type]}</dd></div>
+                      <div><dt>{t.adminDetailsGender}</dt><dd>{t[listing.gender]}</dd></div>
+                      <div><dt>{t.price}</dt><dd>{numberFormat.format(listing.monthly_price)}</dd></div>
+                      <div><dt>{t.deposit}</dt><dd>{numberFormat.format(listing.deposit)}</dd></div>
+                      <div><dt>{t.adminDetailsBeds}</dt><dd>{listing.available_beds} / {listing.total_beds}</dd></div>
+                      <div><dt>{t.adminDetailsWalk}</dt><dd>{t.walkingMinutes(listing.walking_distance_minutes)}</dd></div>
+                      <div><dt>{t.adminContact}</dt><dd><a href={whatsappLink(listing.whatsapp_number)} target="_blank" rel="noreferrer" dir="ltr">{listing.whatsapp_number}</a></dd></div>
+                    </dl>
+                    {listing.status === "rejected" && listing.rejection_reason && (
+                      <p className="owner-review-note"><strong>{t.reviewNote}:</strong> {listing.rejection_reason}</p>
+                    )}
+
+                    {rejectingId === listing.id ? (
+                      <form
+                        className="admin-reject-form"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void updateListing(listing.id, { status: "rejected", rejection_reason: rejectReason.trim() || null });
+                        }}
+                      >
+                        <label className="owner-field">
+                          <span>{t.adminRejectReason}</span>
+                          <textarea rows={2} maxLength={500} value={rejectReason} placeholder={t.adminRejectReasonPlaceholder} onChange={(event) => setRejectReason(event.target.value)} />
+                        </label>
+                        <div className="admin-listing-actions">
+                          <button className="button admin-reject-button" type="submit" disabled={busy}>{busy ? t.sending : t.adminConfirmReject}</button>
+                          <button className="signout-button" type="button" disabled={busy} onClick={() => setRejectingId(null)}>{t.cancel}</button>
+                        </div>
+                      </form>
+                    ) : deletingId === listing.id ? (
+                      <div className="admin-listing-actions">
+                        <button className="button admin-reject-button" type="button" disabled={busy} onClick={() => void deleteListing(listing)}>{busy ? t.sending : t.adminConfirmDelete}</button>
+                        <button className="signout-button" type="button" disabled={busy} onClick={() => setDeletingId(null)}>{t.cancel}</button>
+                      </div>
+                    ) : (
+                      <div className="admin-listing-actions">
+                        {listing.status !== "approved" && (
+                          <button className="button button-primary owner-submit" type="button" disabled={busy} onClick={() => void updateListing(listing.id, { status: "approved", rejection_reason: null })}>
+                            {busy ? t.sending : listing.status === "pending" ? t.adminApprove : t.adminRestore}
+                          </button>
+                        )}
+                        {listing.status !== "rejected" && (
+                          <button className="button admin-reject-button" type="button" disabled={busy} onClick={() => { setRejectingId(listing.id); setRejectReason(""); }}>
+                            {listing.status === "pending" ? t.adminReject : t.adminUnpublish}
+                          </button>
+                        )}
+                        {listing.status !== "rejected" && (
+                          <button className="signout-button" type="button" disabled={busy} onClick={() => void updateListing(listing.id, { verified: !listing.verified })}>
+                            {listing.verified ? t.adminUnverify : t.adminVerify}
+                          </button>
+                        )}
+                        {listing.status === "approved" && (
+                          <Link className="signout-button admin-view-link" href={listingPath(locale, listing.id)} target="_blank"><ExternalLink size={13} /> {t.adminViewPublic}</Link>
+                        )}
+                        <button className="owner-text-button is-danger" type="button" disabled={busy} onClick={() => setDeletingId(listing.id)}>{t.adminDelete}</button>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

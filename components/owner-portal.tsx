@@ -1,21 +1,35 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { BadgeCheck, ImagePlus, LoaderCircle, Sparkles } from "lucide-react";
+import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
 import { areas, universities } from "@/lib/data";
+import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
+import { listingPath } from "@/lib/site";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { MarketplaceListing } from "@/lib/supabase/listings";
+import { PUBLIC_LISTING_COLUMNS, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
 
 const STORAGE_BUCKET = "sakani-listings";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-const OWNER_LISTING_COLUMNS = "id,title_ar,title_en,status,created_at";
+const MAX_IMAGES = 6;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const OWNER_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},rejection_reason`;
 
 type Props = { locale: SiteLocale };
 type PortalState = "loading" | "unconfigured" | "signed-out" | "signed-in";
-type OwnerListing = Pick<MarketplaceListing, "id" | "title_ar" | "title_en" | "status" | "created_at">;
+type OwnerListing = Omit<MarketplaceListing, "owner_id">;
+
+async function fetchOwnerListings(client: SupabaseClient, ownerId: string) {
+  return client
+    .from("properties")
+    .select(OWNER_LISTING_COLUMNS)
+    .eq("owner_id", ownerId)
+    .order("created_at", { ascending: false });
+}
 
 export default function OwnerPortal({ locale }: Props) {
   const t = SITE_COPY[locale];
@@ -25,18 +39,28 @@ export default function OwnerPortal({ locale }: Props) {
   const [ownerListings, setOwnerListings] = useState<OwnerListing[]>([]);
   const [loadingListings, setLoadingListings] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [busyText, setBusyText] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [imagePreview, setImagePreview] = useState("");
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [editing, setEditing] = useState<OwnerListing | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [formVersion, setFormVersion] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaReset, setCaptchaReset] = useState(0);
 
   useEffect(() => {
     if (!supabase) return;
     const client = supabase;
-
     let mounted = true;
+    let currentUserId: string | null | undefined;
 
     async function applySession(currentUser: User | null) {
       if (!mounted) return;
+      // Token refreshes report the same user again; only reload when the account changes.
+      if (currentUser?.id === currentUserId) return;
+      currentUserId = currentUser?.id ?? null;
+
       setUser(currentUser);
       setPortalState(currentUser ? "signed-in" : "signed-out");
       if (!currentUser) {
@@ -45,18 +69,13 @@ export default function OwnerPortal({ locale }: Props) {
       }
 
       setLoadingListings(true);
-      const { data, error: listingError } = await client
-        .from("properties")
-        .select(OWNER_LISTING_COLUMNS)
-        .eq("owner_id", currentUser.id)
-        .order("created_at", { ascending: false });
-
+      const { data, error: listingError } = await fetchOwnerListings(client, currentUser.id);
       if (!mounted) return;
       if (listingError) {
         console.error("Could not load owner listings:", listingError);
         setError(t.formError);
       } else {
-        setOwnerListings((data ?? []) as OwnerListing[]);
+        setOwnerListings((data ?? []) as unknown as OwnerListing[]);
       }
       setLoadingListings(false);
     }
@@ -81,31 +100,36 @@ export default function OwnerPortal({ locale }: Props) {
 
   useEffect(() => {
     return () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      imagePreviews.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [imagePreview]);
+  }, [imagePreviews]);
+
+  async function refreshListings() {
+    if (!supabase || !user) return;
+    const { data, error: refreshError } = await fetchOwnerListings(supabase, user.id);
+    if (refreshError) {
+      console.error("Could not refresh owner listings:", refreshError);
+      setError(t.formError);
+    } else {
+      setOwnerListings((data ?? []) as unknown as OwnerListing[]);
+    }
+  }
 
   async function startEmailFreeSession() {
     if (!supabase) return;
+    if (CAPTCHA_SITE_KEY && !captchaToken) {
+      setError(t.captchaRequired);
+      return;
+    }
     setSubmitting(true);
     setError("");
     setMessage("");
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) {
-      console.error("Could not restore owner session:", sessionError);
-      setError(t.authError);
-      setSubmitting(false);
-      return;
-    }
-    if (sessionData.session?.user) {
-      setUser(sessionData.session.user);
-      setPortalState("signed-in");
-      setSubmitting(false);
-      return;
-    }
-
-    const { data, error: signInError } = await supabase.auth.signInAnonymously();
+    const { data, error: signInError } = await supabase.auth.signInAnonymously(
+      captchaToken ? { options: { captchaToken } } : undefined,
+    );
+    // Captcha tokens are single-use; get a fresh one for any retry.
+    setCaptchaReset((value) => value + 1);
     if (signInError) {
       console.error("Could not start an email-free listing session:", signInError);
       setError(t.anonymousSetupError);
@@ -125,9 +149,53 @@ export default function OwnerPortal({ locale }: Props) {
       setError(t.authError);
     } else {
       setOwnerListings([]);
+      setEditing(null);
       setMessage("");
       setError("");
     }
+  }
+
+  function startEditing(listing: OwnerListing) {
+    setEditing(listing);
+    setImagePreviews([]);
+    setMessage("");
+    setError("");
+    setConfirmingDeleteId(null);
+    document.getElementById("owner-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function stopEditing() {
+    setEditing(null);
+    setImagePreviews([]);
+    setFormVersion((version) => version + 1);
+  }
+
+  async function removeStoredImages(urls: string[]) {
+    if (!supabase) return;
+    const paths = urls.map((url) => storagePathFromPublicUrl(url, STORAGE_BUCKET)).filter((path): path is string => Boolean(path));
+    if (paths.length === 0) return;
+    const { error: removeError } = await supabase.storage.from(STORAGE_BUCKET).remove(paths);
+    if (removeError) console.error("Could not remove listing images:", removeError);
+  }
+
+  async function deleteListing(listing: OwnerListing) {
+    if (!supabase) return;
+    setSubmitting(true);
+    setError("");
+    setMessage("");
+
+    const { data, error: deleteError } = await supabase.from("properties").delete().eq("id", listing.id).select("id");
+    if (deleteError || !data?.length) {
+      console.error("Could not delete listing:", deleteError ?? "no rows were deleted");
+      setError(t.deleteError);
+    } else {
+      await removeStoredImages(listingImages(listing));
+      if (editing?.id === listing.id) stopEditing();
+      setOwnerListings((current) => current.filter((item) => item.id !== listing.id));
+      setMessage(t.listingDeleted);
+    }
+    setConfirmingDeleteId(null);
+    setSubmitting(false);
   }
 
   async function submitListing(event: FormEvent<HTMLFormElement>) {
@@ -136,15 +204,18 @@ export default function OwnerPortal({ locale }: Props) {
 
     setError("");
     setMessage("");
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const selectedImage = formData.get("image");
+    const formData = new FormData(event.currentTarget);
+    const selectedImages = formData.getAll("images").filter((value): value is File => value instanceof File && value.size > 0);
 
-    if (!(selectedImage instanceof File) || selectedImage.size === 0) {
+    if (!editing && selectedImages.length === 0) {
       setError(t.imageError);
       return;
     }
-    if (!["image/jpeg", "image/png", "image/webp"].includes(selectedImage.type) || selectedImage.size > MAX_IMAGE_SIZE) {
+    if (selectedImages.length > MAX_IMAGES) {
+      setError(t.tooManyPhotos);
+      return;
+    }
+    if (selectedImages.some((file) => !ALLOWED_IMAGE_TYPES.includes(file.type) || file.size > MAX_IMAGE_SIZE)) {
       setError(t.imageError);
       return;
     }
@@ -154,27 +225,36 @@ export default function OwnerPortal({ locale }: Props) {
     }
 
     setSubmitting(true);
-    const extension = selectedImage.type === "image/png" ? "png" : selectedImage.type === "image/webp" ? "webp" : "jpg";
-    const imagePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+    let imageUrls = editing ? listingImages(editing) : [];
+    const uploadedPaths: string[] = [];
 
-    const { error: uploadError } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(imagePath, selectedImage, {
-        cacheControl: "3600",
-        contentType: selectedImage.type,
-        upsert: false,
-      });
+    if (selectedImages.length > 0) {
+      setBusyText(t.preparingPhotos);
+      const compressed = await Promise.all(selectedImages.map(compressImage));
+      setBusyText(t.submitting);
 
-    if (uploadError) {
-      console.error("Could not upload listing image:", uploadError);
-      setError(t.formError);
-      setSubmitting(false);
-      return;
+      for (const file of compressed) {
+        const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+        const imagePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(imagePath, file, {
+          cacheControl: "31536000",
+          contentType: file.type,
+          upsert: false,
+        });
+        if (uploadError) {
+          console.error("Could not upload listing image:", uploadError);
+          if (uploadedPaths.length) await supabase.storage.from(STORAGE_BUCKET).remove(uploadedPaths);
+          setError(t.formError);
+          setSubmitting(false);
+          setBusyText("");
+          return;
+        }
+        uploadedPaths.push(imagePath);
+      }
+      imageUrls = uploadedPaths.map((path) => supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl);
     }
 
-    const { data: imageData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(imagePath);
-    const { error: insertError } = await supabase.from("properties").insert({
-      owner_id: user.id,
+    const values = {
       title_ar: String(formData.get("title_ar")).trim(),
       title_en: String(formData.get("title_en")).trim(),
       description_ar: String(formData.get("description_ar")).trim(),
@@ -193,35 +273,30 @@ export default function OwnerPortal({ locale }: Props) {
       wifi: formData.has("wifi"),
       air_conditioning: formData.has("air_conditioning"),
       security: formData.has("security"),
-      image_url: imageData.publicUrl,
-      status: "pending",
-    });
+      image_url: imageUrls[0],
+      image_urls: imageUrls,
+      status: "pending" as const,
+    };
 
-    if (insertError) {
-      console.error("Could not save owner listing:", insertError);
-      const { error: cleanupError } = await supabase.storage.from(STORAGE_BUCKET).remove([imagePath]);
-      if (cleanupError) console.error("Could not clean up the failed listing image upload:", cleanupError);
-      setError(t.formError);
+    const { data: saved, error: saveError } = editing
+      ? await supabase.from("properties").update(values).eq("id", editing.id).select("id")
+      : await supabase.from("properties").insert({ ...values, owner_id: user.id }).select("id");
+
+    if (saveError || !saved?.length) {
+      console.error("Could not save owner listing:", saveError ?? "no rows were saved");
+      if (uploadedPaths.length) await supabase.storage.from(STORAGE_BUCKET).remove(uploadedPaths);
+      setError(saveError?.message.includes("listing_rate_limit") ? t.rateLimitError : t.formError);
       setSubmitting(false);
+      setBusyText("");
       return;
     }
 
-    form.reset();
-    setImagePreview("");
-    setMessage(t.listingSubmitted);
-    const { data: updatedListings, error: refreshError } = await supabase
-      .from("properties")
-      .select(OWNER_LISTING_COLUMNS)
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (refreshError) {
-      console.error("Could not refresh owner listings:", refreshError);
-      setError(t.formError);
-    } else {
-      setOwnerListings((updatedListings ?? []) as OwnerListing[]);
-    }
+    if (editing && uploadedPaths.length) await removeStoredImages(listingImages(editing));
+    setMessage(editing ? t.listingUpdated : t.listingSubmitted);
+    stopEditing();
+    await refreshListings();
     setSubmitting(false);
+    setBusyText("");
   }
 
   const statusLabel = (status: OwnerListing["status"]) => {
@@ -261,6 +336,7 @@ export default function OwnerPortal({ locale }: Props) {
               <span className="signin-icon"><ImagePlus size={19} /></span>
               <h3>{t.ownerSignInTitle}</h3>
               <p>{t.ownerSignInText}</p>
+              <Captcha locale={locale} onToken={setCaptchaToken} resetKey={captchaReset} />
               <button className="button button-primary owner-submit" type="button" disabled={submitting} onClick={() => void startEmailFreeSession()}>
                 {submitting ? t.sending : t.startListing}
               </button>
@@ -270,59 +346,107 @@ export default function OwnerPortal({ locale }: Props) {
           {portalState === "signed-in" && user && (
             <div className="owner-dashboard">
               <div className="owner-dashboard-heading">
-                <div><span className="section-kicker">{t.ownerListings}</span><h3>{t.ownerFormTitle}</h3></div>
+                <div><span className="section-kicker">{t.ownerListings}</span><h3>{editing ? t.editingTitle : t.ownerFormTitle}</h3></div>
                 <button type="button" className="signout-button" onClick={() => void signOutOwner()}>{t.signOut}</button>
               </div>
 
-              <form className="owner-form" onSubmit={submitListing}>
+              <form className="owner-form" id="owner-form" key={`${editing?.id ?? "new"}-${formVersion}`} onSubmit={submitListing}>
                 <div className="owner-form-grid">
-                  <label className="owner-field"><span>{t.titleArabic}</span><input name="title_ar" required minLength={5} maxLength={120} /></label>
-                  <label className="owner-field"><span>{t.titleEnglish}</span><input name="title_en" required minLength={5} maxLength={120} dir="ltr" /></label>
-                </div>
-                <div className="owner-form-grid">
-                  <label className="owner-field"><span>{t.descriptionArabic}</span><textarea name="description_ar" required minLength={20} rows={3} maxLength={2000} /></label>
-                  <label className="owner-field"><span>{t.descriptionEnglish}</span><textarea name="description_en" required minLength={20} rows={3} maxLength={2000} dir="ltr" /></label>
-                </div>
-                <div className="owner-form-grid owner-form-grid-three">
-                  <label className="owner-field"><span>{t.area}</span><select name="area" required defaultValue=""><option value="" disabled>{t.chooseArea}</option>{areas.map((area) => <option key={area.id} value={area.name_en}>{locale === "ar" ? area.name : area.name_en}</option>)}</select></label>
-                  <label className="owner-field"><span>{t.university}</span><select name="university" required defaultValue=""><option value="" disabled>{t.chooseUniversity}</option>{universities.map((university) => <option key={university.id} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}</select></label>
-                  <label className="owner-field"><span>{t.housing}</span><select name="gender" required defaultValue=""><option value="" disabled>{t.all}</option><option value="female">{t.female}</option><option value="male">{t.male}</option><option value="mixed">{t.mixed}</option></select></label>
-                </div>
-                <div className="owner-form-grid owner-form-grid-three">
-                  <label className="owner-field"><span>{t.propertyType}</span><select name="property_type" required defaultValue="room"><option value="room">{t.room}</option><option value="apartment">{t.apartment}</option><option value="bed">{t.bed}</option></select></label>
-                  <label className="owner-field"><span>{t.price}</span><input name="monthly_price" type="number" min="1" max="1000000" required /></label>
-                  <label className="owner-field"><span>{t.deposit}</span><input name="deposit" type="number" min="0" max="1000000" defaultValue="0" required /></label>
-                </div>
-                <div className="owner-form-grid owner-form-grid-three">
-                  <label className="owner-field"><span>{t.availableBeds}</span><input name="available_beds" type="number" min="1" max="100" defaultValue="1" required /></label>
-                  <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" type="number" min="1" max="100" defaultValue="1" required /></label>
-                  <label className="owner-field"><span>{t.walkingDistance}</span><input name="walking_distance_minutes" type="number" min="0" max="300" defaultValue="0" required /></label>
+                  <label className="owner-field"><span>{t.titleArabic}</span><input name="title_ar" required minLength={5} maxLength={120} defaultValue={editing?.title_ar} /></label>
+                  <label className="owner-field"><span>{t.titleEnglish}</span><input name="title_en" required minLength={5} maxLength={120} dir="ltr" defaultValue={editing?.title_en} /></label>
                 </div>
                 <div className="owner-form-grid">
-                  <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" autoComplete="tel" pattern="[+0-9 ()-]{8,20}" required dir="ltr" /></label>
-                  <label className="owner-field"><span className="file-field-label"><ImagePlus size={14} /> {t.listingPhoto}</span><input name="image" type="file" accept="image/jpeg,image/png,image/webp" required onChange={(event) => { const file = event.target.files?.[0] ?? null; setImagePreview(file ? URL.createObjectURL(file) : ""); }} /></label>
+                  <label className="owner-field"><span>{t.descriptionArabic}</span><textarea name="description_ar" required minLength={20} rows={3} maxLength={2000} defaultValue={editing?.description_ar} /></label>
+                  <label className="owner-field"><span>{t.descriptionEnglish}</span><textarea name="description_en" required minLength={20} rows={3} maxLength={2000} dir="ltr" defaultValue={editing?.description_en} /></label>
                 </div>
-                {imagePreview && <Image className="owner-image-preview" src={imagePreview} alt={t.listingPhoto} width={560} height={260} unoptimized />}
+                <div className="owner-form-grid owner-form-grid-three">
+                  <label className="owner-field"><span>{t.area}</span><select name="area" required defaultValue={editing?.area ?? ""}><option value="" disabled>{t.chooseArea}</option>{areas.map((area) => <option key={area.id} value={area.name_en}>{locale === "ar" ? area.name : area.name_en}</option>)}</select></label>
+                  <label className="owner-field"><span>{t.university}</span><select name="university" required defaultValue={editing?.university ?? ""}><option value="" disabled>{t.chooseUniversity}</option>{universities.map((university) => <option key={university.id} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}</select></label>
+                  <label className="owner-field"><span>{t.housing}</span><select name="gender" required defaultValue={editing?.gender ?? ""}><option value="" disabled>{t.all}</option><option value="female">{t.female}</option><option value="male">{t.male}</option><option value="mixed">{t.mixed}</option></select></label>
+                </div>
+                <div className="owner-form-grid owner-form-grid-three">
+                  <label className="owner-field"><span>{t.propertyType}</span><select name="property_type" required defaultValue={editing?.property_type ?? "room"}><option value="room">{t.room}</option><option value="apartment">{t.apartment}</option><option value="bed">{t.bed}</option></select></label>
+                  <label className="owner-field"><span>{t.price}</span><input name="monthly_price" type="number" min="1" max="1000000" required defaultValue={editing?.monthly_price} /></label>
+                  <label className="owner-field"><span>{t.deposit}</span><input name="deposit" type="number" min="0" max="1000000" defaultValue={editing?.deposit ?? 0} required /></label>
+                </div>
+                <div className="owner-form-grid owner-form-grid-three">
+                  <label className="owner-field"><span>{t.availableBeds}</span><input name="available_beds" type="number" min="1" max="100" defaultValue={editing?.available_beds ?? 1} required /></label>
+                  <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" type="number" min="1" max="100" defaultValue={editing?.total_beds ?? 1} required /></label>
+                  <label className="owner-field"><span>{t.walkingDistance}</span><input name="walking_distance_minutes" type="number" min="0" max="300" defaultValue={editing?.walking_distance_minutes ?? 0} required /></label>
+                </div>
+                <div className="owner-form-grid">
+                  <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" autoComplete="tel" pattern="[+0-9 ()-]{8,20}" placeholder={t.whatsappHint} required dir="ltr" defaultValue={editing?.whatsapp_number} /></label>
+                  <label className="owner-field">
+                    <span className="file-field-label"><ImagePlus size={14} /> {t.listingPhotos}</span>
+                    <input
+                      name="images"
+                      type="file"
+                      accept={ALLOWED_IMAGE_TYPES.join(",")}
+                      multiple
+                      required={!editing}
+                      onChange={(event) => {
+                        const files = Array.from(event.target.files ?? []).slice(0, MAX_IMAGES);
+                        setImagePreviews(files.map((file) => URL.createObjectURL(file)));
+                      }}
+                    />
+                    <small className="field-hint">{editing ? t.keepPhotosHint : t.photosHint}</small>
+                  </label>
+                </div>
+                {(imagePreviews.length > 0 || editing) && (
+                  <div className="owner-image-previews">
+                    {(imagePreviews.length > 0 ? imagePreviews : listingImages(editing!)).map((src, index) => (
+                      <Image key={src} className="owner-image-preview" src={src} alt={t.photoAlt(t.listingPhoto, index + 1)} width={160} height={110} unoptimized={src.startsWith("blob:")} />
+                    ))}
+                  </div>
+                )}
                 <fieldset className="amenity-fieldset">
                   <legend>{t.amenitiesTitle}</legend>
-                  <label><input name="furnished" type="checkbox" /> {t.furnished}</label>
-                  <label><input name="wifi" type="checkbox" /> {t.wifi}</label>
-                  <label><input name="air_conditioning" type="checkbox" /> {t.airConditioning}</label>
-                  <label><input name="security" type="checkbox" /> {t.secure}</label>
+                  <label><input name="furnished" type="checkbox" defaultChecked={editing?.furnished} /> {t.furnished}</label>
+                  <label><input name="wifi" type="checkbox" defaultChecked={editing?.wifi} /> {t.wifi}</label>
+                  <label><input name="air_conditioning" type="checkbox" defaultChecked={editing?.air_conditioning} /> {t.airConditioning}</label>
+                  <label><input name="security" type="checkbox" defaultChecked={editing?.security} /> {t.secure}</label>
                 </fieldset>
-                <button className="button button-primary owner-submit" type="submit" disabled={submitting}>
-                  {submitting ? t.submitting : t.submitListing}
-                </button>
+                <div className="owner-form-actions">
+                  <button className="button button-primary owner-submit" type="submit" disabled={submitting}>
+                    {submitting ? busyText || t.submitting : editing ? t.saveChanges : t.submitListing}
+                  </button>
+                  {editing && <button className="signout-button" type="button" disabled={submitting} onClick={stopEditing}>{t.cancel}</button>}
+                </div>
               </form>
 
               <div className="owner-listings">
                 <h4>{t.ownerListings}</h4>
-                {loadingListings ? <p>{t.loading}</p> : ownerListings.length === 0 ? <p>{t.noOwnerListings}</p> : ownerListings.map((listing) => (
-                  <div className="owner-listing-row" key={listing.id}>
-                    <span>{locale === "ar" ? listing.title_ar : listing.title_en}</span>
-                    <span className={`listing-status listing-status-${listing.status}`}>{statusLabel(listing.status)}</span>
-                  </div>
-                ))}
+                {loadingListings ? <p>{t.loading}</p> : ownerListings.length === 0 ? <p>{t.noOwnerListings}</p> : ownerListings.map((listing) => {
+                  const title = locale === "ar" ? listing.title_ar : listing.title_en;
+                  const canChange = listing.status !== "approved";
+                  return (
+                    <div className="owner-listing-row" key={listing.id}>
+                      <div className="owner-listing-main">
+                        {listing.status === "approved"
+                          ? <Link href={listingPath(locale, listing.id)}>{title}</Link>
+                          : <span>{title}</span>}
+                        {listing.status === "rejected" && listing.rejection_reason && (
+                          <small className="owner-review-note"><strong>{t.reviewNote}:</strong> {listing.rejection_reason}</small>
+                        )}
+                      </div>
+                      <div className="owner-listing-actions">
+                        <span className={`listing-status listing-status-${listing.status}`}>{statusLabel(listing.status)}</span>
+                        {canChange && confirmingDeleteId !== listing.id && (
+                          <>
+                            <button type="button" className="owner-text-button" disabled={submitting} onClick={() => startEditing(listing)}>{t.editListing}</button>
+                            <button type="button" className="owner-text-button is-danger" disabled={submitting} onClick={() => setConfirmingDeleteId(listing.id)}>{t.deleteListing}</button>
+                          </>
+                        )}
+                        {confirmingDeleteId === listing.id && (
+                          <>
+                            <button type="button" className="owner-text-button is-danger" disabled={submitting} onClick={() => void deleteListing(listing)}>{t.confirmDelete}</button>
+                            <button type="button" className="owner-text-button" disabled={submitting} onClick={() => setConfirmingDeleteId(null)}>{t.cancel}</button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LockKeyhole } from "lucide-react";
+import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -17,6 +18,16 @@ export default function AdminSignIn({ locale }: { locale: SiteLocale }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [resetMode, setResetMode] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaReset, setCaptchaReset] = useState(0);
+
+  function captchaMissing() {
+    if (CAPTCHA_SITE_KEY && !captchaToken) {
+      setError(t.captchaRequired);
+      return true;
+    }
+    return false;
+  }
 
   async function handlePasswordReset() {
     if (!supabase) {
@@ -27,13 +38,18 @@ export default function AdminSignIn({ locale }: { locale: SiteLocale }) {
       setError(t.adminResetEmailRequired);
       return;
     }
+    if (captchaMissing()) return;
 
     setSubmitting(true);
     setError("");
     setNotice("");
     try {
       const redirectTo = `${window.location.origin}/${locale}/update-password`;
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo,
+        ...(captchaToken ? { captchaToken } : {}),
+      });
+      setCaptchaReset((value) => value + 1);
       if (resetError) {
         console.error("Could not request an admin password reset:", resetError);
         setError(resetError.status === 429 ? t.adminResetRateLimit : t.adminResetError);
@@ -68,6 +84,7 @@ export default function AdminSignIn({ locale }: { locale: SiteLocale }) {
       setError(t.ownerSetupNeeded);
       return;
     }
+    if (captchaMissing()) return;
 
     setSubmitting(true);
     setError("");
@@ -76,7 +93,9 @@ export default function AdminSignIn({ locale }: { locale: SiteLocale }) {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
+        ...(captchaToken ? { options: { captchaToken } } : {}),
       });
+      setCaptchaReset((value) => value + 1);
 
       if (signInError) {
         console.error("Could not sign in to the admin dashboard:", signInError);
@@ -136,6 +155,7 @@ export default function AdminSignIn({ locale }: { locale: SiteLocale }) {
             <span>{t.password}</span>
             <input name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} required />
           </label>}
+          <Captcha locale={locale} onToken={setCaptchaToken} resetKey={captchaReset} />
           <button className="button button-primary owner-submit" type="submit" disabled={submitting} aria-live="polite">
             {submitting ? (resetMode ? t.adminResetSending : t.signingIn) : (resetMode ? t.adminResetSend : t.signIn)}
           </button>

@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Property } from "@/types";
 
 export type MarketplaceListing = {
@@ -22,9 +23,81 @@ export type MarketplaceListing = {
   walking_distance_minutes: number;
   whatsapp_number: string;
   image_url: string;
+  image_urls: string[];
+  verified: boolean;
+  rejection_reason: string | null;
   status: "pending" | "approved" | "rejected";
   created_at: string;
+  updated_at: string;
 };
+
+/** Columns that are safe to show to anyone. Excludes owner_id and review notes. */
+export const PUBLIC_LISTING_COLUMNS =
+  "id,title_ar,title_en,description_ar,description_en,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,whatsapp_number,image_url,image_urls,verified,status,created_at,updated_at";
+
+export const LISTINGS_PAGE_SIZE = 12;
+
+export type ListingSort = "newest" | "price_asc" | "price_desc";
+
+export type ListingFilters = {
+  university: string;
+  area: string;
+  gender: string;
+  propertyType: string;
+  maxPrice: string;
+  sort: ListingSort;
+};
+
+export const EMPTY_FILTERS: ListingFilters = {
+  university: "",
+  area: "",
+  gender: "",
+  propertyType: "",
+  maxPrice: "",
+  sort: "newest",
+};
+
+export function hasActiveFilters(filters: ListingFilters) {
+  return Boolean(filters.university || filters.area || filters.gender || filters.propertyType || filters.maxPrice);
+}
+
+export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Runs the public feed query with filtering, sorting and pagination done by the database. */
+export async function fetchApprovedListings(
+  client: SupabaseClient,
+  filters: ListingFilters,
+  page: number,
+): Promise<{ listings: Property[]; total: number; error: unknown }> {
+  let query = client
+    .from("properties")
+    .select(PUBLIC_LISTING_COLUMNS, { count: "exact" })
+    .eq("status", "approved");
+
+  if (filters.university) query = query.eq("university", filters.university);
+  if (filters.area) query = query.eq("area", filters.area);
+  if (filters.gender) query = query.eq("gender", filters.gender);
+  if (filters.propertyType) query = query.eq("property_type", filters.propertyType);
+  const maxPrice = Number(filters.maxPrice);
+  if (filters.maxPrice && Number.isFinite(maxPrice) && maxPrice > 0) query = query.lte("monthly_price", maxPrice);
+
+  if (filters.sort === "price_asc") query = query.order("monthly_price", { ascending: true });
+  else if (filters.sort === "price_desc") query = query.order("monthly_price", { ascending: false });
+  query = query.order("created_at", { ascending: false });
+
+  const from = page * LISTINGS_PAGE_SIZE;
+  const { data, count, error } = await query.range(from, from + LISTINGS_PAGE_SIZE - 1);
+
+  return {
+    listings: ((data ?? []) as unknown as MarketplaceListing[]).map(toProperty),
+    total: count ?? 0,
+    error,
+  };
+}
+
+export function listingImages(listing: Pick<MarketplaceListing, "image_url" | "image_urls">) {
+  return listing.image_urls?.length ? listing.image_urls : [listing.image_url].filter(Boolean);
+}
 
 export function toProperty(listing: MarketplaceListing): Property {
   const now = new Date().toISOString();
@@ -52,12 +125,12 @@ export function toProperty(listing: MarketplaceListing): Property {
     security: listing.security,
     available_beds: listing.available_beds,
     total_beds: listing.total_beds,
-    verification_status: "verified",
+    verification_status: listing.verified ? "verified" : "pending",
     walking_distance_minutes: listing.walking_distance_minutes,
     address_text: `${listing.area}, Giza, Egypt`,
     whatsapp_number: listing.whatsapp_number,
     phone_number: listing.whatsapp_number,
-    images: [listing.image_url],
+    images: listingImages(listing),
     amenities: [
       ...(listing.wifi ? ["Wi-Fi"] : []),
       ...(listing.furnished ? ["Furnished"] : []),
@@ -66,6 +139,6 @@ export function toProperty(listing: MarketplaceListing): Property {
     ],
     rules: [],
     created_at: listing.created_at || now,
-    updated_at: listing.created_at || now,
+    updated_at: listing.updated_at || listing.created_at || now,
   };
 }
