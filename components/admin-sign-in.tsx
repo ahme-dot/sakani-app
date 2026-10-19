@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LockKeyhole } from "lucide-react";
+import { Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
+import AuthLayout from "@/components/auth-layout";
 import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -18,6 +18,7 @@ export default function AdminSignIn({ locale }: { locale: SiteLocale }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [resetMode, setResetMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaReset, setCaptchaReset] = useState(0);
 
@@ -139,35 +140,54 @@ export default function AdminSignIn({ locale }: { locale: SiteLocale }) {
     }
   }
 
+  function switchMode(nextResetMode: boolean) {
+    setResetMode(nextResetMode);
+    setError("");
+    setNotice("");
+  }
+
   return (
-    <main className="admin-page" dir={locale === "ar" ? "rtl" : "ltr"}>
-      <section className="admin-auth-panel">
-        <span className="signin-icon"><LockKeyhole size={20} /></span>
-        <span className="section-kicker">{t.adminNav}</span>
-        <h1>{t.signInTitle}</h1>
-        <p>{t.signInDescription}</p>
-        <form className="admin-sign-in-form" noValidate onSubmit={handleSubmit}>
-          <label className="owner-field">
-            <span>{t.email}</span>
-            <input name="email" type="email" autoComplete="username" value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} required />
+    <AuthLayout locale={locale}>
+      <span className="auth-icon"><LockKeyhole size={20} /></span>
+      <h1>{resetMode ? t.adminForgotPassword : t.signInTitle}</h1>
+      <p className="auth-lead">{resetMode ? t.authResetIntro : t.signInDescription}</p>
+
+      <form className="auth-form" noValidate onSubmit={handleSubmit}>
+        <label className="auth-field">
+          <span>{t.email}</span>
+          <span className="auth-input">
+            <Mail size={17} aria-hidden="true" />
+            <input name="email" type="email" autoComplete="username" dir="ltr" placeholder="name@example.com" value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} required />
+          </span>
+        </label>
+
+        {!resetMode && (
+          <label className="auth-field">
+            <span className="auth-field-row">
+              {t.password}
+              <button className="auth-link" type="button" onClick={() => switchMode(true)}>{t.adminForgotPassword}</button>
+            </span>
+            <span className="auth-input">
+              <KeyRound size={17} aria-hidden="true" />
+              <input name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" dir="ltr" value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} required />
+              <button className="auth-reveal" type="button" aria-label={showPassword ? t.hidePassword : t.showPassword} title={showPassword ? t.hidePassword : t.showPassword} onClick={() => setShowPassword((value) => !value)}>
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </span>
           </label>
-          {!resetMode && <label className="owner-field">
-            <span>{t.password}</span>
-            <input name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} required />
-          </label>}
-          <Captcha locale={locale} onToken={setCaptchaToken} resetKey={captchaReset} />
-          <button className="button button-primary owner-submit" type="submit" disabled={submitting} aria-live="polite">
-            {submitting ? (resetMode ? t.adminResetSending : t.signingIn) : (resetMode ? t.adminResetSend : t.signIn)}
-          </button>
-        </form>
-        <div className="admin-auth-links">
-          {!resetMode && <button className="admin-text-button" type="button" onClick={() => { setResetMode(true); setError(""); setNotice(""); }}>{t.adminForgotPassword}</button>}
-          {resetMode && <button className="admin-text-button" type="button" onClick={() => { setResetMode(false); setError(""); setNotice(""); }}>{t.adminBackToSignIn}</button>}
-          <Link className="admin-home-link" href={locale === "ar" ? "/ar" : "/en"}>{t.adminBackHome}</Link>
-        </div>
-        {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
-        {notice && <p className="owner-feedback owner-feedback-success" role="status">{notice}</p>}
-      </section>
-    </main>
+        )}
+
+        <Captcha locale={locale} onToken={setCaptchaToken} resetKey={captchaReset} />
+        {error && <p className="auth-message is-error" role="alert">{error}</p>}
+        {notice && <p className="auth-message is-success" role="status">{notice}</p>}
+
+        <button className="auth-submit" type="submit" disabled={submitting} aria-live="polite">
+          {submitting ? <LoaderCircle className="spinner" size={18} /> : null}
+          {submitting ? (resetMode ? t.adminResetSending : t.signingIn) : (resetMode ? t.adminResetSend : t.signIn)}
+        </button>
+      </form>
+
+      {resetMode && <button className="auth-link auth-switch" type="button" onClick={() => switchMode(false)}>{t.adminBackToSignIn}</button>}
+    </AuthLayout>
   );
 }

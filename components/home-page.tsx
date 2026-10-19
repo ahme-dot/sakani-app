@@ -135,7 +135,9 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
   const [loading, setLoading] = useState<"none" | "replace" | "more">("none");
   const [listingError, setListingError] = useState(initialError);
   const requestId = useRef(0);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const filtersActive = hasActiveFilters(filters);
+  const extraFilterCount = [filters.propertyType, filters.maxPrice].filter(Boolean).length;
 
   async function loadListings(nextFilters: ListingFilters, nextPage: number) {
     if (isDemoMode) {
@@ -230,6 +232,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
               <div><h2 id="search-title">{t.searchTitle}</h2><p>{t.searchDescription}</p></div>
             </div>
             <form className="search-form" onSubmit={handleSearch}>
+              <div className="search-main">
               <label className="field">
                 <span>{t.university}</span>
                 <span className="select-wrap">
@@ -262,6 +265,18 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
                   <ChevronDown size={16} />
                 </span>
               </label>
+              <button className="button button-primary search-button" type="submit"><Search size={18} /> {t.searchButton}</button>
+              </div>
+
+              <div className="search-extra-bar">
+                <button className="search-more-toggle" type="button" aria-expanded={showMoreFilters} aria-controls="search-extra" onClick={() => setShowMoreFilters((value) => !value)}>
+                  <SlidersHorizontal size={15} /> {showMoreFilters ? t.hideFilters : t.moreFilters}
+                  {extraFilterCount > 0 && <span className="search-more-count">{extraFilterCount}</span>}
+                </button>
+                {filtersActive && <button className="reset-button" type="button" onClick={resetFilters}>{t.clearFilters}</button>}
+              </div>
+
+              <div className="search-extra" id="search-extra" hidden={!showMoreFilters}>
               <label className="field">
                 <span>{t.propertyType}</span>
                 <span className="select-wrap">
@@ -288,20 +303,6 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
                   dir="ltr"
                 />
               </label>
-              <label className="field">
-                <span>{t.sortLabel}</span>
-                <span className="select-wrap">
-                  <select value={filters.sort} onChange={(event) => updateFilters({ sort: event.target.value as ListingSort })}>
-                    <option value="newest">{t.sortNewest}</option>
-                    <option value="price_asc">{t.sortPriceAsc}</option>
-                    <option value="price_desc">{t.sortPriceDesc}</option>
-                  </select>
-                  <ChevronDown size={16} />
-                </span>
-              </label>
-              <div className="search-actions">
-                <button className="button button-primary search-button" type="submit"><Search size={18} /> {t.searchButton}</button>
-                {(filtersActive || filters.sort !== "newest") && <button className="reset-button" type="button" onClick={resetFilters}>{t.clearFilters}</button>}
               </div>
             </form>
           </div>
@@ -314,7 +315,17 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
               <h2>{filtersActive ? t.filteredTitle : t.featuredTitle}</h2>
               <p aria-live="polite">{filtersActive ? t.resultCount(total) : isDemoMode ? t.browseHint : t.approvedListingCount(total)}</p>
             </div>
-            <a href="#search" className="section-link">{t.customizeSearch} <ArrowLeft size={17} /></a>
+            <label className="listing-sort">
+              <span>{t.sortLabel}</span>
+              <span className="select-wrap">
+                <select value={filters.sort} onChange={(event) => updateFilters({ sort: event.target.value as ListingSort })}>
+                  <option value="newest">{t.sortNewest}</option>
+                  <option value="price_asc">{t.sortPriceAsc}</option>
+                  <option value="price_desc">{t.sortPriceDesc}</option>
+                </select>
+                <ChevronDown size={16} />
+              </span>
+            </label>
           </div>
           {isDemoMode && <p className="demo-notice">{t.demoNotice}</p>}
           {listingError && <p className="owner-feedback owner-feedback-error" role="alert">{t.feedError}</p>}

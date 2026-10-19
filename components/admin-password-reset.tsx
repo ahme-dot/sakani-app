@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LockKeyhole, LoaderCircle } from "lucide-react";
+import { Eye, EyeOff, KeyRound, LockKeyhole, LoaderCircle } from "lucide-react";
+import AuthLayout from "@/components/auth-layout";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -15,6 +16,7 @@ export default function AdminPasswordReset({ locale }: { locale: SiteLocale }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [state, setState] = useState<ResetState>(supabase ? "checking" : "invalid");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -70,36 +72,38 @@ export default function AdminPasswordReset({ locale }: { locale: SiteLocale }) {
   }
 
   return (
-    <main className="admin-page" dir={locale === "ar" ? "rtl" : "ltr"}>
-      <section className="admin-auth-panel">
-        <span className="signin-icon"><LockKeyhole size={20} /></span>
-        <span className="section-kicker">{t.adminNav}</span>
-        <h1>{t.adminResetTitle}</h1>
-        {state === "checking" ? (
-          <div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.adminResetChecking}</div>
-        ) : state === "invalid" ? (
-          <>
-            <p>{t.adminResetInvalid}</p>
-            {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
-            <Link className="button button-primary owner-submit" href={`/${locale}/sign-in`}>{t.signIn}</Link>
-          </>
-        ) : (
-          <>
-            <p>{t.adminResetDescription}</p>
-            <form className="admin-sign-in-form" onSubmit={handleSubmit}>
-              <label className="owner-field">
-                <span>{t.adminNewPassword}</span>
-                <input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required />
-              </label>
-              <button className="button button-primary owner-submit" type="submit" disabled={submitting}>
-                {submitting ? t.adminResetSaving : t.adminResetSave}
-              </button>
-            </form>
-          </>
-        )}
-        {error && state !== "invalid" && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
-        <Link className="admin-home-link" href={locale === "ar" ? "/ar" : "/en"}>{t.adminBackHome}</Link>
-      </section>
-    </main>
+    <AuthLayout locale={locale}>
+      <span className="auth-icon"><LockKeyhole size={20} /></span>
+      <h1>{t.adminResetTitle}</h1>
+      {state === "checking" ? (
+        <div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.adminResetChecking}</div>
+      ) : state === "invalid" ? (
+        <>
+          <p className="auth-lead">{t.adminResetInvalid}</p>
+          {error && <p className="auth-message is-error" role="alert">{error}</p>}
+          <Link className="auth-submit" href={`/${locale}/sign-in`}>{t.signIn}</Link>
+        </>
+      ) : (
+        <>
+          <p className="auth-lead">{t.adminResetDescription}</p>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <label className="auth-field">
+              <span>{t.adminNewPassword}</span>
+              <span className="auth-input">
+                <KeyRound size={17} aria-hidden="true" />
+                <input type={showPassword ? "text" : "password"} autoComplete="new-password" dir="ltr" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required />
+                <button className="auth-reveal" type="button" aria-label={showPassword ? t.hidePassword : t.showPassword} title={showPassword ? t.hidePassword : t.showPassword} onClick={() => setShowPassword((value) => !value)}>
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </span>
+            </label>
+            {error && <p className="auth-message is-error" role="alert">{error}</p>}
+            <button className="auth-submit" type="submit" disabled={submitting}>
+              {submitting ? t.adminResetSaving : t.adminResetSave}
+            </button>
+          </form>
+        </>
+      )}
+    </AuthLayout>
   );
 }
