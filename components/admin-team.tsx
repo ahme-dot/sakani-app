@@ -118,22 +118,15 @@ export default function AdminTeam({ locale, supabase, currentUserId }: { locale:
   }
 
   return (
-    <section className="admin-team" aria-labelledby="admin-team-title">
-      <div className="admin-team-heading">
-        <span className="signin-icon"><ShieldCheck size={20} /></span>
-        <div>
-          <h2 id="admin-team-title">{t.teamTitle}</h2>
-          <p>{t.teamDescription}</p>
-        </div>
-      </div>
-
+    <section className="admin-team" aria-label={t.teamTitle}>
+      <h2 className="admin-section-title"><UserPlus size={17} /> {t.teamAddButton}</h2>
       <form className="admin-team-add" onSubmit={addAdmin}>
         <label className="owner-field">
           <span>{t.teamAddLabel}</span>
           <input type="email" required autoComplete="off" dir="ltr" value={email} placeholder="name@example.com" onChange={(event) => setEmail(event.target.value)} />
         </label>
-        <button className="button button-primary owner-submit" type="submit" disabled={busy}>
-          <UserPlus size={16} /> {busy ? t.sending : t.teamAddButton}
+        <button className="admin-btn admin-btn-primary" type="submit" disabled={busy}>
+          {busy ? t.sending : t.teamAddButton}
         </button>
       </form>
       <p className="field-hint admin-team-hint">{t.teamAddHint}</p>
@@ -141,6 +134,7 @@ export default function AdminTeam({ locale, supabase, currentUserId }: { locale:
       {message && <p className="owner-feedback owner-feedback-success" role="status">{message}</p>}
       {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
 
+      <h2 className="admin-section-title admin-team-list-title"><ShieldCheck size={17} /> {t.teamMembers(members.length)}</h2>
       {loading ? (
         <div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.loading}</div>
       ) : (
