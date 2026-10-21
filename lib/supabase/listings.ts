@@ -39,12 +39,16 @@ export const LISTINGS_PAGE_SIZE = 12;
 
 export type ListingSort = "newest" | "price_asc" | "price_desc";
 
+export const AMENITY_FILTERS = ["furnished", "wifi", "air_conditioning", "security"] as const;
+export type AmenityFilter = (typeof AMENITY_FILTERS)[number];
+
 export type ListingFilters = {
   university: string;
   area: string;
   gender: string;
   propertyType: string;
   maxPrice: string;
+  amenities: AmenityFilter[];
   sort: ListingSort;
 };
 
@@ -54,14 +58,30 @@ export const EMPTY_FILTERS: ListingFilters = {
   gender: "",
   propertyType: "",
   maxPrice: "",
+  amenities: [],
   sort: "newest",
 };
 
 export function hasActiveFilters(filters: ListingFilters) {
-  return Boolean(filters.university || filters.area || filters.gender || filters.propertyType || filters.maxPrice);
+  return Boolean(filters.university || filters.area || filters.gender || filters.propertyType || filters.maxPrice || filters.amenities.length);
 }
 
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Other approved listings near the same university, for "More homes near…" on a listing page. */
+export async function fetchSimilarListings(client: SupabaseClient, listing: Pick<Property, "id" | "university">, limit = 3) {
+  const { data, error } = await client
+    .from("properties")
+    .select(PUBLIC_LISTING_COLUMNS)
+    .eq("status", "approved")
+    .eq("university", listing.university)
+    .neq("id", listing.id)
+    .order("verified", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) console.error("Could not load similar listings:", error);
+  return ((data ?? []) as unknown as MarketplaceListing[]).map(toProperty);
+}
 
 /** Runs the public feed query with filtering, sorting and pagination done by the database. */
 export async function fetchApprovedListings(
@@ -80,6 +100,7 @@ export async function fetchApprovedListings(
   if (filters.propertyType) query = query.eq("property_type", filters.propertyType);
   const maxPrice = Number(filters.maxPrice);
   if (filters.maxPrice && Number.isFinite(maxPrice) && maxPrice > 0) query = query.lte("monthly_price", maxPrice);
+  for (const amenity of filters.amenities) query = query.eq(amenity, true);
 
   if (filters.sort === "price_asc") query = query.order("monthly_price", { ascending: true });
   else if (filters.sort === "price_desc") query = query.order("monthly_price", { ascending: false });

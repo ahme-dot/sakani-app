@@ -84,6 +84,7 @@ export function SiteFooter({ locale, sectionBase = "", switchHref }: ChromeProps
           <a href={`${sectionBase}#search`}>{t.headerSearch}</a>
           <a href={`${sectionBase}#homes`}>{t.navListings}</a>
           <a href={`${sectionBase}#why-sakani`}>{t.footerAbout}</a>
+          <a href={`${sectionBase}#faq`}>{t.faqKicker}</a>
         </nav>
         <nav aria-label={t.footerForOwners}>
           <h3>{t.footerForOwners}</h3>

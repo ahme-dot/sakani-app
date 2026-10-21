@@ -20,11 +20,14 @@ import {
   Wind,
 } from "lucide-react";
 import ListingGallery from "@/components/listing-gallery";
+import { ReportListing, ShareListingButton } from "@/components/listing-actions";
+import PropertyCard from "@/components/property-card";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { areas, universities } from "@/lib/data";
 import { bilingualMetadata } from "@/lib/metadata";
 import { SITE_URL, listingPath, whatsappLink } from "@/lib/site";
-import { getApprovedListing } from "@/lib/supabase/server";
+import { fetchSimilarListings } from "@/lib/supabase/listings";
+import { getApprovedListing, getSupabaseServerClient } from "@/lib/supabase/server";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 type ListingParams = { params: Promise<{ id: string }> };
@@ -60,14 +63,17 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-EG");
   const verified = listing.verification_status === "verified";
   const whatsappHref = whatsappLink(listing.whatsapp_number, t.whatsappMessage(title));
+  const pageUrl = `${SITE_URL}${listingPath(locale, listing.id)}`;
+  const serverClient = getSupabaseServerClient();
+  const similar = serverClient ? await fetchSimilarListings(serverClient, listing) : [];
 
   const facts = [
     { icon: Building2, label: t.propertyType, value: t[listing.property_type] },
-    { icon: Users, label: t.housing, value: t[listing.gender] },
-    { icon: GraduationCap, label: t.university, value: universityLabel },
-    { icon: Clock3, label: t.walkingDistance, value: t.walkingMinutes(listing.walking_distance_minutes) },
+    { icon: Users, label: t.adminDetailsGender, value: t[listing.gender] },
     { icon: BedDouble, label: t.beds, value: t.bedsSummary(listing.available_beds, listing.total_beds) },
-    { icon: Wallet, label: t.deposit, value: numberFormat.format(listing.deposit) },
+    { icon: Clock3, label: t.walkingDistance, value: t.walkingMinutes(listing.walking_distance_minutes) },
+    { icon: GraduationCap, label: t.university, value: universityLabel },
+    { icon: Wallet, label: t.deposit, value: listing.deposit > 0 ? numberFormat.format(listing.deposit) : t.noDeposit },
   ];
   const amenities: Array<{ icon: typeof Check; label: string }> = [
     ...(listing.furnished ? [{ icon: Check, label: t.furnished }] : []),
@@ -97,56 +103,70 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
       />
 
-      <main className="listing-page section-wrap">
+      <main className="listing2 section-wrap">
         <Link className="listing-back" href={`/${locale}#homes`}>
           <ArrowRight size={16} /> {t.backToListings}
         </Link>
 
-        <div className="listing-layout">
-          <div className="listing-main">
-            <ListingGallery images={listing.images} altFor={listing.images.map((_, index) => t.photoAlt(title, index + 1))} />
+        <ListingGallery images={listing.images} altFor={listing.images.map((_, index) => t.photoAlt(title, index + 1))} />
 
-            <div className="listing-heading">
-              <div className="property-location"><MapPin size={15} /> {locale === "ar" ? `${areaLabel}، ${t.city}` : `${areaLabel}, ${t.city}`}</div>
-              <h1>{title}</h1>
-              {verified && <span className="verified-badge"><BadgeCheck size={14} /> {t.verified}</span>}
+        <div className="listing2-layout">
+          <div className="listing2-main">
+            <div className="listing2-badges">
+              {verified && <span className="listing2-badge is-verified"><BadgeCheck size={14} /> {t.verified}</span>}
+              <span className="listing2-badge">{t[listing.property_type]}</span>
+              <span className="listing2-badge">{t[listing.gender]}</span>
             </div>
+            <h1>{title}</h1>
+            <p className="listing2-location">
+              <span><MapPin size={16} /> {locale === "ar" ? `${areaLabel}، ${t.city}` : `${areaLabel}, ${t.city}`}</span>
+              <span><GraduationCap size={16} /> {universityLabel}</span>
+            </p>
 
-            <section className="listing-section" aria-labelledby="listing-details-title">
-              <h2 id="listing-details-title">{t.listingDetails}</h2>
-              <dl className="listing-facts">
-                {facts.map(({ icon: Icon, label, value }) => (
-                  <div key={label}>
-                    <dt><Icon size={15} /> {label}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
+            <dl className="listing2-facts" aria-label={t.listingDetails}>
+              {facts.map(({ icon: Icon, label, value }) => (
+                <div key={label}>
+                  <span className="listing2-fact-icon"><Icon size={18} /></span>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
 
-            <section className="listing-section">
+            <section className="listing2-section" aria-labelledby="listing-description-title">
+              <h2 id="listing-description-title">{t.listingDetails}</h2>
               <p className="listing-description">{description}</p>
             </section>
 
             {amenities.length > 0 && (
-              <section className="listing-section" aria-labelledby="listing-amenities-title">
+              <section className="listing2-section" aria-labelledby="listing-amenities-title">
                 <h2 id="listing-amenities-title">{t.amenitiesTitle}</h2>
                 <ul className="listing-amenities">
                   {amenities.map(({ icon: Icon, label }) => <li key={label}><Icon size={16} /> {label}</li>)}
                 </ul>
               </section>
             )}
+
+            <div className="listing-safety">
+              <ShieldAlert size={18} />
+              <div><strong>{t.safetyTitle}</strong><p>{t.safetyText}</p></div>
+            </div>
           </div>
 
-          <aside className="listing-aside">
-            <div className="listing-price-card">
-              <p className="property-price">
+          <aside className="listing2-aside">
+            <div className="listing2-card">
+              <p className="listing2-price">
                 <strong>{numberFormat.format(listing.monthly_price)}</strong>
                 <span>{t.perMonth}</span>
               </p>
-              <a className="button button-primary listing-contact" href={whatsappHref} target="_blank" rel="noreferrer">
+              <ul className="listing2-card-meta">
+                <li><Wallet size={15} /> {listing.deposit > 0 ? t.depositLine(numberFormat.format(listing.deposit)) : t.noDeposit}</li>
+                <li><BedDouble size={15} /> {t.availableBedsLine(listing.available_beds, listing.total_beds)}</li>
+              </ul>
+              <a className="button button-primary listing2-whatsapp" href={whatsappHref} target="_blank" rel="noreferrer">
                 <MessageCircle size={18} /> {t.contactOwner}
               </a>
+              <ShareListingButton locale={locale} title={title} url={pageUrl} className="listing2-share" />
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>
                 {verified ? <BadgeCheck size={16} /> : <Info size={16} />}
                 {verified ? t.listingVerifiedNote : t.listingUnverifiedNote}
@@ -155,13 +175,30 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                 {t.listedOn}: <time dateTime={listing.created_at}>{new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium" }).format(new Date(listing.created_at))}</time>
               </p>
             </div>
-            <div className="listing-safety">
-              <ShieldAlert size={18} />
-              <div><strong>{t.safetyTitle}</strong><p>{t.safetyText}</p></div>
-            </div>
+            <ReportListing locale={locale} listingId={listing.id} />
           </aside>
         </div>
+
+        {similar.length > 0 && (
+          <section className="listing2-similar" aria-labelledby="similar-title">
+            <h2 id="similar-title">{t.similarListings(universityLabel)}</h2>
+            <div className="property-grid">
+              {similar.map((item) => <PropertyCard key={item.id} property={item} locale={locale} />)}
+            </div>
+          </section>
+        )}
       </main>
+
+      {/* Phones: price and contact always within reach. */}
+      <div className="listing2-bar">
+        <p className="listing2-price">
+          <strong>{numberFormat.format(listing.monthly_price)}</strong>
+          <span>{t.perMonth}</span>
+        </p>
+        <a className="button button-primary" href={whatsappHref} target="_blank" rel="noreferrer">
+          <MessageCircle size={18} /> {t.contactShort}
+        </a>
+      </div>
 
       <SiteFooter locale={locale} sectionBase={`/${locale}`} switchHref={listingPath(otherLocale, listing.id)} />
     </div>

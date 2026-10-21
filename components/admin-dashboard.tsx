@@ -11,6 +11,7 @@ import {
   Building2,
   Clock3,
   ExternalLink,
+  Flag,
   GraduationCap,
   Home,
   Images,
@@ -31,6 +32,7 @@ import {
   X,
 } from "lucide-react";
 import AdminListingEditor from "@/components/admin-listing-editor";
+import AdminReports from "@/components/admin-reports";
 import AdminTeam from "@/components/admin-team";
 import AdminUsers, { type DirectoryUser } from "@/components/admin-users";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
@@ -46,7 +48,7 @@ const SEARCH_COLUMNS = ["title_ar", "title_en", "area", "university", "whatsapp_
 const SEARCH_DEBOUNCE_MS = 300;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
-type AdminView = "listings" | "users" | "team";
+type AdminView = "listings" | "reports" | "users" | "team";
 type AdminListing = MarketplaceListing;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
 type Counts = Record<ReviewFilter | "verified", number>;
@@ -76,6 +78,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [ownerFilter, setOwnerFilter] = useState<DirectoryUser | null>(null);
+  const [listingIdFilter, setListingIdFilter] = useState<string | null>(null);
+  const [openReports, setOpenReports] = useState(0);
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(true);
   const [directoryError, setDirectoryError] = useState("");
@@ -156,6 +160,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       .eq("status", filter);
     if (query) request = request.or(SEARCH_COLUMNS.map((column) => `${column}.ilike.*${query}*`).join(","));
     if (ownerFilter) request = request.eq("owner_id", ownerFilter.user_id);
+    if (listingIdFilter) request = request.eq("id", listingIdFilter);
     void request
       .order("created_at", { ascending: false })
       .limit(100)
@@ -175,7 +180,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     return () => {
       mounted = false;
     };
-  }, [supabase, state, filter, query, ownerFilter, t.adminLoadError]);
+  }, [supabase, state, filter, query, ownerFilter, listingIdFilter, t.adminLoadError]);
 
   // Users and their listing counts (admin-only database function); refreshed with the summary counts.
   useEffect(() => {
@@ -213,6 +218,13 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
         if (mounted) setCounts({ pending, approved, rejected, verified });
       },
     );
+    void supabase
+      .from("listing_reports")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open")
+      .then(({ count: reportCount }) => {
+        if (mounted) setOpenReports(reportCount ?? 0);
+      });
     return () => {
       mounted = false;
     };
@@ -306,11 +318,23 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     setError("");
   }
 
+  function reviewReportedListing(listingId: string, status: ReviewFilter) {
+    setLoadingListings(true);
+    setEditingId(null);
+    setRejectingId(null);
+    setDeletingId(null);
+    setOwnerFilter(null);
+    setListingIdFilter(listingId);
+    setFilter(status);
+    setView("listings");
+  }
+
   function showOwnerListings(owner: DirectoryUser | null) {
     setLoadingListings(true);
     setEditingId(null);
     setRejectingId(null);
     setDeletingId(null);
+    setListingIdFilter(null);
     setOwnerFilter(owner);
     if (owner) {
       // Open the tab where this person has listings, preferring ones waiting for review.
@@ -359,6 +383,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium" });
   const navItems: Array<{ value: AdminView; label: string; icon: typeof Users; badge?: number }> = [
     { value: "listings", label: t.adminViewListings, icon: LayoutList, badge: counts?.pending },
+    { value: "reports", label: t.adminViewReports, icon: Flag, badge: openReports },
     { value: "users", label: t.adminViewUsers, icon: UsersRound },
     { value: "team", label: t.adminViewTeam, icon: Users },
   ];
@@ -391,12 +416,14 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
 
       <main className="admin-main">
         <header className="admin-main-header">
-          <h1>{view === "team" ? t.teamTitle : view === "users" ? t.usersTitle : t.adminDashboardTitle}</h1>
-          <p>{view === "team" ? t.teamDescription : view === "users" ? t.usersDescription : t.adminDashboardDescription}</p>
+          <h1>{view === "team" ? t.teamTitle : view === "users" ? t.usersTitle : view === "reports" ? t.reportsTitle : t.adminDashboardTitle}</h1>
+          <p>{view === "team" ? t.teamDescription : view === "users" ? t.usersDescription : view === "reports" ? t.reportsDescription : t.adminDashboardDescription}</p>
         </header>
 
         {view === "team" && supabase && user ? (
           <AdminTeam locale={locale} supabase={supabase} currentUserId={user.id} />
+        ) : view === "reports" && supabase && user ? (
+          <AdminReports locale={locale} supabase={supabase} currentUserId={user.id} onChanged={refreshCounts} onReviewListing={reviewReportedListing} />
         ) : view === "users" ? (
           <AdminUsers locale={locale} users={directory} loading={directoryLoading} error={directoryError} onViewListings={showOwnerListings} />
         ) : (
@@ -430,6 +457,14 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
               </label>
               <span className="admin-toolbar-count">{loadingListings ? "" : t.adminShowingCount(listings.length, statusLabel[filter])}</span>
             </div>
+
+            {listingIdFilter && (
+              <div className="admin-owner-filter">
+                <Flag size={15} />
+                <span>{t.reportReviewListing}</span>
+                <button type="button" onClick={() => { setLoadingListings(true); setListingIdFilter(null); }} aria-label={t.clearOwnerFilter}><X size={14} /> {t.clearOwnerFilter}</button>
+              </div>
+            )}
 
             {ownerFilter && (
               <div className="admin-owner-filter">

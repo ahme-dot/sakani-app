@@ -2,38 +2,37 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   ArrowUpLeft,
   BadgeCheck,
-  BedDouble,
-  Check,
   ChevronDown,
-  Clock3,
   GraduationCap,
+  House,
   MapPin,
   MessageCircle,
   Search,
+  Share2,
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
-  Wifi,
-  Wind,
 } from "lucide-react";
 import { areas, properties as sampleProperties, universities } from "@/lib/data";
 import type { Property } from "@/types";
 import OwnerPortal from "@/components/owner-portal";
+import PropertyCard from "@/components/property-card";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
+  AMENITY_FILTERS,
   EMPTY_FILTERS,
   fetchApprovedListings,
   hasActiveFilters,
+  type AmenityFilter,
   type ListingFilters,
   type ListingSort,
 } from "@/lib/supabase/listings";
-import { listingPath, whatsappLink } from "@/lib/site";
+import { SITE_URL } from "@/lib/site";
 
 type HomePageProps = {
   locale: SiteLocale;
@@ -50,78 +49,12 @@ function filterSamples(filters: ListingFilters) {
     (!filters.area || property.area === filters.area) &&
     (!filters.gender || property.gender === filters.gender) &&
     (!filters.propertyType || property.property_type === filters.propertyType) &&
-    (!maxPrice || property.monthly_price <= maxPrice),
+    (!maxPrice || property.monthly_price <= maxPrice) &&
+    filters.amenities.every((amenity) => property[amenity]),
   );
   if (filters.sort === "price_asc") matches.sort((a, b) => a.monthly_price - b.monthly_price);
   if (filters.sort === "price_desc") matches.sort((a, b) => b.monthly_price - a.monthly_price);
   return matches;
-}
-
-function PropertyCard({ property, locale, linkToDetails }: { property: Property; locale: SiteLocale; linkToDetails: boolean }) {
-  const t = SITE_COPY[locale];
-  const title = locale === "ar" ? property.title_ar : property.title_en;
-  const area = areas.find((candidate) => candidate.name_en === property.area);
-  const areaLabel = locale === "ar" ? area?.name ?? property.area : property.area;
-  const price = new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-EG").format(property.monthly_price);
-  const availableBeds = property.available_beds === 1 ? t.oneBedAvailable : t.bedAvailable(property.available_beds);
-  const detailsHref = listingPath(locale, property.id);
-
-  const image = (
-    <Image
-      className="property-image"
-      src={property.images[0]}
-      alt={t.sampleImageAlt(title)}
-      fill
-      sizes="(max-width: 640px) 92vw, (max-width: 900px) 50vw, 360px"
-    />
-  );
-
-  return (
-    <article className="property-card">
-      <div className="property-image-wrap">
-        {linkToDetails ? <Link href={detailsHref} tabIndex={-1} aria-hidden="true">{image}</Link> : image}
-        <div className="property-badges">
-          {property.verification_status === "verified" && (
-            <span className="verified-badge"><BadgeCheck size={14} /> {t.verified}</span>
-          )}
-          <span className="gender-badge">{t[property.gender]}</span>
-        </div>
-        <span className="walking-badge"><Clock3 size={14} /> {t.walkingMinutes(property.walking_distance_minutes)}</span>
-      </div>
-
-      <div className="property-content">
-        <div className="property-location"><MapPin size={15} /> {locale === "ar" ? `${areaLabel}، ${t.city}` : `${areaLabel}, ${t.city}`}</div>
-        <h3 className="property-title">
-          {linkToDetails ? <Link href={detailsHref}>{title}</Link> : title}
-        </h3>
-        <div className="property-amenities">
-          {property.furnished && <span><Check size={14} /> {t.furnished}</span>}
-          {property.wifi && <span><Wifi size={14} /> {t.wifi}</span>}
-          {property.air_conditioning && <span><Wind size={14} /> {t.airConditioning}</span>}
-          <span><BedDouble size={14} /> {availableBeds}</span>
-        </div>
-        <div className="property-bottom">
-          <p className="property-price">
-            <strong>{price}</strong>
-            <span>{t.perMonth}</span>
-          </p>
-          <div className="property-card-actions">
-            {linkToDetails && <Link className="property-details-link" href={detailsHref}>{t.viewDetails}</Link>}
-            <a
-              className="property-contact"
-              href={whatsappLink(property.whatsapp_number, t.whatsappMessage(title))}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={t.whatsappAria(title)}
-            >
-              <MessageCircle size={17} />
-              {t.inquire}
-            </a>
-          </div>
-        </div>
-      </div>
-    </article>
-  );
 }
 
 export default function HomePage({ locale, initialListings, initialTotal, initialError }: HomePageProps) {
@@ -137,7 +70,20 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
   const requestId = useRef(0);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const filtersActive = hasActiveFilters(filters);
-  const extraFilterCount = [filters.propertyType, filters.maxPrice].filter(Boolean).length;
+  const extraFilterCount = [filters.propertyType, filters.maxPrice].filter(Boolean).length + filters.amenities.length;
+  const amenityLabels: Record<AmenityFilter, string> = {
+    furnished: t.furnished,
+    wifi: t.wifi,
+    air_conditioning: t.airConditioning,
+    security: t.secure,
+  };
+
+  function toggleAmenity(amenity: AmenityFilter) {
+    const amenities = filters.amenities.includes(amenity)
+      ? filters.amenities.filter((item) => item !== amenity)
+      : [...filters.amenities, amenity];
+    updateFilters({ amenities });
+  }
 
   async function loadListings(nextFilters: ListingFilters, nextPage: number) {
     if (isDemoMode) {
@@ -276,6 +222,17 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
                   dir="ltr"
                 />
               </label>
+              <div className="field search-amenities" role="group" aria-label={t.filterAmenities}>
+                <span>{t.filterAmenities}</span>
+                <div className="choice-row">
+                  {AMENITY_FILTERS.map((amenity) => (
+                    <label className="choice" key={amenity}>
+                      <input type="checkbox" checked={filters.amenities.includes(amenity)} onChange={() => toggleAmenity(amenity)} />
+                      <span>{amenityLabels[amenity]}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               </div>
             </form>
           </div>
@@ -341,12 +298,31 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
               )}
             </>
           ) : (
-            <div className="empty-state">
-              <Search size={24} />
-              <h3>{filtersActive ? t.noMatchTitle : t.noListingsYet}</h3>
-              <p>{filtersActive ? t.noMatchText : t.ownerDescription}</p>
-              {filtersActive && <button className="button button-outline" type="button" onClick={resetFilters}>{t.showAll}</button>}
-            </div>
+            filtersActive ? (
+              <div className="empty-state">
+                <Search size={24} />
+                <h3>{t.noMatchTitle}</h3>
+                <p>{t.noMatchText}</p>
+                <button className="button button-outline" type="button" onClick={resetFilters}>{t.showAll}</button>
+              </div>
+            ) : (
+              <div className="empty-launch">
+                <span className="empty-launch-icon"><House size={26} /></span>
+                <h3>{t.emptyTitle}</h3>
+                <p>{t.emptyText}</p>
+                <div className="empty-launch-actions">
+                  <a className="button button-primary" href="#owner">{t.emptyOwnerCta}</a>
+                  <a
+                    className="button button-outline"
+                    href={`https://wa.me/?text=${encodeURIComponent(`${t.emptyShareMessage} ${SITE_URL}/${locale}`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Share2 size={16} /> {t.emptyShareCta}
+                  </a>
+                </div>
+              </div>
+            )
           )}
         </section>
 
@@ -375,6 +351,31 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
         </section>
 
         <OwnerPortal locale={locale} />
+
+        <section className="faq-section section-wrap" id="faq" aria-labelledby="faq-title">
+          <div className="faq-heading">
+            <span className="section-kicker">{t.faqKicker}</span>
+            <h2 id="faq-title">{t.faqTitle}</h2>
+          </div>
+          <div className="faq-list">
+            {t.faqItems.map((item, index) => (
+              <details className="faq-item" key={item.q} open={index === 0}>
+                <summary>{item.q}<ChevronDown size={18} aria-hidden="true" /></summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                mainEntity: t.faqItems.map((item) => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })),
+              }).replace(/</g, "\\u003c"),
+            }}
+          />
+        </section>
 
         <section className="contact-section section-wrap" id="contact">
           <div className="contact-panel">
