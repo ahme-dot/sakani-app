@@ -1,0 +1,6 @@
+# Never upload local secrets or build artifacts in CLI deployments; Vercel uses its own env settings.
+.env*
+.next
+node_modules
+.claude
+.agents
