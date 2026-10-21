@@ -4,7 +4,7 @@
   color-scheme: light;
   --ink: #192d27;
   --ink-soft: #53655e;
-  --muted: #829089;
+  --muted: #67766f; /* ≥4.5:1 on white for readable secondary text */
   --green: #246b53;
   --green-dark: #174d3d;
   --green-pale: #e8f2ec;
@@ -5003,4 +5003,26 @@ button.admin-stat:hover {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+/* ==== Readability floor (design review D3) ==== */
+.listing-status { font-size: 11px; }
+.owner-dashboard-heading .section-kicker { font-size: 12px; }
+.signout-button { font-size: 12px; }
+.promotion-copy small { font-size: 11px; }
+.field-hint { font-size: 12px; }
+.language-toggle { font-size: 12px; }
+.owner-feedback { font-size: 13px; }
+
+/* ==== Visible keyboard focus (design review D4) ==== */
+/* :where() keeps specificity at zero, so fields with their own focus styles keep them. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.hero2 :focus-visible,
+.footer2 :focus-visible,
+.auth-brand :focus-visible,
+.contact-panel :focus-visible {
+  outline-color: #a8e0c4;
 }

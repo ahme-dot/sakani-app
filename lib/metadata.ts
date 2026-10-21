@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 const OG_LOCALE: Record<SiteLocale, string> = { ar: "ar_EG", en: "en_US" };
+const DEFAULT_SHARE_IMAGE = "/opengraph-image";
 
 /** Metadata for a public page that exists in both languages at /ar{path} and /en{path}. */
 export function bilingualMetadata(
@@ -12,6 +13,8 @@ export function bilingualMetadata(
   const t = SITE_COPY[locale];
   const pageTitle = title ?? t.metaTitle;
   const pageDescription = description ?? t.metaDescription;
+  // Pages that set openGraph here hide the inherited app/opengraph-image, so fall back to it explicitly.
+  const shareImage = image ?? DEFAULT_SHARE_IMAGE;
 
   return {
     title: pageTitle,
@@ -27,13 +30,13 @@ export function bilingualMetadata(
       url: `/${locale}${path}`,
       title: pageTitle,
       description: pageDescription,
-      ...(image ? { images: [{ url: image }] } : {}),
+      images: [image ? { url: image } : { url: DEFAULT_SHARE_IMAGE, width: 1200, height: 630, alt: t.metaTitle }],
     },
     twitter: {
-      card: image ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: pageTitle,
       description: pageDescription,
-      ...(image ? { images: [image] } : {}),
+      images: [shareImage],
     },
   };
 }

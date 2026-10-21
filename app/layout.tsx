@@ -6,16 +6,17 @@ import type { ReactNode } from "react";
 import { SITE_URL } from "@/lib/site";
 import { SITE_COPY } from "@/messages/site";
 
+// Variable fonts: one file per family covering every weight the design uses (400–800).
 const cairo = Cairo({
   subsets: ["arabic"],
-  weight: ["400", "700"],
   variable: "--font-cairo",
+  display: "swap",
 });
 
 const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
   variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
