@@ -24,11 +24,15 @@ import {
   Search,
   ShieldCheck,
   Trash2,
+  UserRound,
   Users,
+  UsersRound,
   Wallet,
+  X,
 } from "lucide-react";
 import AdminListingEditor from "@/components/admin-listing-editor";
 import AdminTeam from "@/components/admin-team";
+import AdminUsers, { type DirectoryUser } from "@/components/admin-users";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { PUBLIC_LISTING_COLUMNS, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
@@ -36,14 +40,14 @@ import { storagePathFromPublicUrl } from "@/lib/images";
 import { listingPath, whatsappLink } from "@/lib/site";
 import { areas, universities } from "@/lib/data";
 
-const ADMIN_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},rejection_reason`;
+const ADMIN_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},owner_id,rejection_reason`;
 const STORAGE_BUCKET = "sakani-listings";
 const SEARCH_COLUMNS = ["title_ar", "title_en", "area", "university", "whatsapp_number"];
 const SEARCH_DEBOUNCE_MS = 300;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
-type AdminView = "listings" | "team";
-type AdminListing = Omit<MarketplaceListing, "owner_id">;
+type AdminView = "listings" | "users" | "team";
+type AdminListing = MarketplaceListing;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
 type Counts = Record<ReviewFilter | "verified", number>;
 
@@ -71,6 +75,10 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
+  const [ownerFilter, setOwnerFilter] = useState<DirectoryUser | null>(null);
+  const [directory, setDirectory] = useState<DirectoryUser[]>([]);
+  const [directoryLoading, setDirectoryLoading] = useState(true);
+  const [directoryError, setDirectoryError] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -147,6 +155,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       .select(ADMIN_LISTING_COLUMNS)
       .eq("status", filter);
     if (query) request = request.or(SEARCH_COLUMNS.map((column) => `${column}.ilike.*${query}*`).join(","));
+    if (ownerFilter) request = request.eq("owner_id", ownerFilter.user_id);
     void request
       .order("created_at", { ascending: false })
       .limit(100)
@@ -166,7 +175,29 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     return () => {
       mounted = false;
     };
-  }, [supabase, state, filter, query, t.adminLoadError]);
+  }, [supabase, state, filter, query, ownerFilter, t.adminLoadError]);
+
+  // Users and their listing counts (admin-only database function); refreshed with the summary counts.
+  useEffect(() => {
+    if (!supabase || state !== "ready") return;
+    let mounted = true;
+    void supabase.rpc("admin_user_directory").then(({ data, error: directoryLoadError }) => {
+      if (!mounted) return;
+      if (directoryLoadError) {
+        console.error("Could not load users:", directoryLoadError);
+        setDirectoryError(t.usersLoadError);
+      } else {
+        setDirectory((data ?? []) as DirectoryUser[]);
+        setDirectoryError("");
+      }
+      setDirectoryLoading(false);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [supabase, state, countsVersion, t.usersLoadError]);
+
+  const ownersById = useMemo(() => new Map(directory.map((entry) => [entry.user_id, entry])), [directory]);
 
   // Summary counts for the overview cards; refreshed after every change.
   useEffect(() => {
@@ -275,6 +306,20 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     setError("");
   }
 
+  function showOwnerListings(owner: DirectoryUser | null) {
+    setLoadingListings(true);
+    setEditingId(null);
+    setRejectingId(null);
+    setDeletingId(null);
+    setOwnerFilter(owner);
+    if (owner) {
+      // Open the tab where this person has listings, preferring ones waiting for review.
+      const status: ReviewFilter = owner.listings_pending > 0 ? "pending" : owner.listings_approved > 0 ? "approved" : "rejected";
+      setFilter(status);
+      setView("listings");
+    }
+  }
+
   const dir = locale === "ar" ? "rtl" : "ltr";
 
   if (state === "loading" || state === "checking") {
@@ -314,6 +359,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium" });
   const navItems: Array<{ value: AdminView; label: string; icon: typeof Users; badge?: number }> = [
     { value: "listings", label: t.adminViewListings, icon: LayoutList, badge: counts?.pending },
+    { value: "users", label: t.adminViewUsers, icon: UsersRound },
     { value: "team", label: t.adminViewTeam, icon: Users },
   ];
 
@@ -345,12 +391,14 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
 
       <main className="admin-main">
         <header className="admin-main-header">
-          <h1>{view === "team" ? t.teamTitle : t.adminDashboardTitle}</h1>
-          <p>{view === "team" ? t.teamDescription : t.adminDashboardDescription}</p>
+          <h1>{view === "team" ? t.teamTitle : view === "users" ? t.usersTitle : t.adminDashboardTitle}</h1>
+          <p>{view === "team" ? t.teamDescription : view === "users" ? t.usersDescription : t.adminDashboardDescription}</p>
         </header>
 
         {view === "team" && supabase && user ? (
           <AdminTeam locale={locale} supabase={supabase} currentUserId={user.id} />
+        ) : view === "users" ? (
+          <AdminUsers locale={locale} users={directory} loading={directoryLoading} error={directoryError} onViewListings={showOwnerListings} />
         ) : (
           <>
             <div className="admin-stats" role="tablist" aria-label={t.adminDashboardTitle}>
@@ -383,6 +431,14 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
               <span className="admin-toolbar-count">{loadingListings ? "" : t.adminShowingCount(listings.length, statusLabel[filter])}</span>
             </div>
 
+            {ownerFilter && (
+              <div className="admin-owner-filter">
+                <UserRound size={15} />
+                <span>{t.filteringByOwner(ownerFilter.is_guest ? t.ownerGuest : ownerFilter.full_name || ownerFilter.email)}</span>
+                <button type="button" onClick={() => showOwnerListings(null)} aria-label={t.clearOwnerFilter}><X size={14} /> {t.clearOwnerFilter}</button>
+              </div>
+            )}
+
             {message && <p className="owner-feedback owner-feedback-success admin-feedback" role="status">{message}</p>}
             {error && <p className="owner-feedback owner-feedback-error admin-feedback" role="alert">{error}</p>}
 
@@ -413,7 +469,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                             columns={ADMIN_LISTING_COLUMNS}
                             onCancel={() => setEditingId(null)}
                             onSaved={(saved) => {
-                              setListings((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+                              setListings((current) => current.map((item) => (item.id === saved.id ? { ...item, ...saved } : item)));
                               setEditingId(null);
                               setError("");
                               setMessage(t.adminListingSaved);
@@ -461,6 +517,29 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                         {listing.status === "rejected" && listing.rejection_reason && (
                           <p className="owner-review-note"><strong>{t.reviewNote}:</strong> {listing.rejection_reason}</p>
                         )}
+
+                        {(() => {
+                          const owner = ownersById.get(listing.owner_id);
+                          return (
+                            <div className="admin-card-owner">
+                              <span className={`admin-avatar${!owner || owner.is_guest ? " is-guest" : ""}`} aria-hidden="true">
+                                {!owner || owner.is_guest ? <UserRound size={14} /> : (owner.full_name || owner.email)[0]?.toUpperCase()}
+                              </span>
+                              <span className="admin-card-owner-text">
+                                <small>{t.ownerLabel}</small>
+                                <strong>{!owner ? "–" : owner.is_guest ? t.ownerGuest : owner.full_name || owner.email}</strong>
+                                {owner && !owner.is_guest && owner.email && (
+                                  <a href={`mailto:${owner.email}`} dir="ltr">{owner.email}</a>
+                                )}
+                              </span>
+                              {owner && !ownerFilter && owner.listings_total > 1 && (
+                                <button className="admin-owner-more" type="button" onClick={() => showOwnerListings(owner)}>
+                                  {t.ownerListingCount(owner.listings_total)}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {rejectingId === listing.id ? (
                           <form
