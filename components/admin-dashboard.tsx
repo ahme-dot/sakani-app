@@ -29,10 +29,16 @@ import {
   UserRound,
   Users,
   UsersRound,
+  Eye,
+  Megaphone,
+  PlusCircle,
   Wallet,
   X,
 } from "lucide-react";
+import AdminGrow from "@/components/admin-grow";
 import AdminInbox from "@/components/admin-inbox";
+import ListingForm from "@/components/listing-form";
+import VisitChecklist, { readVisit } from "@/components/visit-checklist";
 import AdminListingEditor from "@/components/admin-listing-editor";
 import AdminReports from "@/components/admin-reports";
 import AdminTeam from "@/components/admin-team";
@@ -50,7 +56,8 @@ const SEARCH_COLUMNS = ["title_ar", "title_en", "area", "university", "whatsapp_
 const SEARCH_DEBOUNCE_MS = 300;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
-type AdminView = "listings" | "reports" | "inbox" | "users" | "team";
+type AdminView = "listings" | "add" | "reports" | "inbox" | "users" | "grow" | "team";
+type ListingStats = { views: number; whatsapp_clicks: number };
 type AdminListing = MarketplaceListing;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
 type Counts = Record<ReviewFilter | "verified", number>;
@@ -76,6 +83,9 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [listingStats, setListingStats] = useState<Record<string, ListingStats>>({});
+  const [addVersion, setAddVersion] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
@@ -207,6 +217,25 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
 
   const ownersById = useMemo(() => new Map(directory.map((entry) => [entry.user_id, entry])), [directory]);
 
+  // Views and WhatsApp clicks for the listings on screen.
+  const listingIds = useMemo(() => listings.map((listing) => listing.id).join(","), [listings]);
+  useEffect(() => {
+    if (!supabase || state !== "ready" || !listingIds) return;
+    let mounted = true;
+    void supabase.rpc("listing_stats", { listing_ids: listingIds.split(",") }).then(({ data, error: statsError }) => {
+      if (!mounted) return;
+      if (statsError) {
+        console.warn("Listing stats unavailable:", statsError.message);
+        return;
+      }
+      const rows = (data ?? []) as Array<{ listing_id: string; views: number; whatsapp_clicks: number }>;
+      setListingStats(Object.fromEntries(rows.map((row) => [row.listing_id, { views: row.views, whatsapp_clicks: row.whatsapp_clicks }])));
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [supabase, state, listingIds]);
+
   // Summary counts for the overview cards; refreshed after every change.
   useEffect(() => {
     if (!supabase || state !== "ready") return;
@@ -273,6 +302,51 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     setMessage(t.adminStatusUpdated);
     setUpdatingId(null);
     refreshCounts();
+  }
+
+  async function verifyListing(listingId: string, formData: FormData) {
+    if (!supabase) return;
+    const visit = readVisit(formData);
+    if (!visit) {
+      setError(t.visitIncomplete);
+      return;
+    }
+    setUpdatingId(listingId);
+    setError("");
+    setMessage("");
+    const { error: verifyError } = await supabase.rpc("admin_verify_listing", {
+      target_listing: listingId,
+      visit_date: visit.date,
+      visit_checklist: visit.checklist,
+      visit_notes: visit.notes,
+    });
+    if (verifyError) {
+      console.error("Could not record the verification visit:", verifyError);
+      setError(t.adminUpdateError);
+    } else {
+      setListings((current) => current.map((listing) => (listing.id === listingId ? { ...listing, verified: true, verified_at: visit.date } : listing)));
+      setVerifyingId(null);
+      setMessage(t.adminStatusUpdated);
+      refreshCounts();
+    }
+    setUpdatingId(null);
+  }
+
+  async function unverifyListing(listingId: string) {
+    if (!supabase) return;
+    setUpdatingId(listingId);
+    setError("");
+    setMessage("");
+    const { error: unverifyError } = await supabase.rpc("admin_unverify_listing", { target_listing: listingId });
+    if (unverifyError) {
+      console.error("Could not remove verification:", unverifyError);
+      setError(t.adminUpdateError);
+    } else {
+      setListings((current) => current.map((listing) => (listing.id === listingId ? { ...listing, verified: false, verified_at: null } : listing)));
+      setMessage(t.adminStatusUpdated);
+      refreshCounts();
+    }
+    setUpdatingId(null);
   }
 
   async function deleteListing(listing: AdminListing) {
@@ -393,11 +467,22 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium" });
   const navItems: Array<{ value: AdminView; label: string; icon: typeof Users; badge?: number }> = [
     { value: "listings", label: t.adminViewListings, icon: LayoutList, badge: counts?.pending },
+    { value: "add", label: t.adminViewAddListing, icon: PlusCircle },
     { value: "reports", label: t.adminViewReports, icon: Flag, badge: openReports },
     { value: "inbox", label: t.adminViewInbox, icon: Inbox, badge: openMessages },
     { value: "users", label: t.adminViewUsers, icon: UsersRound },
+    { value: "grow", label: t.adminViewGrow, icon: Megaphone },
     { value: "team", label: t.adminViewTeam, icon: Users },
   ];
+  const viewHeadings: Record<AdminView, { title: string; description: string }> = {
+    listings: { title: t.adminDashboardTitle, description: t.adminDashboardDescription },
+    add: { title: t.addListingTitle, description: t.addListingDescription },
+    reports: { title: t.reportsTitle, description: t.reportsDescription },
+    inbox: { title: t.inboxTitle, description: t.inboxDescription },
+    users: { title: t.usersTitle, description: t.usersDescription },
+    grow: { title: t.growTitle, description: t.growDescription },
+    team: { title: t.teamTitle, description: t.teamDescription },
+  };
 
   return (
     <div className="admin-shell" dir={dir}>
@@ -427,14 +512,35 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
 
       <main className="admin-main">
         <header className="admin-main-header">
-          <h1>{view === "team" ? t.teamTitle : view === "users" ? t.usersTitle : view === "reports" ? t.reportsTitle : view === "inbox" ? t.inboxTitle : t.adminDashboardTitle}</h1>
-          <p>{view === "team" ? t.teamDescription : view === "users" ? t.usersDescription : view === "reports" ? t.reportsDescription : view === "inbox" ? t.inboxDescription : t.adminDashboardDescription}</p>
+          <h1>{viewHeadings[view].title}</h1>
+          <p>{viewHeadings[view].description}</p>
         </header>
 
         {view === "team" && supabase && user ? (
           <AdminTeam locale={locale} supabase={supabase} currentUserId={user.id} />
         ) : view === "reports" && supabase && user ? (
           <AdminReports locale={locale} supabase={supabase} currentUserId={user.id} onChanged={refreshCounts} onReviewListing={reviewReportedListing} />
+        ) : view === "add" && supabase && user ? (
+          <section className="admin-add">
+            {message && <p className="owner-feedback owner-feedback-success admin-feedback" role="status">{message}</p>}
+            <div className="admin-add-card">
+              <ListingForm
+                key={addVersion}
+                locale={locale}
+                supabase={supabase}
+                ownerId={user.id}
+                mode="admin"
+                onSaved={() => {
+                  setMessage(t.addListingSaved);
+                  setAddVersion((value) => value + 1);
+                  refreshCounts();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            </div>
+          </section>
+        ) : view === "grow" ? (
+          <AdminGrow locale={locale} />
         ) : view === "inbox" && supabase && user ? (
           <AdminInbox locale={locale} supabase={supabase} currentUserId={user.id} onChanged={refreshCounts} />
         ) : view === "users" ? (
@@ -557,6 +663,11 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                           <li><Building2 size={14} /> {t[listing.property_type]} · {t[listing.gender]}</li>
                           <li><BedDouble size={14} /> {t.bedsSummary(listing.available_beds, listing.total_beds)}</li>
                           <li><Clock3 size={14} /> {t.walkingMinutes(listing.walking_distance_minutes)}</li>
+                          {listing.status === "approved" && listingStats[listing.id] && (
+                            <li className="is-stats">
+                              <Eye size={14} /> {t.statsViews(numberFormat.format(listingStats[listing.id].views))} · {t.statsWhatsapp(numberFormat.format(listingStats[listing.id].whatsapp_clicks))}
+                            </li>
+                          )}
                           <li>
                             <a href={whatsappLink(listing.whatsapp_number)} target="_blank" rel="noreferrer" dir="ltr"><MessageCircle size={14} /> {listing.whatsapp_number}</a>
                           </li>
@@ -606,6 +717,20 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                               <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => setRejectingId(null)}>{t.cancel}</button>
                             </div>
                           </form>
+                        ) : verifyingId === listing.id ? (
+                          <form
+                            className="admin-inline-panel"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              void verifyListing(listing.id, new FormData(event.currentTarget));
+                            }}
+                          >
+                            <VisitChecklist locale={locale} />
+                            <div className="admin-card-actions">
+                              <button className="admin-btn admin-btn-primary" type="submit" disabled={busy}><BadgeCheck size={15} /> {busy ? t.sending : t.visitConfirm}</button>
+                              <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => setVerifyingId(null)}>{t.cancel}</button>
+                            </div>
+                          </form>
                         ) : deletingId === listing.id ? (
                           <div className="admin-inline-panel is-danger">
                             <p>{t.adminDeleteWarning}</p>
@@ -627,7 +752,15 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                               </button>
                             )}
                             {listing.status !== "rejected" && (
-                              <button className={`admin-btn admin-btn-ghost${listing.verified ? " is-on" : ""}`} type="button" disabled={busy} onClick={() => void updateListing(listing.id, { verified: !listing.verified })}>
+                              <button
+                                className={`admin-btn admin-btn-ghost${listing.verified ? " is-on" : ""}`}
+                                type="button"
+                                disabled={busy}
+                                onClick={() => {
+                                  if (listing.verified) void unverifyListing(listing.id);
+                                  else { setVerifyingId(listing.id); setRejectingId(null); setDeletingId(null); }
+                                }}
+                              >
                                 <BadgeCheck size={15} /> {listing.verified ? t.adminUnverify : t.adminVerify}
                               </button>
                             )}

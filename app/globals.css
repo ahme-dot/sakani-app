@@ -5842,3 +5842,285 @@ button.admin-stat:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* ==== Launch kit: admin add listing, verification, stats, grow, flyer ==== */
+.admin-add-card {
+  margin-top: 22px;
+  padding: clamp(16px, 3vw, 26px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+}
+
+.form-section-admin {
+  border-color: #cfe0d4;
+  background: var(--green-pale);
+}
+
+.visit-checklist {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.visit-date {
+  max-width: 240px;
+}
+
+.visit-checks {
+  display: grid;
+  gap: 8px;
+}
+
+.visit-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.visit-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
+.visit-check:has(input:checked) {
+  border-color: #bcd7c6;
+  background: #f4faf6;
+}
+
+.admin-card-facts li.is-stats {
+  background: #eef3fb;
+  color: #3c5a85;
+}
+
+.admin-card-facts li.is-stats svg {
+  color: #3c5a85;
+}
+
+.owner-listing-stats {
+  color: #3c5a85;
+  font-size: 12px;
+}
+
+.admin-grow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.admin-grow-card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+}
+
+.admin-grow-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.admin-grow-card h2 svg {
+  color: var(--green);
+}
+
+.admin-grow-message {
+  grid-row: span 2;
+}
+
+.grow-message {
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f4f7f3;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.grow-qr {
+  width: 220px;
+  margin: 14px auto 0;
+}
+
+.grow-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.grow-url {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .admin-grow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-grow-message {
+    grid-row: auto;
+  }
+}
+
+/* Printable flyer */
+.flyer-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  gap: 16px;
+  padding: 24px 16px;
+  background: #e9ede6;
+}
+
+.flyer-shell[dir="ltr"] {
+  font-family: var(--font-latin), sans-serif;
+}
+
+.flyer-print {
+  cursor: pointer;
+}
+
+.flyer-sheet {
+  display: flex;
+  width: min(100%, 210mm);
+  min-height: 297mm;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22mm 18mm;
+  background: var(--white);
+  box-shadow: 0 20px 50px rgb(29 52 41 / 15%);
+  color: var(--ink);
+}
+
+.flyer-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.flyer-sheet h1 {
+  margin: 18mm 0 0;
+  color: var(--green-dark);
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.flyer-sub {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 22px;
+}
+
+.flyer-points {
+  display: grid;
+  gap: 12px;
+  margin: 8mm 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.flyer-points li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.flyer-points svg {
+  flex: 0 0 auto;
+  padding: 4px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--green-pale);
+  color: var(--green);
+}
+
+.flyer-qr-block {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-top: auto;
+  padding: 18px;
+  border: 2px dashed #bcd7c6;
+  border-radius: 20px;
+}
+
+.flyer-qr {
+  width: 52mm;
+  flex: 0 0 auto;
+}
+
+.flyer-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.flyer-qr-block strong {
+  display: block;
+  font-size: 26px;
+  line-height: 1.3;
+}
+
+.flyer-qr-block span {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.flyer-foot {
+  color: var(--muted);
+  font-size: 15px;
+  text-align: center;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  .flyer-shell {
+    display: block;
+    padding: 0;
+    background: #fff;
+  }
+
+  .flyer-print {
+    display: none;
+  }
+
+  .flyer-sheet {
+    width: 210mm;
+    height: 297mm;
+    min-height: 0;
+    box-shadow: none;
+  }
+}

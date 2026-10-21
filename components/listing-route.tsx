@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import ListingGallery from "@/components/listing-gallery";
 import { ReportListing, ShareListingButton } from "@/components/listing-actions";
+import { TrackListingView, WhatsAppLink } from "@/components/listing-tracking";
 import PropertyCard from "@/components/property-card";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { areas, universities } from "@/lib/data";
@@ -103,6 +104,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
       />
 
+      <TrackListingView listingId={listing.id} />
       <main className="listing2 section-wrap">
         <Link className="listing-back" href={`/${locale}#homes`}>
           <ArrowRight size={16} /> {t.backToListings}
@@ -113,7 +115,11 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
         <div className="listing2-layout">
           <div className="listing2-main">
             <div className="listing2-badges">
-              {verified && <span className="listing2-badge is-verified"><BadgeCheck size={14} /> {t.verified}</span>}
+              {verified && (
+                <span className="listing2-badge is-verified">
+                  <BadgeCheck size={14} /> {listing.verified_at ? t.verifiedOn(new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { month: "long", year: "numeric" }).format(new Date(listing.verified_at))) : t.verified}
+                </span>
+              )}
               <span className="listing2-badge">{t[listing.property_type]}</span>
               <span className="listing2-badge">{t[listing.gender]}</span>
             </div>
@@ -163,9 +169,9 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                 <li><Wallet size={15} /> {listing.deposit > 0 ? t.depositLine(numberFormat.format(listing.deposit)) : t.noDeposit}</li>
                 <li><BedDouble size={15} /> {t.availableBedsLine(listing.available_beds, listing.total_beds)}</li>
               </ul>
-              <a className="button button-primary listing2-whatsapp" href={whatsappHref} target="_blank" rel="noreferrer">
+              <WhatsAppLink listingId={listing.id} className="button button-primary listing2-whatsapp" href={whatsappHref}>
                 <MessageCircle size={18} /> {t.contactOwner}
-              </a>
+              </WhatsAppLink>
               <ShareListingButton locale={locale} title={title} url={pageUrl} className="listing2-share" />
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>
                 {verified ? <BadgeCheck size={16} /> : <Info size={16} />}
@@ -195,9 +201,9 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
           <strong>{numberFormat.format(listing.monthly_price)}</strong>
           <span>{t.perMonth}</span>
         </p>
-        <a className="button button-primary" href={whatsappHref} target="_blank" rel="noreferrer">
+        <WhatsAppLink listingId={listing.id} className="button button-primary" href={whatsappHref}>
           <MessageCircle size={18} /> {t.contactShort}
-        </a>
+        </WhatsAppLink>
       </div>
 
       <SiteFooter locale={locale} sectionBase={`/${locale}`} switchHref={listingPath(otherLocale, listing.id)} />

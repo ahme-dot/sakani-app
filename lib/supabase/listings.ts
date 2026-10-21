@@ -25,6 +25,7 @@ export type MarketplaceListing = {
   image_url: string;
   image_urls: string[];
   verified: boolean;
+  verified_at: string | null;
   rejection_reason: string | null;
   status: "pending" | "approved" | "rejected";
   created_at: string;
@@ -33,7 +34,7 @@ export type MarketplaceListing = {
 
 /** Columns that are safe to show to anyone. Excludes owner_id and review notes. */
 export const PUBLIC_LISTING_COLUMNS =
-  "id,title_ar,title_en,description_ar,description_en,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,whatsapp_number,image_url,image_urls,verified,status,created_at,updated_at";
+  "id,title_ar,title_en,description_ar,description_en,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,whatsapp_number,image_url,image_urls,verified,verified_at,status,created_at,updated_at";
 
 export const LISTINGS_PAGE_SIZE = 12;
 
@@ -147,6 +148,7 @@ export function toProperty(listing: MarketplaceListing): Property {
     available_beds: listing.available_beds,
     total_beds: listing.total_beds,
     verification_status: listing.verified ? "verified" : "pending",
+    verified_at: listing.verified_at ?? null,
     walking_distance_minutes: listing.walking_distance_minutes,
     address_text: `${listing.area}, Giza, Egypt`,
     whatsapp_number: listing.whatsapp_number,

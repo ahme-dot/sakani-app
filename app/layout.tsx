@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Cairo, Inter } from "next/font/google";
 import "./globals.css";
 import type { ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/next";
 import { SITE_URL } from "@/lib/site";
 import { SITE_COPY } from "@/messages/site";
 
@@ -47,6 +48,7 @@ export default async function RootLayout({
     <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} data-scroll-behavior="smooth">
       <body className={`${cairo.variable} ${inter.variable}`}>
         {children}
+        <Analytics />
       </body>
     </html>
   );

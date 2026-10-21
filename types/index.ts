@@ -22,6 +22,7 @@ export interface Property {
     available_beds: number;
     total_beds: number;
     verification_status: "verified" | "pending" | "rejected";
+    verified_at?: string | null;
     walking_distance_minutes: number;
     address_text: string;
     whatsapp_number: string;

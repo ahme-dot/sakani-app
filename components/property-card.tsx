@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, BedDouble, Check, Clock3, MapPin, MessageCircle, Wifi, Wind } from "lucide-react";
+import { WhatsAppLink } from "@/components/listing-tracking";
 import { areas } from "@/lib/data";
 import { listingPath, whatsappLink } from "@/lib/site";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
@@ -57,16 +58,15 @@ export default function PropertyCard({ property, locale, linkToDetails = true }:
           </p>
           <div className="property-card-actions">
             {linkToDetails && <Link className="property-details-link" href={detailsHref}>{t.viewDetails}</Link>}
-            <a
+            <WhatsAppLink
+              listingId={property.id}
               className="property-contact"
               href={whatsappLink(property.whatsapp_number, t.whatsappMessage(title))}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={t.whatsappAria(title)}
+              ariaLabel={t.whatsappAria(title)}
             >
               <MessageCircle size={17} />
               {t.inquire}
-            </a>
+            </WhatsAppLink>
           </div>
         </div>
       </div>
