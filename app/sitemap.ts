@@ -14,6 +14,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${SITE_URL}/ar`, changeFrequency: "daily", priority: 1, alternates: bilingual("") },
     { url: `${SITE_URL}/en`, changeFrequency: "daily", priority: 0.9, alternates: bilingual("") },
+    ...(["privacy", "terms"] as const).flatMap((page) => (["ar", "en"] as const).map((locale) => ({
+      url: `${SITE_URL}/${locale}/${page}`,
+      changeFrequency: "yearly" as const,
+      priority: 0.2,
+      alternates: bilingual(`/${page}`),
+    }))),
     ...listings.flatMap((listing) => (["ar", "en"] as const).map((locale) => ({
       url: `${SITE_URL}/${locale}/listings/${listing.id}`,
       lastModified: listing.updated_at,

@@ -70,6 +70,7 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       <div>
         <h2>{t.adminEditTitle}</h2>
         <p className="field-hint">{t.adminEditHint}</p>
+        <p className="field-hint">{t.adminTranslateHint}</p>
       </div>
       <div className="owner-form-grid">
         <label className="owner-field"><span>{t.titleArabic}</span><input name="title_ar" required minLength={5} maxLength={120} dir="rtl" defaultValue={listing.title_ar} /></label>

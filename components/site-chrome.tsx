@@ -98,7 +98,11 @@ export function SiteFooter({ locale, sectionBase = "", switchHref }: ChromeProps
       </div>
       <div className="footer-inner footer2-bottom">
         <p>© {new Date().getFullYear()} {t.brandLabel}. {t.allRights}</p>
-        <p>{t.city}</p>
+        <p className="footer2-legal">
+          <Link href={`/${locale}/privacy`}>{t.privacyLink}</Link>
+          <Link href={`/${locale}/terms`}>{t.termsLink}</Link>
+          <span>{t.city}</span>
+        </p>
       </div>
     </footer>
   );

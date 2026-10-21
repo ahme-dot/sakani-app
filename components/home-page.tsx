@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import {
-  ArrowUpLeft,
   BadgeCheck,
   ChevronDown,
   GraduationCap,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 import { areas, properties as sampleProperties, universities } from "@/lib/data";
 import type { Property } from "@/types";
+import ContactForm from "@/components/contact-form";
 import OwnerPortal from "@/components/owner-portal";
 import PropertyCard from "@/components/property-card";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -377,18 +377,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
           />
         </section>
 
-        <section className="contact-section section-wrap" id="contact">
-          <div className="contact-panel">
-            <span className="contact-orbit orbit-one" />
-            <span className="contact-orbit orbit-two" />
-            <div className="contact-copy">
-              <span className="contact-kicker">{t.journeyKicker}</span>
-              <h2>{t.journeyTitle}</h2>
-              <p>{t.journeyDescription}</p>
-            </div>
-            <a className="button button-light" href="#search">{t.startSearch} <ArrowUpLeft size={18} /></a>
-          </div>
-        </section>
+        <ContactForm locale={locale} />
       </main>
 
       <SiteFooter locale={locale} switchHref={locale === "ar" ? "/en" : "/ar"} />

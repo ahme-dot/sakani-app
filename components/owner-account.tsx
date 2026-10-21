@@ -306,6 +306,11 @@ export default function OwnerAccount({ locale, initialMode = "login" }: { locale
           {submitting && <LoaderCircle className="spinner" size={18} />}
           {submitLabel}
         </button>
+        {isSignup && (
+          <p className="auth-legal">
+            {t.signupAgreePrefix} <Link href={`/${locale}/terms`}>{t.termsLink}</Link> {t.signupAgreeAnd} <Link href={`/${locale}/privacy`}>{t.privacyLink}</Link>.
+          </p>
+        )}
       </form>
 
       {mode === "reset" && <button className="auth-link auth-switch" type="button" onClick={() => switchMode("login")}>{t.adminBackToSignIn}</button>}

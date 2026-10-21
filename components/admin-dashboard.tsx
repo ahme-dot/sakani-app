@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Home,
   Images,
+  Inbox,
   LayoutList,
   LoaderCircle,
   LockKeyhole,
@@ -31,6 +32,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import AdminInbox from "@/components/admin-inbox";
 import AdminListingEditor from "@/components/admin-listing-editor";
 import AdminReports from "@/components/admin-reports";
 import AdminTeam from "@/components/admin-team";
@@ -48,7 +50,7 @@ const SEARCH_COLUMNS = ["title_ar", "title_en", "area", "university", "whatsapp_
 const SEARCH_DEBOUNCE_MS = 300;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
-type AdminView = "listings" | "reports" | "users" | "team";
+type AdminView = "listings" | "reports" | "inbox" | "users" | "team";
 type AdminListing = MarketplaceListing;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
 type Counts = Record<ReviewFilter | "verified", number>;
@@ -80,6 +82,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [ownerFilter, setOwnerFilter] = useState<DirectoryUser | null>(null);
   const [listingIdFilter, setListingIdFilter] = useState<string | null>(null);
   const [openReports, setOpenReports] = useState(0);
+  const [openMessages, setOpenMessages] = useState(0);
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(true);
   const [directoryError, setDirectoryError] = useState("");
@@ -224,6 +227,13 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       .eq("status", "open")
       .then(({ count: reportCount }) => {
         if (mounted) setOpenReports(reportCount ?? 0);
+      });
+    void supabase
+      .from("contact_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open")
+      .then(({ count: messageCount }) => {
+        if (mounted) setOpenMessages(messageCount ?? 0);
       });
     return () => {
       mounted = false;
@@ -384,6 +394,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const navItems: Array<{ value: AdminView; label: string; icon: typeof Users; badge?: number }> = [
     { value: "listings", label: t.adminViewListings, icon: LayoutList, badge: counts?.pending },
     { value: "reports", label: t.adminViewReports, icon: Flag, badge: openReports },
+    { value: "inbox", label: t.adminViewInbox, icon: Inbox, badge: openMessages },
     { value: "users", label: t.adminViewUsers, icon: UsersRound },
     { value: "team", label: t.adminViewTeam, icon: Users },
   ];
@@ -416,14 +427,16 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
 
       <main className="admin-main">
         <header className="admin-main-header">
-          <h1>{view === "team" ? t.teamTitle : view === "users" ? t.usersTitle : view === "reports" ? t.reportsTitle : t.adminDashboardTitle}</h1>
-          <p>{view === "team" ? t.teamDescription : view === "users" ? t.usersDescription : view === "reports" ? t.reportsDescription : t.adminDashboardDescription}</p>
+          <h1>{view === "team" ? t.teamTitle : view === "users" ? t.usersTitle : view === "reports" ? t.reportsTitle : view === "inbox" ? t.inboxTitle : t.adminDashboardTitle}</h1>
+          <p>{view === "team" ? t.teamDescription : view === "users" ? t.usersDescription : view === "reports" ? t.reportsDescription : view === "inbox" ? t.inboxDescription : t.adminDashboardDescription}</p>
         </header>
 
         {view === "team" && supabase && user ? (
           <AdminTeam locale={locale} supabase={supabase} currentUserId={user.id} />
         ) : view === "reports" && supabase && user ? (
           <AdminReports locale={locale} supabase={supabase} currentUserId={user.id} onChanged={refreshCounts} onReviewListing={reviewReportedListing} />
+        ) : view === "inbox" && supabase && user ? (
+          <AdminInbox locale={locale} supabase={supabase} currentUserId={user.id} onChanged={refreshCounts} />
         ) : view === "users" ? (
           <AdminUsers locale={locale} users={directory} loading={directoryLoading} error={directoryError} onViewListings={showOwnerListings} />
         ) : (
