@@ -34,7 +34,7 @@ export default function AdminInbox({
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium", timeStyle: "short" });
+  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium", timeStyle: "short" });
   const topicLabels = { student: t.contactTopicStudent, owner: t.contactTopicOwner, other: t.contactTopicOther };
 
   useEffect(() => {

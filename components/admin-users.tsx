@@ -34,8 +34,8 @@ export default function AdminUsers({
   const t = SITE_COPY[locale];
   const [search, setSearch] = useState("");
   const [type, setType] = useState<"all" | "account" | "guest">("all");
-  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium" });
-  const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-EG");
+  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
+  const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();

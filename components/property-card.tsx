@@ -13,7 +13,7 @@ export default function PropertyCard({ property, locale, linkToDetails = true }:
   const title = locale === "ar" ? property.title_ar : property.title_en;
   const area = areas.find((candidate) => candidate.name_en === property.area);
   const areaLabel = locale === "ar" ? area?.name ?? property.area : property.area;
-  const price = new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-EG").format(property.monthly_price);
+  const price = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG").format(property.monthly_price);
   const availableBeds = property.available_beds === 1 ? t.oneBedAvailable : t.bedAvailable(property.available_beds);
   const detailsHref = listingPath(locale, property.id);
 

@@ -9,7 +9,7 @@ export default function LegalPage({ locale, kind }: { locale: SiteLocale; kind: 
   const legal = LEGAL_COPY[locale];
   const page = legal[kind];
   const otherLocale: SiteLocale = locale === "ar" ? "en" : "ar";
-  const updated = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "long" }).format(new Date(LEGAL_UPDATED));
+  const updated = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "long" }).format(new Date(LEGAL_UPDATED));
 
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>

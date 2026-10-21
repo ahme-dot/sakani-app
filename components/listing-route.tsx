@@ -61,7 +61,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const university = universities.find((candidate) => candidate.name_en === listing.university);
   const areaLabel = locale === "ar" ? area?.name ?? listing.area : listing.area;
   const universityLabel = locale === "ar" ? university?.name ?? listing.university : listing.university;
-  const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-EG");
+  const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
   const verified = listing.verification_status === "verified";
   const whatsappHref = whatsappLink(listing.whatsapp_number, t.whatsappMessage(title));
   const pageUrl = `${SITE_URL}${listingPath(locale, listing.id)}`;
@@ -117,7 +117,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
             <div className="listing2-badges">
               {verified && (
                 <span className="listing2-badge is-verified">
-                  <BadgeCheck size={14} /> {listing.verified_at ? t.verifiedOn(new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { month: "long", year: "numeric" }).format(new Date(listing.verified_at))) : t.verified}
+                  <BadgeCheck size={14} /> {listing.verified_at ? t.verifiedOn(new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { month: "long", year: "numeric" }).format(new Date(listing.verified_at))) : t.verified}
                 </span>
               )}
               <span className="listing2-badge">{t[listing.property_type]}</span>
@@ -178,7 +178,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                 {verified ? t.listingVerifiedNote : t.listingUnverifiedNote}
               </p>
               <p className="listing-listed">
-                {t.listedOn}: <time dateTime={listing.created_at}>{new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium" }).format(new Date(listing.created_at))}</time>
+                {t.listedOn}: <time dateTime={listing.created_at}>{new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" }).format(new Date(listing.created_at))}</time>
               </p>
             </div>
             <ReportListing locale={locale} listingId={listing.id} />

@@ -463,8 +463,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     { value: "approved", label: t.adminApproved, hint: t.adminStatApprovedHint },
     { value: "rejected", label: t.adminRejected, hint: t.adminStatRejectedHint },
   ];
-  const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-EG");
-  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium" });
+  const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
+  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
   const navItems: Array<{ value: AdminView; label: string; icon: typeof Users; badge?: number }> = [
     { value: "listings", label: t.adminViewListings, icon: LayoutList, badge: counts?.pending },
     { value: "add", label: t.adminViewAddListing, icon: PlusCircle },

@@ -98,10 +98,14 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" pattern="[+0-9 ()-]{8,20}" required dir="ltr" defaultValue={listing.whatsapp_number} /></label>
       <fieldset className="amenity-fieldset">
         <legend>{t.amenitiesTitle}</legend>
-        <label><input name="furnished" type="checkbox" defaultChecked={listing.furnished} /> {t.furnished}</label>
-        <label><input name="wifi" type="checkbox" defaultChecked={listing.wifi} /> {t.wifi}</label>
-        <label><input name="air_conditioning" type="checkbox" defaultChecked={listing.air_conditioning} /> {t.airConditioning}</label>
-        <label><input name="security" type="checkbox" defaultChecked={listing.security} /> {t.secure}</label>
+        <div className="choice-row">
+          {([["furnished", t.furnished], ["wifi", t.wifi], ["air_conditioning", t.airConditioning], ["security", t.secure]] as const).map(([name, label]) => (
+            <label className="choice" key={name}>
+              <input name={name} type="checkbox" defaultChecked={listing[name]} />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
       </fieldset>
       {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
       <div className="admin-listing-actions">

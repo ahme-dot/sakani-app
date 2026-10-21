@@ -45,8 +45,8 @@ export default async function RootLayout({
   const locale = (await headers()).get("x-sakani-locale") === "en" ? "en" : "ar";
 
   return (
-    <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} data-scroll-behavior="smooth">
-      <body className={`${cairo.variable} ${inter.variable}`}>
+    <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} data-scroll-behavior="smooth" className={`${cairo.variable} ${inter.variable}`}>
+      <body>
         {children}
         <Analytics />
       </body>

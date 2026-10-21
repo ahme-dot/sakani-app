@@ -41,7 +41,7 @@ export default function AdminTeam({ locale, supabase, currentUserId }: { locale:
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
-  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-EG", { dateStyle: "medium" });
+  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
 
   useEffect(() => {
     let mounted = true;
