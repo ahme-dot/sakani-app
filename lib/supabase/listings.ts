@@ -27,7 +27,7 @@ export type MarketplaceListing = {
   verified: boolean;
   verified_at: string | null;
   rejection_reason: string | null;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "paused";
   created_at: string;
   updated_at: string;
 };

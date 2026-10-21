@@ -54,6 +54,9 @@ const ADMIN_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},owner_id,rejection_reas
 const STORAGE_BUCKET = "sakani-listings";
 const SEARCH_COLUMNS = ["title_ar", "title_en", "area", "university", "whatsapp_number"];
 const SEARCH_DEBOUNCE_MS = 300;
+/** Published listings not updated or confirmed for this long are flagged as possibly out of date. */
+const STALE_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
 type AdminView = "listings" | "add" | "reports" | "inbox" | "users" | "grow" | "team";
@@ -91,6 +94,9 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [query, setQuery] = useState("");
   const [ownerFilter, setOwnerFilter] = useState<DirectoryUser | null>(null);
   const [listingIdFilter, setListingIdFilter] = useState<string | null>(null);
+  const [staleOnly, setStaleOnly] = useState(false);
+  // When the current listings were loaded; listing ages are measured from this, not during render.
+  const [loadedAt, setLoadedAt] = useState(0);
   const [openReports, setOpenReports] = useState(0);
   const [openMessages, setOpenMessages] = useState(0);
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
@@ -174,6 +180,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     if (query) request = request.or(SEARCH_COLUMNS.map((column) => `${column}.ilike.*${query}*`).join(","));
     if (ownerFilter) request = request.eq("owner_id", ownerFilter.user_id);
     if (listingIdFilter) request = request.eq("id", listingIdFilter);
+    if (staleOnly && filter === "approved") request = request.lt("updated_at", new Date(Date.now() - STALE_DAYS * DAY_MS).toISOString());
     void request
       .order("created_at", { ascending: false })
       .limit(100)
@@ -185,6 +192,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           setError(t.adminLoadError);
         } else {
           setListings((data ?? []) as unknown as AdminListing[]);
+          setLoadedAt(Date.now());
           setError("");
         }
         setLoadingListings(false);
@@ -193,7 +201,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     return () => {
       mounted = false;
     };
-  }, [supabase, state, filter, query, ownerFilter, listingIdFilter, t.adminLoadError]);
+  }, [supabase, state, filter, query, ownerFilter, listingIdFilter, staleOnly, t.adminLoadError]);
 
   // Users and their listing counts (admin-only database function); refreshed with the summary counts.
   useEffect(() => {
@@ -245,9 +253,9 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       if (verifiedOnly) request = request.eq("verified", true);
       return request.then(({ count: value }) => value ?? 0);
     };
-    void Promise.all([count("pending"), count("approved"), count("rejected"), count("approved", true)]).then(
-      ([pending, approved, rejected, verified]) => {
-        if (mounted) setCounts({ pending, approved, rejected, verified });
+    void Promise.all([count("pending"), count("approved"), count("rejected"), count("paused"), count("approved", true)]).then(
+      ([pending, approved, rejected, paused, verified]) => {
+        if (mounted) setCounts({ pending, approved, rejected, paused, verified });
       },
     );
     void supabase
@@ -457,10 +465,11 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     );
   }
 
-  const statusLabel: Record<ReviewFilter, string> = { pending: t.adminPending, approved: t.adminApproved, rejected: t.adminRejected };
+  const statusLabel: Record<ReviewFilter, string> = { pending: t.adminPending, approved: t.adminApproved, rejected: t.adminRejected, paused: t.adminStatusPaused };
   const stats: Array<{ value: ReviewFilter; label: string; hint: string }> = [
     { value: "pending", label: t.adminPending, hint: t.adminStatPendingHint },
     { value: "approved", label: t.adminApproved, hint: t.adminStatApprovedHint },
+    { value: "paused", label: t.adminStatusPaused, hint: t.adminStatPausedHint },
     { value: "rejected", label: t.adminRejected, hint: t.adminStatRejectedHint },
   ];
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
@@ -574,6 +583,12 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                 <Search size={16} aria-hidden="true" />
                 <input type="search" value={search} aria-label={t.adminSearchLabel} placeholder={t.adminSearchPlaceholder} onChange={(event) => setSearch(event.target.value)} />
               </label>
+              {filter === "approved" && (
+                <label className="choice admin-stale-toggle">
+                  <input type="checkbox" checked={staleOnly} onChange={(event) => { setLoadingListings(true); setStaleOnly(event.target.checked); }} />
+                  <span><Clock3 size={14} /> {t.adminStaleFilter}</span>
+                </label>
+              )}
               <span className="admin-toolbar-count">{loadingListings ? "" : t.adminShowingCount(listings.length, statusLabel[filter])}</span>
             </div>
 
@@ -646,6 +661,9 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                           <span className="admin-card-badges">
                             <span className={`listing-status listing-status-${listing.status}`}>{statusLabel[listing.status]}</span>
                             {listing.verified && <span className="listing-status listing-status-approved"><BadgeCheck size={12} /> {t.adminVerifiedBadge}</span>}
+                            {listing.status === "approved" && loadedAt - new Date(listing.updated_at).getTime() > STALE_DAYS * DAY_MS && (
+                              <span className="listing-status listing-status-stale"><Clock3 size={12} /> {t.adminStaleBadge(numberFormat.format(Math.floor((loadedAt - new Date(listing.updated_at).getTime()) / DAY_MS)))}</span>
+                            )}
                           </span>
                           <time dateTime={listing.created_at}>{dateFormat.format(new Date(listing.created_at))}</time>
                         </div>

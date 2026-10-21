@@ -41,12 +41,19 @@ export default function OwnerPortal({ locale }: Props) {
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaReset, setCaptchaReset] = useState(0);
   const [ownerStats, setOwnerStats] = useState<Record<string, { views: number; whatsapp_clicks: number }>>({});
+  // Hidden until the availability migration is installed (the functions below do not exist yet).
+  const [availabilityReady, setAvailabilityReady] = useState(true);
+  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
 
   // Views and WhatsApp clicks for the owner's published listings.
   const publishedIds = ownerListings.filter((listing) => listing.status === "approved").map((listing) => listing.id).join(",");
   useEffect(() => {
     if (!supabase || !publishedIds) return;
     let mounted = true;
+    // Probe for the availability functions: a missing function (PGRST202) means the migration is not installed yet.
+    void supabase.rpc("confirm_listing", { target_listing: "00000000-0000-0000-0000-000000000000" }).then(({ error: probeError }) => {
+      if (mounted && probeError?.code === "PGRST202") setAvailabilityReady(false);
+    });
     void supabase.rpc("listing_stats", { listing_ids: publishedIds.split(",") }).then(({ data, error: statsError }) => {
       if (!mounted || statsError) return;
       const rows = (data ?? []) as Array<{ listing_id: string; views: number; whatsapp_clicks: number }>;
@@ -192,9 +199,44 @@ export default function OwnerPortal({ locale }: Props) {
     setSubmitting(false);
   }
 
+  async function setPaused(listing: OwnerListing, pause: boolean) {
+    if (!supabase) return;
+    setSubmitting(true);
+    setError("");
+    setMessage("");
+    const { data, error: rpcError } = await supabase.rpc("owner_set_listing_paused", { target_listing: listing.id, pause });
+    if (rpcError) {
+      console.error("Could not change listing availability:", rpcError);
+      if (rpcError.code === "PGRST202") setAvailabilityReady(false);
+      setError(t.availabilityError);
+    } else {
+      setOwnerListings((current) => current.map((item) => item.id === listing.id ? { ...item, status: data as OwnerListing["status"], updated_at: new Date().toISOString() } : item));
+      setMessage(pause ? t.listingPausedMessage : t.listingResumedMessage);
+    }
+    setSubmitting(false);
+  }
+
+  async function confirmAvailable(listing: OwnerListing) {
+    if (!supabase) return;
+    setSubmitting(true);
+    setError("");
+    setMessage("");
+    const { data, error: rpcError } = await supabase.rpc("confirm_listing", { target_listing: listing.id });
+    if (rpcError) {
+      console.error("Could not confirm listing:", rpcError);
+      if (rpcError.code === "PGRST202") setAvailabilityReady(false);
+      setError(t.availabilityError);
+    } else {
+      setOwnerListings((current) => current.map((item) => item.id === listing.id ? { ...item, updated_at: String(data) } : item));
+      setMessage(t.listingConfirmedMessage);
+    }
+    setSubmitting(false);
+  }
+
   const statusLabel = (status: OwnerListing["status"]) => {
     if (status === "approved") return t.statusApproved;
     if (status === "rejected") return t.statusRejected;
+    if (status === "paused") return t.statusPaused;
     return t.statusPending;
   };
 
@@ -271,9 +313,11 @@ export default function OwnerPortal({ locale }: Props) {
 
               <div className="owner-listings">
                 <h4>{t.ownerListings}</h4>
+                {availabilityReady && ownerListings.some((listing) => listing.status === "approved") && <p className="owner-listings-hint">{t.confirmReminder}</p>}
                 {loadingListings ? <p>{t.loading}</p> : ownerListings.length === 0 ? <p>{t.noOwnerListings}</p> : ownerListings.map((listing) => {
                   const title = locale === "ar" ? listing.title_ar : listing.title_en;
-                  const canChange = listing.status !== "approved";
+                  const canChange = listing.status === "pending" || listing.status === "rejected";
+                  const canDelete = canChange || listing.status === "paused";
                   return (
                     <div className="owner-listing-row" key={listing.id}>
                       <div className="owner-listing-main">
@@ -283,6 +327,9 @@ export default function OwnerPortal({ locale }: Props) {
                         {listing.status === "rejected" && listing.rejection_reason && (
                           <small className="owner-review-note"><strong>{t.reviewNote}:</strong> {listing.rejection_reason}</small>
                         )}
+                        {(listing.status === "approved" || listing.status === "paused") && (
+                          <small className="owner-listing-updated">{t.lastUpdated(dateFormat.format(new Date(listing.updated_at)))}</small>
+                        )}
                         {listing.status === "approved" && ownerStats[listing.id] && (
                           <small className="owner-listing-stats">
                             {t.statsViews(String(ownerStats[listing.id].views))} · {t.statsWhatsapp(String(ownerStats[listing.id].whatsapp_clicks))}
@@ -291,11 +338,20 @@ export default function OwnerPortal({ locale }: Props) {
                       </div>
                       <div className="owner-listing-actions">
                         <span className={`listing-status listing-status-${listing.status}`}>{statusLabel(listing.status)}</span>
-                        {canChange && confirmingDeleteId !== listing.id && (
+                        {availabilityReady && listing.status === "approved" && (
                           <>
-                            <button type="button" className="owner-text-button" disabled={submitting} onClick={() => startEditing(listing)}>{t.editListing}</button>
-                            <button type="button" className="owner-text-button is-danger" disabled={submitting} onClick={() => setConfirmingDeleteId(listing.id)}>{t.deleteListing}</button>
+                            <button type="button" className="owner-text-button" disabled={submitting} onClick={() => void confirmAvailable(listing)}>{t.confirmAvailable}</button>
+                            <button type="button" className="owner-text-button" disabled={submitting} onClick={() => void setPaused(listing, true)}>{t.pauseListing}</button>
                           </>
+                        )}
+                        {availabilityReady && listing.status === "paused" && confirmingDeleteId !== listing.id && (
+                          <button type="button" className="owner-text-button" disabled={submitting} onClick={() => void setPaused(listing, false)}>{t.resumeListing}</button>
+                        )}
+                        {canChange && confirmingDeleteId !== listing.id && (
+                          <button type="button" className="owner-text-button" disabled={submitting} onClick={() => startEditing(listing)}>{t.editListing}</button>
+                        )}
+                        {canDelete && confirmingDeleteId !== listing.id && (
+                          <button type="button" className="owner-text-button is-danger" disabled={submitting} onClick={() => setConfirmingDeleteId(listing.id)}>{t.deleteListing}</button>
                         )}
                         {confirmingDeleteId === listing.id && (
                           <>

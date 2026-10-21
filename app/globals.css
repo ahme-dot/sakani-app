@@ -6274,3 +6274,173 @@ button {
 .admin-nav {
   position: relative;
 }
+
+/* ---------- Availability, error page, loading skeleton ---------- */
+.listing-status-paused {
+  background: #eef0ee;
+  color: #55625c;
+}
+
+.listing-status-stale {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fbf1e6;
+  color: #94582f;
+}
+
+.owner-listing-updated {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.owner-listings-hint {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--green-pale);
+  color: var(--green-dark);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.admin-stats {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 1180px) {
+  .admin-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.admin-stat-paused { --accent: #8a9690; }
+
+.admin-stale-toggle {
+  flex: 0 0 auto;
+}
+
+.admin-stale-toggle span {
+  gap: 6px;
+  min-height: 44px;
+  font-size: 13px;
+}
+
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.error-actions .owner-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-actions .signout-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 45px;
+  padding-inline: 18px;
+}
+
+.skeleton {
+  border-radius: 14px;
+  background: linear-gradient(90deg, #eceee9 0%, #f6f7f4 50%, #eceee9 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-gallery {
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  margin-top: 40px;
+  border-radius: 22px;
+}
+
+.skeleton-line {
+  height: 16px;
+  margin-top: 14px;
+  width: 60%;
+}
+
+.skeleton-line.is-short {
+  width: 25%;
+  margin-top: 28px;
+}
+
+.skeleton-title {
+  height: 40px;
+  margin-top: 16px;
+  width: 85%;
+}
+
+.skeleton-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.skeleton-fact {
+  height: 76px;
+}
+
+.skeleton-card {
+  height: 300px;
+  margin-top: 28px;
+  border-radius: 20px;
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (max-width: 900px) {
+  .skeleton-gallery {
+    aspect-ratio: 16 / 10;
+  }
+
+  .skeleton-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.admin-toolbar {
+  flex-wrap: wrap;
+}
+
+.not-found-panel h1 {
+  margin: 14px 0 6px;
+  font-size: clamp(22px, 3vw, 26px);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.error-actions {
+  align-items: center;
+  margin-top: 8px;
+}
+
+.error-actions .owner-submit,
+.error-actions .signout-button {
+  min-height: 46px;
+  margin: 0;
+  padding-inline: 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.error-actions {
+  justify-content: flex-start;
+}

@@ -62,6 +62,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const areaLabel = locale === "ar" ? area?.name ?? listing.area : listing.area;
   const universityLabel = locale === "ar" ? university?.name ?? listing.university : listing.university;
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
+  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
   const verified = listing.verification_status === "verified";
   const whatsappHref = whatsappLink(listing.whatsapp_number, t.whatsappMessage(title));
   const pageUrl = `${SITE_URL}${listingPath(locale, listing.id)}`;
@@ -178,7 +179,10 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                 {verified ? t.listingVerifiedNote : t.listingUnverifiedNote}
               </p>
               <p className="listing-listed">
-                {t.listedOn}: <time dateTime={listing.created_at}>{new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" }).format(new Date(listing.created_at))}</time>
+                {t.listedOn}: <time dateTime={listing.created_at}>{dateFormat.format(new Date(listing.created_at))}</time>
+                {listing.updated_at && listing.updated_at.slice(0, 10) !== listing.created_at.slice(0, 10) && (
+                  <> · {t.updatedOn}: <time dateTime={listing.updated_at}>{dateFormat.format(new Date(listing.updated_at))}</time></>
+                )}
               </p>
             </div>
             <ReportListing locale={locale} listingId={listing.id} />
