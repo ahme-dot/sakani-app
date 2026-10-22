@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useSavedListings } from "@/lib/saved";
 import Image from "next/image";
 import {
   BadgeCheck,
@@ -8,6 +9,7 @@ import {
   GraduationCap,
   House,
   MapPin,
+  Heart,
   MessageCircle,
   Search,
   Share2,
@@ -27,6 +29,7 @@ import {
   AMENITY_FILTERS,
   EMPTY_FILTERS,
   fetchApprovedListings,
+  fetchListingsByIds,
   hasActiveFilters,
   type AmenityFilter,
   type ListingFilters,
@@ -69,6 +72,24 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
   const [listingError, setListingError] = useState(initialError);
   const requestId = useRef(0);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const savedIds = useSavedListings();
+  const savedKey = savedIds.join(",");
+  const [showSaved, setShowSaved] = useState(false);
+  const [savedListings, setSavedListings] = useState<Property[] | null>(null);
+
+  // Saved view: load the saved homes, and reload when one is un-saved.
+  useEffect(() => {
+    if (!showSaved || !supabase) return;
+    let mounted = true;
+    void fetchListingsByIds(supabase, savedKey ? savedKey.split(",") : []).then(({ listings: saved, error }) => {
+      if (!mounted) return;
+      if (error) console.error("Could not load saved listings:", error);
+      setSavedListings(saved);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [showSaved, savedKey, supabase]);
   const filtersActive = hasActiveFilters(filters);
   const extraFilterCount = [filters.propertyType, filters.maxPrice].filter(Boolean).length + filters.amenities.length;
   const amenityLabels: Record<AmenityFilter, string> = {
@@ -112,6 +133,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
   }
 
   function updateFilters(patch: Partial<ListingFilters>, { reload = true } = {}) {
+    setShowSaved(false);
     const next = { ...filters, ...patch };
     setFilters(next);
     if (reload) void loadListings(next, 0);
@@ -249,8 +271,8 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
           <div className="section-heading">
             <div>
               <span className="section-kicker">{t.featuredKicker}</span>
-              <h2>{filtersActive ? t.filteredTitle : t.featuredTitle}</h2>
-              <p aria-live="polite">{filtersActive ? t.resultCount(total) : isDemoMode ? t.browseHint : t.approvedListingCount(total)}</p>
+              <h2>{showSaved ? t.savedTitle : filtersActive ? t.filteredTitle : t.featuredTitle}</h2>
+              <p aria-live="polite">{showSaved ? t.savedCount(savedIds.length) : filtersActive ? t.resultCount(total) : isDemoMode ? t.browseHint : t.approvedListingCount(total)}</p>
             </div>
             <label className="listing-sort">
               <span>{t.sortLabel}</span>
@@ -265,24 +287,44 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
             </label>
           </div>
           <div className="uni-chips" role="group" aria-label={t.university}>
-            <button type="button" className={!filters.university ? "is-active" : ""} aria-pressed={!filters.university} onClick={() => updateFilters({ university: "" })}>
+            <button type="button" className={!showSaved && !filters.university ? "is-active" : ""} aria-pressed={!showSaved && !filters.university} onClick={() => updateFilters({ university: "" })}>
               {t.allUniversities}
             </button>
             {universities.map((university) => (
               <button
                 key={university.id}
                 type="button"
-                className={filters.university === university.name_en ? "is-active" : ""}
-                aria-pressed={filters.university === university.name_en}
+                className={!showSaved && filters.university === university.name_en ? "is-active" : ""}
+                aria-pressed={!showSaved && filters.university === university.name_en}
                 onClick={() => updateFilters({ university: university.name_en })}
               >
                 <GraduationCap size={15} /> {locale === "ar" ? university.name : university.name_en}
               </button>
             ))}
+            {!isDemoMode && (savedIds.length > 0 || showSaved) && (
+              <button type="button" className={`uni-chip-saved${showSaved ? " is-active" : ""}`} aria-pressed={showSaved} onClick={() => { setSavedListings(null); setShowSaved((value) => !value); }}>
+                <Heart size={15} fill={showSaved ? "currentColor" : "none"} /> {t.savedFilter(savedIds.length)}
+              </button>
+            )}
           </div>
           {isDemoMode && <p className="demo-notice">{t.demoNotice}</p>}
           {listingError && <p className="owner-feedback owner-feedback-error" role="alert">{t.feedError}</p>}
-          {loading === "replace" ? (
+          {showSaved ? (
+            savedListings === null ? (
+              <div className="listings-loading">{t.loadingListings}</div>
+            ) : savedListings.length > 0 ? (
+              <div className="property-grid">
+                {savedListings.map((property) => <PropertyCard key={property.id} property={property} locale={locale} />)}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <Heart size={24} />
+                <h3>{t.savedEmptyTitle}</h3>
+                <p>{t.savedEmptyText}</p>
+                <button className="button button-outline" type="button" onClick={() => setShowSaved(false)}>{t.savedBack}</button>
+              </div>
+            )
+          ) : loading === "replace" ? (
             <div className="listings-loading">{t.loadingListings}</div>
           ) : listings.length > 0 ? (
             <>

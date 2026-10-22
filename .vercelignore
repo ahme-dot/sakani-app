@@ -4,3 +4,5 @@
 node_modules
 .claude
 .agents
+test-results
+playwright-report

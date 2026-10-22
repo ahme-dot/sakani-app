@@ -95,7 +95,7 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
         <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" type="number" min="1" max="100" required defaultValue={listing.total_beds} /></label>
         <label className="owner-field"><span>{t.walkingDistance}</span><input name="walking_distance_minutes" type="number" min="0" max="300" required defaultValue={listing.walking_distance_minutes} /></label>
       </div>
-      <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" pattern="[+0-9 ()-]{8,20}" required dir="ltr" defaultValue={listing.whatsapp_number} /></label>
+      <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" pattern="[0-9+ \(\)\-]{8,20}" required dir="ltr" defaultValue={listing.whatsapp_number} /></label>
       <fieldset className="amenity-fieldset">
         <legend>{t.amenitiesTitle}</legend>
         <div className="choice-row">

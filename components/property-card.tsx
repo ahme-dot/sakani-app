@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, BedDouble, Check, Clock3, MapPin, MessageCircle, Wifi, Wind } from "lucide-react";
 import { WhatsAppLink } from "@/components/listing-tracking";
+import SaveButton from "@/components/save-button";
 import { areas } from "@/lib/data";
 import { listingPath, whatsappLink } from "@/lib/site";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
@@ -37,6 +38,7 @@ export default function PropertyCard({ property, locale, linkToDetails = true }:
           )}
           <span className="gender-badge">{t[property.gender]}</span>
         </div>
+        {linkToDetails && <SaveButton locale={locale} listingId={property.id} title={title} />}
         <span className="walking-badge"><Clock3 size={14} /> {t.walkingMinutes(property.walking_distance_minutes)}</span>
       </div>
 

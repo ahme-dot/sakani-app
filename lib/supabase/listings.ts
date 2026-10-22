@@ -84,6 +84,19 @@ export async function fetchSimilarListings(client: SupabaseClient, listing: Pick
   return ((data ?? []) as unknown as MarketplaceListing[]).map(toProperty);
 }
 
+/** Published listings by id (for the visitor's saved homes), in the order given; unpublished ones are left out. */
+export async function fetchListingsByIds(client: SupabaseClient, ids: string[]) {
+  const valid = ids.filter((id) => UUID_PATTERN.test(id)).slice(0, 100);
+  if (!valid.length) return { listings: [] as Property[], error: null };
+  const { data, error } = await client
+    .from("properties")
+    .select(PUBLIC_LISTING_COLUMNS)
+    .eq("status", "approved")
+    .in("id", valid);
+  const byId = new Map(((data ?? []) as unknown as MarketplaceListing[]).map((listing) => [listing.id, toProperty(listing)]));
+  return { listings: valid.flatMap((id) => byId.get(id) ?? []), error };
+}
+
 /** Runs the public feed query with filtering, sorting and pagination done by the database. */
 export async function fetchApprovedListings(
   client: SupabaseClient,

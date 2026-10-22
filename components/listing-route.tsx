@@ -10,6 +10,7 @@ import {
   Clock3,
   GraduationCap,
   Info,
+  Map as MapIcon,
   MapPin,
   MessageCircle,
   ShieldAlert,
@@ -25,6 +26,7 @@ import { TrackListingView, WhatsAppLink } from "@/components/listing-tracking";
 import PropertyCard from "@/components/property-card";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { areas, universities } from "@/lib/data";
+import SaveButton from "@/components/save-button";
 import { bilingualMetadata } from "@/lib/metadata";
 import { SITE_URL, listingPath, whatsappLink } from "@/lib/site";
 import { fetchSimilarListings } from "@/lib/supabase/listings";
@@ -129,6 +131,12 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
               <span><MapPin size={16} /> {locale === "ar" ? `${areaLabel}، ${t.city}` : `${areaLabel}, ${t.city}`}</span>
               <span><GraduationCap size={16} /> {universityLabel}</span>
             </p>
+            <p className="listing2-maps">
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${listing.area}, Giza, Egypt`)}`} target="_blank" rel="noreferrer">
+                <MapIcon size={16} /> {t.openInMaps}
+              </a>
+              <small>{t.mapsHint}</small>
+            </p>
 
             <dl className="listing2-facts" aria-label={t.listingDetails}>
               {facts.map(({ icon: Icon, label, value }) => (
@@ -173,7 +181,10 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
               <WhatsAppLink listingId={listing.id} className="button button-primary listing2-whatsapp" href={whatsappHref}>
                 <MessageCircle size={18} /> {t.contactOwner}
               </WhatsAppLink>
-              <ShareListingButton locale={locale} title={title} url={pageUrl} className="listing2-share" />
+              <div className="listing2-secondary">
+                <SaveButton locale={locale} listingId={listing.id} title={title} variant="page" />
+                <ShareListingButton locale={locale} title={title} url={pageUrl} className="listing2-share" />
+              </div>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>
                 {verified ? <BadgeCheck size={16} /> : <Info size={16} />}
                 {verified ? t.listingVerifiedNote : t.listingUnverifiedNote}

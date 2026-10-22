@@ -291,7 +291,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
 
       <fieldset className="form-section">
         <legend><span className="form-step">6</span> {t.formSectionContact}</legend>
-        <label className="owner-field"><span>{isAdmin ? t.ownerWhatsapp : t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" autoComplete={isAdmin ? "off" : "tel"} pattern="[+0-9 ()-]{8,20}" placeholder={t.whatsappHint} required dir="ltr" defaultValue={editing?.whatsapp_number} /></label>
+        <label className="owner-field"><span>{isAdmin ? t.ownerWhatsapp : t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" autoComplete={isAdmin ? "off" : "tel"} pattern="[0-9+ \(\)\-]{8,20}" placeholder={t.whatsappHint} required dir="ltr" defaultValue={editing?.whatsapp_number} /></label>
       </fieldset>
 
       {isAdmin && (

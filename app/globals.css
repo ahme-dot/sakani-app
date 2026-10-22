@@ -6444,3 +6444,111 @@ button {
 .error-actions {
   justify-content: flex-start;
 }
+
+/* ---------- Saved homes and maps ---------- */
+.save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--ink);
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.save-button.is-saved {
+  color: #c2414b;
+}
+
+.save-button:active {
+  transform: scale(0.94);
+}
+
+.save-button-card {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  inset-inline-end: 10px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 4px 14px rgb(29 52 41 / 18%);
+}
+
+.save-button-card:hover {
+  color: #c2414b;
+}
+
+.save-button-page {
+  flex: 1 1 0;
+  min-height: 46px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.save-button-page:hover {
+  border-color: #cbd8cd;
+}
+
+.save-button-page.is-saved {
+  border-color: #efc5c9;
+  background: #fdf3f4;
+}
+
+.listing2-secondary {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.listing2-secondary .listing2-share {
+  flex: 1 1 0;
+  margin-top: 0;
+}
+
+.uni-chips button.uni-chip-saved {
+  color: #b2404a;
+}
+
+.uni-chips button.uni-chip-saved.is-active {
+  border-color: #c2414b;
+  background: #fdf3f4;
+  color: #a3323c;
+}
+
+.listing2-maps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 12px 0 0;
+}
+
+.listing2-maps a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  padding-inline: 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--green-dark);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.listing2-maps a:hover {
+  border-color: #b9d3c3;
+  background: var(--green-pale);
+}
+
+.listing2-maps small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
