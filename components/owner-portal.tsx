@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { BadgeCheck, ImagePlus, LoaderCircle, Sparkles } from "lucide-react";
+import { BadgeCheck, ImagePlus, Sparkles } from "lucide-react";
 import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
 import ListingForm, { removeListingImages } from "@/components/listing-form";
 import { listingPath } from "@/lib/site";
@@ -254,10 +254,6 @@ export default function OwnerPortal({ locale }: Props) {
         </div>
 
         <div className="owner-panel">
-          {portalState === "loading" && (
-            <div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.loading}</div>
-          )}
-
           {portalState === "unconfigured" && (
             <div className="portal-message">
               <BadgeCheck size={25} />
@@ -266,14 +262,16 @@ export default function OwnerPortal({ locale }: Props) {
             </div>
           )}
 
-          {portalState === "signed-out" && (
+          {/* Shown straight away while the saved session is checked: most visitors are not signed in,
+              and a returning owner switches to their dashboard as soon as the page has loaded. */}
+          {(portalState === "signed-out" || portalState === "loading") && (
             <div className="owner-signin">
               <span className="signin-icon"><ImagePlus size={19} /></span>
               <h3>{t.ownerSignInTitle}</h3>
               <p>{t.ownerSignInText}</p>
               <Link className="button button-primary owner-submit" href={`/${locale}/account`}>{t.ownerLoginButton}</Link>
               <Captcha locale={locale} onToken={setCaptchaToken} resetKey={captchaReset} />
-              <button className="button button-outline owner-guest-button" type="button" disabled={submitting} onClick={() => void startEmailFreeSession()}>
+              <button className="button button-outline owner-guest-button" type="button" disabled={submitting || portalState === "loading"} onClick={() => void startEmailFreeSession()}>
                 {submitting ? t.sending : t.ownerGuestButton}
               </button>
             </div>
