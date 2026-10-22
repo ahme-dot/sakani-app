@@ -8349,3 +8349,485 @@ body:has(.site-shell) {
     padding-top: 32px;
   }
 }
+
+/* =====================================================================
+   Calm refinements (fewer weights, softer contrast, less chrome) and
+   success-fee payment screens.
+   ===================================================================== */
+.site-shell {
+  --muted: #717171;
+  --line: #e2e2e2;
+  line-height: 1.6;
+}
+
+.site-shell h1,
+.site-shell h2,
+.site-shell h3 {
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.site-shell .home-intro h1 {
+  font-size: clamp(21px, 2.2vw, 26px);
+  font-weight: 700;
+}
+
+.site-shell .home-trust {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.site-shell .listings-head {
+  align-items: center;
+}
+
+.site-shell .listings-head h2 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.site-shell .listing-sort {
+  min-width: 150px;
+}
+
+.site-shell .listing-sort .select-wrap select {
+  height: 40px;
+  border-color: var(--line);
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+.site-shell .search-pill {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 3px 10px rgb(0 0 0 / 4%);
+}
+
+.site-shell .category-tab {
+  color: #8a8a8a;
+}
+
+.site-shell .category-tab:hover,
+.site-shell .category-tab.is-active {
+  color: var(--ink);
+}
+
+.site-shell .property-location {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.site-shell .property-price strong {
+  font-weight: 700;
+}
+
+.site-shell .property-pill {
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.site-shell .save-button-card {
+  box-shadow: none;
+}
+
+/* Owner banner: soft panel instead of a dark block. */
+.site-shell .host-banner-card {
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.site-shell .host-banner-copy p {
+  color: var(--muted);
+}
+
+.site-shell .host-banner-copy .button {
+  background: var(--green);
+  color: #fff;
+}
+
+.site-shell .host-banner-copy h2 {
+  font-size: clamp(24px, 3vw, 32px);
+}
+
+.site-shell .listing3-top h1,
+.site-shell .listing3-summary h2,
+.site-shell .listing3-section h2,
+.site-shell .listing3-know h2,
+.site-shell .listing3-similar h2 {
+  font-weight: 700;
+}
+
+.site-shell .listing3-card {
+  box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+}
+
+/* Host page pricing */
+.host-pricing {
+  max-width: 820px;
+  margin-block: 8px 8px;
+  padding: 28px 32px;
+  border-radius: 20px;
+  background: var(--panel);
+}
+
+.host-pricing h2 {
+  margin: 0 0 14px;
+  font-size: 20px;
+}
+
+.host-pricing ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.host-pricing li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 15.5px;
+}
+
+.host-pricing li svg {
+  flex: 0 0 auto;
+  margin-top: 4px;
+  color: var(--green);
+}
+
+.host-pricing p {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Owner dashboard */
+.owner-add-another {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 18px;
+}
+
+.owner-listing-item + .owner-listing-item {
+  border-top: 1px solid var(--line-soft);
+}
+
+.owner-listing-item .owner-listing-row {
+  border: 0;
+}
+
+.owner-rented-panel {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.owner-rented-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.owner-rented-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.owner-rented-actions .button {
+  min-height: 42px;
+  padding-inline: 16px;
+  font-size: 14px;
+}
+
+.owner-payments {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.owner-payments h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+
+.owner-payments-intro {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.fee-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.fee-card.is-due {
+  border-color: #e9c8a8;
+}
+
+.fee-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fee-card-head div {
+  display: grid;
+}
+
+.fee-card-head strong {
+  font-size: 20px;
+}
+
+.fee-card-head span {
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.fee-status {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fee-status.is-due {
+  background: #fbf1e6;
+  color: #94582f;
+}
+
+.fee-status.is-submitted {
+  background: #eef3fb;
+  color: #3c5a85;
+}
+
+.fee-status.is-paid {
+  background: var(--green-pale);
+  color: var(--green-dark);
+}
+
+.fee-overdue,
+.fee-note,
+.fee-wait {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.fee-overdue {
+  color: #94582f;
+  font-weight: 600;
+}
+
+.fee-wait {
+  color: var(--muted);
+}
+
+.fee-pay {
+  display: grid;
+  gap: 14px;
+}
+
+.fee-pay > p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.pay-accounts {
+  display: grid;
+  gap: 8px;
+}
+
+.pay-account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.pay-account span {
+  min-width: 100px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pay-account strong {
+  font-size: 16px;
+  letter-spacing: 0.3px;
+}
+
+.pay-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-inline-start: auto;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pay-payee {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.fee-pay .button {
+  justify-self: start;
+  min-height: 46px;
+  padding-inline: 22px;
+}
+
+/* Admin payments */
+.admin-pay-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-payments .admin-segment {
+  margin-bottom: 16px;
+}
+
+.admin-fee-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-fee {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.admin-fee-main {
+  display: grid;
+}
+
+.admin-fee-main strong {
+  font-size: 18px;
+}
+
+.admin-fee-main span {
+  font-size: 14px;
+}
+
+.admin-fee-main small {
+  color: var(--muted);
+}
+
+.admin-fee-ref {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.admin-fee-ref div {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-fee-ref dt {
+  color: var(--muted);
+}
+
+.admin-fee-ref dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.admin-fee .admin-card-actions {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.admin-pay-settings {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.admin-pay-settings h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.admin-pay-settings .admin-btn {
+  justify-self: start;
+}
+
+@media (max-width: 760px) {
+  .host-pricing {
+    padding: 22px 18px;
+  }
+
+  .admin-pay-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-fee {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .site-shell .listings-head {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .site-shell .listing-sort {
+    min-width: 0;
+    width: 140px;
+  }
+}
+
+/* Owner page: centred sign-in choices inside the wide card. */
+.site-shell .owner-layout.is-standalone .owner-signin {
+  max-width: 440px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.site-shell .owner-layout.is-standalone .owner-signin .signin-icon {
+  margin-inline: auto;
+}
+
+@media (max-width: 760px) {
+  .site-shell .listing-sort .select-wrap select {
+    font-size: 16px;
+  }
+}

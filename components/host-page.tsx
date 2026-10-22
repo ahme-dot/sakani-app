@@ -1,13 +1,18 @@
-import { ClipboardList, MessageCircle, ShieldCheck } from "lucide-react";
+import { Check, ClipboardList, MessageCircle, ShieldCheck } from "lucide-react";
 import OwnerPortal from "@/components/owner-portal";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
+import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings } from "@/lib/payments";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 const STEP_ICONS = [ClipboardList, ShieldCheck, MessageCircle];
 
 /** "List your home" page for owners (like Airbnb's host page), with the owner portal below. */
-export default function HostPage({ locale }: { locale: SiteLocale }) {
+export default async function HostPage({ locale }: { locale: SiteLocale }) {
   const t = SITE_COPY[locale];
+  const client = getSupabaseServerClient();
+  const settings = (client ? await fetchPaymentSettings(client) : null) ?? DEFAULT_PAYMENT_SETTINGS;
+  const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
   const otherLocale: SiteLocale = locale === "ar" ? "en" : "ar";
 
   return (
@@ -30,6 +35,15 @@ export default function HostPage({ locale }: { locale: SiteLocale }) {
             })}
           </ol>
           <a className="button button-primary host-start" href="#owner">{t.hostStart}</a>
+        </section>
+        <section className="host-pricing section-wrap" aria-labelledby="pricing-title">
+          <h2 id="pricing-title">{t.pricingTitle}</h2>
+          <ul>
+            <li><Check size={18} /> {t.pricingStudents}</li>
+            <li><Check size={18} /> {t.pricingListing}</li>
+            <li><Check size={18} /> {t.pricingSuccess(numberFormat.format(settings.fee_percent), numberFormat.format(settings.fee_minimum))}</li>
+          </ul>
+          <p>{t.pricingPay}</p>
         </section>
         <OwnerPortal locale={locale} showIntro={false} />
       </main>

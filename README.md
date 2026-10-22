@@ -37,6 +37,7 @@ The site uses Supabase for email-free owner submissions, image uploads, private 
    8. [`supabase/migrations/20261025000000_sakani_contact_and_photos.sql`](./supabase/migrations/20261025000000_sakani_contact_and_photos.sql) — contact form inbox and photo rules.
    9. [`supabase/migrations/20261026000000_sakani_launch.sql`](./supabase/migrations/20261026000000_sakani_launch.sql) — in-person visit verification, views and WhatsApp-click counts.
    10. [`supabase/migrations/20261027000000_sakani_availability.sql`](./supabase/migrations/20261027000000_sakani_availability.sql) — owners mark homes "Rented / full" and confirm "Still available".
+   11. [`supabase/migrations/20261028000000_sakani_payments.sql`](./supabase/migrations/20261028000000_sakani_payments.sql) — owner success fee paid by InstaPay / Vodafone Cash, and payment settings.
 4. Create an administrator in Supabase Authentication with an email and password. This email is only for the administrator; listing submitters do not need one.
 5. In the Supabase SQL Editor, add that Auth user's ID to the admin allowlist by running this query after replacing the placeholder with the exact administrator email:
 
@@ -97,6 +98,13 @@ Do steps 2 and 3 together: once Supabase requires CAPTCHA, every sign-in needs t
 
 For local testing, run the app on a computer and open its LAN address (for example, `http://192.168.x.x:3000`) on a phone connected to the same Wi-Fi network. The computer firewall must allow inbound connections on port 3000. A LAN URL is temporary and is not a public deployment; deploy to a host with HTTPS and configure its URL in Supabase before sharing the site publicly.
 
-## Monetization status
+## Payments (owner success fee)
 
-Paid featured placement is planned, but **checkout is intentionally disabled**. No money is collected, and the site does not collect tenant rent or deposits. Choose and configure a payment provider, pricing, and production credentials before enabling any paid product. Do not accept card details directly in this app.
+Students never pay, and listing is free. When an owner marks a home **Rented / full** and confirms the student found it on Sakani, a one-time success fee becomes due (a percentage of one month’s rent, with a minimum).
+
+1. In the admin panel, open **Payments** and enter your InstaPay address, Vodafone Cash number, account name, the fee percentage and the minimum. Owners see these details on their payment card.
+2. The owner sends the money by InstaPay or Vodafone Cash and enters the transaction number and the phone number they paid from.
+3. Under **Payments → To check**, compare it with your InstaPay / Vodafone Cash history and choose **Payment received**, **Not received** (the owner can resend) or **Waive**.
+4. If a student tells you they rented a home the owner did not report, use **Rented via Sakani: add fee** on the listing card.
+
+Owners with a fee more than 14 days overdue cannot add new listings until it is paid. Money goes straight to your account; the site never handles card details.

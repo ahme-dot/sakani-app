@@ -4,7 +4,7 @@ import type { SiteLocale } from "@/messages/site";
  * DRAFT legal pages. Written to describe what the site actually does; not legal advice.
  * The site operator should have them reviewed (Egypt Personal Data Protection Law No. 151 of 2020) before relying on them.
  */
-export const LEGAL_UPDATED = "2026-10-21";
+export const LEGAL_UPDATED = "2026-10-22";
 
 type LegalSection = { heading: string; body: string[] };
 type LegalPage = { title: string; intro: string; sections: LegalSection[] };
@@ -23,6 +23,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
             "المُلّاك: الاسم والبريد الإلكتروني وكلمة المرور (تُحفظ مشفرة ولا يمكن لأحد قراءتها)، وتفاصيل الإعلان، ورقم واتساب، وصور السكن.",
             "الضيوف (بدون حساب): نحفظ جلسة مجهولة في متصفحك لتتمكن من متابعة إعلاناتك، دون بريد أو اسم.",
             "الزوار: ما تكتبه بنفسك في نموذج التواصل أو البلاغات، مثل رسالتك ووسيلة التواصل إن أضفتها.",
+            "المدفوعات (للمُلّاك): عند سداد رسوم النجاح نحفظ المبلغ ووسيلة الدفع (إنستاباي أو فودافون كاش) ورقم العملية ورقم الهاتف المستخدم في التحويل، لنتأكد من وصول المبلغ. لا نطلب ولا نحفظ أي بيانات بطاقات بنكية.",
             "سجلات تقنية أساسية يحتفظ بها مزودو الاستضافة لأغراض الأمان والتشغيل. لا نستخدم إعلانات أو أدوات تتبع إعلانية.",
           ],
         },
@@ -77,7 +78,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "ما هو سكني",
           body: [
-            "سكني منصة مجانية تعرض إعلانات سكن الطلاب في الجيزة وتتيح التواصل المباشر مع المُلّاك. لسنا طرفاً في أي اتفاق إيجار، ولا نستلم أي مدفوعات أو تأمينات.",
+            "سكني منصة تعرض إعلانات سكن الطلاب في الجيزة وتتيح التواصل المباشر مع المُلّاك. التصفح والتواصل مجانيان للطلاب، ونشر الإعلانات مجاني للمُلّاك. لسنا طرفاً في أي اتفاق إيجار، ولا نستلم إيجاراً أو تأميناً من الطلاب.",
           ],
         },
         {
@@ -98,6 +99,14 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           heading: "حدود المسؤولية",
           body: [
             "نبذل جهدنا لمراجعة الإعلانات، لكننا لا نضمن دقة كل المعلومات أو توفر السكن. سكني غير مسؤول عن أي خلاف أو خسارة تنتج عن اتفاق بين الطالب والمالك.",
+          ],
+        },
+        {
+          heading: "رسوم النجاح للمُلّاك",
+          body: [
+            "عندما يؤجر المالك سكنه لطالب وجده عبر سكني، يلتزم بدفع رسوم نجاح لمرة واحدة. تظهر قيمة الرسوم للمالك قبل تأكيدها، وهي نسبة من إيجار شهر واحد بحد أدنى.",
+            "تُدفع الرسوم بتحويل عبر إنستاباي أو فودافون كاش إلى الحساب الموضح في صفحة الدفع، وتُعتبر مدفوعة بعد تأكيد فريق سكني لوصول التحويل.",
+            "يحق لنا إيقاف نشر إعلانات جديدة للمالك إذا تأخر سداد رسوم مستحقة أكثر من 14 يوماً. لا يدفع الطلاب أي رسوم لسكني.",
           ],
         },
         {
@@ -124,6 +133,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
             "Owners: name, email address and password (stored hashed — nobody can read it), listing details, WhatsApp number, and property photos.",
             "Guests (no account): an anonymous session in your browser so you can follow your listings, without an email or name.",
             "Visitors: whatever you type into the contact form or a listing report, such as your message and any contact details you add.",
+            "Payments (owners): when you pay a success fee we keep the amount, the method (InstaPay or Vodafone Cash), the transaction reference and the phone number used for the transfer, so we can confirm it arrived. We never ask for or store bank card details.",
             "Basic technical logs kept by our hosting providers for security and operations. We don’t use advertising or ad-tracking tools.",
           ],
         },
@@ -178,7 +188,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "What Sakani is",
           body: [
-            "Sakani is a free platform that shows student housing listings in Giza and lets students contact owners directly. We are not a party to any rental agreement and we don’t receive any payments or deposits.",
+            "Sakani shows student housing listings in Giza and lets students contact owners directly. Browsing and contacting owners is free for students, and listing a home is free for owners. We are not a party to any rental agreement and we never receive rent or deposits from students.",
           ],
         },
         {
@@ -199,6 +209,14 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           heading: "Limitation of liability",
           body: [
             "We do our best to review listings, but we can’t guarantee every detail is accurate or that a home is still available. Sakani is not responsible for disputes or losses arising from an agreement between a student and an owner.",
+          ],
+        },
+        {
+          heading: "Success fee for owners",
+          body: [
+            "When an owner rents their home to a student who found it on Sakani, the owner pays a one-time success fee. The owner sees the amount before confirming; it is a percentage of one month’s rent, with a minimum.",
+            "The fee is paid by InstaPay or Vodafone Cash transfer to the account shown on the payment page, and counts as paid once the Sakani team confirms the transfer arrived.",
+            "We may stop an owner from publishing new listings while a fee is more than 14 days overdue. Students never pay Sakani anything.",
           ],
         },
         {

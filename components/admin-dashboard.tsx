@@ -36,6 +36,7 @@ import {
   X,
 } from "lucide-react";
 import AdminGrow from "@/components/admin-grow";
+import AdminPayments from "@/components/admin-payments";
 import AdminInbox from "@/components/admin-inbox";
 import ListingForm from "@/components/listing-form";
 import VisitChecklist, { readVisit } from "@/components/visit-checklist";
@@ -59,7 +60,7 @@ const STALE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
-type AdminView = "listings" | "add" | "reports" | "inbox" | "users" | "grow" | "team";
+type AdminView = "listings" | "add" | "reports" | "inbox" | "payments" | "users" | "grow" | "team";
 type ListingStats = { views: number; whatsapp_clicks: number };
 type AdminListing = MarketplaceListing;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
@@ -99,6 +100,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [loadedAt, setLoadedAt] = useState(0);
   const [openReports, setOpenReports] = useState(0);
   const [openMessages, setOpenMessages] = useState(0);
+  const [feesToCheck, setFeesToCheck] = useState(0);
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(true);
   const [directoryError, setDirectoryError] = useState("");
@@ -272,12 +274,36 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       .then(({ count: messageCount }) => {
         if (mounted) setOpenMessages(messageCount ?? 0);
       });
+    // Fees with a transfer to check (0 until the payments migration is installed).
+    void supabase
+      .from("rental_fees")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "submitted")
+      .then(({ count: feeCount, error: feeError }) => {
+        if (mounted) setFeesToCheck(feeError ? 0 : feeCount ?? 0);
+      });
     return () => {
       mounted = false;
     };
   }, [supabase, state, countsVersion]);
 
   const refreshCounts = () => setCountsVersion((value) => value + 1);
+
+  async function chargeFee(listingId: string) {
+    if (!supabase) return;
+    setUpdatingId(listingId);
+    setError("");
+    setMessage("");
+    const { error: chargeError } = await supabase.rpc("admin_charge_fee", { target_listing: listingId });
+    setUpdatingId(null);
+    if (chargeError) {
+      console.error("Could not add success fee:", chargeError);
+      setError(chargeError.code === "PGRST202" ? t.paymentsMigration : t.adminUpdateError);
+      return;
+    }
+    setMessage(t.feeCharged);
+    refreshCounts();
+  }
 
   async function updateListing(listingId: string, patch: ListingPatch) {
     if (!supabase) return;
@@ -479,6 +505,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     { value: "add", label: t.adminViewAddListing, icon: PlusCircle },
     { value: "reports", label: t.adminViewReports, icon: Flag, badge: openReports },
     { value: "inbox", label: t.adminViewInbox, icon: Inbox, badge: openMessages },
+    { value: "payments", label: t.adminViewPayments, icon: Wallet, badge: feesToCheck },
     { value: "users", label: t.adminViewUsers, icon: UsersRound },
     { value: "grow", label: t.adminViewGrow, icon: Megaphone },
     { value: "team", label: t.adminViewTeam, icon: Users },
@@ -488,6 +515,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     add: { title: t.addListingTitle, description: t.addListingDescription },
     reports: { title: t.reportsTitle, description: t.reportsDescription },
     inbox: { title: t.inboxTitle, description: t.inboxDescription },
+    payments: { title: t.adminViewPayments, description: t.paymentsAdminDescription },
     users: { title: t.usersTitle, description: t.usersDescription },
     grow: { title: t.growTitle, description: t.growDescription },
     team: { title: t.teamTitle, description: t.teamDescription },
@@ -548,6 +576,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
               />
             </div>
           </section>
+        ) : view === "payments" ? (
+          <AdminPayments locale={locale} supabase={supabase!} onChanged={refreshCounts} />
         ) : view === "grow" ? (
           <AdminGrow locale={locale} />
         ) : view === "inbox" && supabase && user ? (
@@ -787,6 +817,11 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                             </button>
                             {listing.status === "approved" && (
                               <Link className="admin-btn admin-btn-ghost" href={listingPath(locale, listing.id)} target="_blank"><ExternalLink size={14} /> {t.adminViewPublic}</Link>
+                            )}
+                            {(listing.status === "approved" || listing.status === "paused") && (
+                              <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void chargeFee(listing.id)}>
+                                <Wallet size={14} /> {t.adminChargeFee}
+                              </button>
                             )}
                             <button className="admin-icon-btn" type="button" disabled={busy} aria-label={t.adminDelete} title={t.adminDelete} onClick={() => setDeletingId(listing.id)}>
                               <Trash2 size={16} />

@@ -3,9 +3,19 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { BadgeCheck, ImagePlus, Sparkles } from "lucide-react";
+import { BadgeCheck, ImagePlus, Plus, Sparkles } from "lucide-react";
 import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
 import ListingForm, { removeListingImages } from "@/components/listing-form";
+import OwnerPayments from "@/components/owner-payments";
+import {
+  DEFAULT_PAYMENT_SETTINGS,
+  RENTAL_FEE_COLUMNS,
+  fetchPaymentSettings,
+  isMissingFunction,
+  successFee,
+  type PaymentSettings,
+  type RentalFee,
+} from "@/lib/payments";
 import { listingPath } from "@/lib/site";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -48,6 +58,16 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
   // Hidden until the availability migration is installed (the functions below do not exist yet).
   const [availabilityReady, setAvailabilityReady] = useState(true);
   const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
+  const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
+  // Success fees: off until the payments migration is installed.
+  const [paymentsReady, setPaymentsReady] = useState(true);
+  const [fees, setFees] = useState<RentalFee[]>([]);
+  const [feesLoadedAt, setFeesLoadedAt] = useState(0);
+  const [paySettings, setPaySettings] = useState<PaymentSettings | null>(null);
+  const [feesVersion, setFeesVersion] = useState(0);
+  const [reportingId, setReportingId] = useState<string | null>(null);
+  // Returning owners see their listings first; the form opens with "Add another home".
+  const [formOpen, setFormOpen] = useState(false);
 
   // Views and WhatsApp clicks for the owner's published listings.
   const publishedIds = ownerListings.filter((listing) => listing.status === "approved").map((listing) => listing.id).join(",");
@@ -67,6 +87,29 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
       mounted = false;
     };
   }, [supabase, publishedIds]);
+
+  const ownerId = user?.id ?? null;
+  useEffect(() => {
+    if (!supabase || !ownerId) return;
+    let mounted = true;
+    void Promise.all([
+      supabase.from("rental_fees").select(RENTAL_FEE_COLUMNS).eq("owner_id", ownerId).order("created_at", { ascending: false }),
+      fetchPaymentSettings(supabase),
+    ]).then(([{ data, error: feesError }, settings]) => {
+      if (!mounted) return;
+      if (feesError) {
+        if (isMissingFunction(feesError)) setPaymentsReady(false);
+        else console.error("Could not load success fees:", feesError);
+        return;
+      }
+      setFees((data ?? []) as unknown as RentalFee[]);
+      setFeesLoadedAt(Date.now());
+      setPaySettings(settings);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [supabase, ownerId, feesVersion]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -220,6 +263,29 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
     setSubmitting(false);
   }
 
+  async function reportRental(listing: OwnerListing, viaSakani: boolean) {
+    if (!supabase) return;
+    setSubmitting(true);
+    setError("");
+    setMessage("");
+    const { error: rpcError } = await supabase.rpc("owner_report_rental", { target_listing: listing.id, via_sakani: viaSakani });
+    setSubmitting(false);
+    setReportingId(null);
+    if (isMissingFunction(rpcError)) {
+      setPaymentsReady(false);
+      await setPaused(listing, true);
+      return;
+    }
+    if (rpcError) {
+      console.error("Could not report rental:", rpcError);
+      setError(t.availabilityError);
+      return;
+    }
+    setOwnerListings((current) => current.map((item) => item.id === listing.id ? { ...item, status: "paused", updated_at: new Date().toISOString() } : item));
+    setMessage(viaSakani ? t.rentedThanks : t.rentedHidden);
+    setFeesVersion((version) => version + 1);
+  }
+
   async function confirmAvailable(listing: OwnerListing) {
     if (!supabase) return;
     setSubmitting(true);
@@ -298,7 +364,24 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                 </div>
               )}
 
-              <ListingForm
+              {paymentsReady && supabase && (
+                <OwnerPayments
+                  locale={locale}
+                  supabase={supabase}
+                  fees={fees}
+                  settings={paySettings}
+                  loadedAt={feesLoadedAt}
+                  onChanged={() => setFeesVersion((version) => version + 1)}
+                />
+              )}
+
+              {!(formOpen || editing || (!loadingListings && ownerListings.length === 0)) && (
+                <button type="button" className="button button-outline owner-add-another" onClick={() => setFormOpen(true)}>
+                  <Plus size={17} /> {t.addAnotherHome}
+                </button>
+              )}
+
+              {(formOpen || editing || (!loadingListings && ownerListings.length === 0)) && <ListingForm
                 key={`${editing?.id ?? "new"}-${formVersion}`}
                 locale={locale}
                 supabase={supabase!}
@@ -308,10 +391,11 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                 onSaved={async ({ created }) => {
                   setError("");
                   setMessage(created ? t.listingSubmitted : t.listingUpdated);
+                  setFormOpen(false);
                   stopEditing();
                   await refreshListings();
                 }}
-              />
+              />}
 
               <div className="owner-listings">
                 <h4>{t.ownerListings}</h4>
@@ -321,7 +405,8 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                   const canChange = listing.status === "pending" || listing.status === "rejected";
                   const canDelete = canChange || listing.status === "paused";
                   return (
-                    <div className="owner-listing-row" key={listing.id}>
+                    <div className="owner-listing-item" key={listing.id}>
+                    <div className="owner-listing-row">
                       <div className="owner-listing-main">
                         {listing.status === "approved"
                           ? <Link href={listingPath(locale, listing.id)}>{title}</Link>
@@ -343,7 +428,7 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                         {availabilityReady && listing.status === "approved" && (
                           <>
                             <button type="button" className="owner-text-button" disabled={submitting} onClick={() => void confirmAvailable(listing)}>{t.confirmAvailable}</button>
-                            <button type="button" className="owner-text-button" disabled={submitting} onClick={() => void setPaused(listing, true)}>{t.pauseListing}</button>
+                            <button type="button" className="owner-text-button" disabled={submitting} onClick={() => (paymentsReady ? setReportingId(listing.id) : void setPaused(listing, true))}>{t.pauseListing}</button>
                           </>
                         )}
                         {availabilityReady && listing.status === "paused" && confirmingDeleteId !== listing.id && (
@@ -362,6 +447,20 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                           </>
                         )}
                       </div>
+                    </div>
+                    {reportingId === listing.id && (
+                      <div className="owner-rented-panel" role="group" aria-label={t.rentedQuestion}>
+                        <strong>{t.rentedQuestion}</strong>
+                        <p>{t.rentedFeeExplain(numberFormat.format((paySettings ?? DEFAULT_PAYMENT_SETTINGS).fee_percent), numberFormat.format((paySettings ?? DEFAULT_PAYMENT_SETTINGS).fee_minimum))}</p>
+                        <div className="owner-rented-actions">
+                          <button type="button" className="button button-primary" disabled={submitting} onClick={() => void reportRental(listing, true)}>
+                            {t.rentedYes(numberFormat.format(successFee(listing.monthly_price, paySettings ?? DEFAULT_PAYMENT_SETTINGS)))}
+                          </button>
+                          <button type="button" className="button button-outline" disabled={submitting} onClick={() => void reportRental(listing, false)}>{t.rentedNo}</button>
+                          <button type="button" className="text-button" disabled={submitting} onClick={() => setReportingId(null)}>{t.cancel}</button>
+                        </div>
+                      </div>
+                    )}
                     </div>
                   );
                 })}

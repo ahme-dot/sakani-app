@@ -38,8 +38,7 @@ export default function PropertyCard({ property, locale, linkToDetails = true }:
         <h3 className="property-title">
           {detailsHref ? <Link href={detailsHref}>{title}</Link> : title}
         </h3>
-        <p className="property-meta">{t.walkTo(property.walking_distance_minutes, universityLabel)}</p>
-        <p className="property-meta">{t[property.property_type]} · {t[property.gender]} · {t.bedsSummary(property.available_beds, property.total_beds)}</p>
+        <p className="property-meta">{t[property.property_type]} · {t[property.gender]} · {t.walkTo(property.walking_distance_minutes, universityLabel)}</p>
         <p className="property-price"><strong>{price}</strong> {t.perMonth}</p>
       </div>
     </article>

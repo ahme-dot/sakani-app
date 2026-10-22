@@ -1,7 +1,6 @@
 "use client";
 
-import { BadgeCheck, BedDouble, Building, DoorOpen, GraduationCap, Heart, LayoutGrid, Mars, SlidersHorizontal, Sofa, Venus } from "lucide-react";
-import { universities } from "@/lib/data";
+import { BadgeCheck, BedDouble, Building, DoorOpen, Heart, LayoutGrid, Mars, SlidersHorizontal, Sofa, Venus } from "lucide-react";
 import type { ListingFilters } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -19,7 +18,7 @@ type Props = {
 
 type Category = { key: string; label: string; icon: typeof LayoutGrid; active: boolean; patch: Partial<ListingFilters> };
 
-/** Airbnb-style row of icon categories; each one toggles a single filter. */
+/** Row of icon categories; each one toggles a single filter. Universities live in the search bar. */
 export default function CategoryBar({ locale, filters, onChange, onOpenFilters, extraCount, savedCount, showSaved, onToggleSaved }: Props) {
   const t = SITE_COPY[locale];
   const furnished = filters.amenities.includes("furnished");
@@ -31,16 +30,9 @@ export default function CategoryBar({ locale, filters, onChange, onOpenFilters, 
       key: "all",
       label: t.categoryAll,
       icon: LayoutGrid,
-      active: !showSaved && !filters.university && !filters.propertyType && !filters.gender && !filters.verified && !furnished,
-      patch: { university: "", propertyType: "", gender: "", verified: false, amenities: filters.amenities.filter((item) => item !== "furnished") },
+      active: !showSaved && !filters.propertyType && !filters.gender && !filters.verified && !furnished,
+      patch: { propertyType: "", gender: "", verified: false, amenities: filters.amenities.filter((item) => item !== "furnished") },
     },
-    ...universities.map((university) => ({
-      key: university.name_en,
-      label: locale === "ar" ? university.name : university.name_en,
-      icon: GraduationCap,
-      active: filters.university === university.name_en,
-      patch: toggle("university", university.name_en, ""),
-    })),
     { key: "verified", label: t.categoryVerified, icon: BadgeCheck, active: filters.verified, patch: { verified: !filters.verified } },
     { key: "female", label: t.categoryWomen, icon: Venus, active: filters.gender === "female", patch: toggle("gender", "female", "") },
     { key: "male", label: t.categoryMen, icon: Mars, active: filters.gender === "male", patch: toggle("gender", "male", "") },

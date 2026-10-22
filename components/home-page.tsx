@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, ChevronDown, Heart, House, MessageCircle, Search, Share2, ShieldCheck } from "lucide-react";
+import { ChevronDown, Heart, House, Search, Share2 } from "lucide-react";
 import { properties as sampleProperties } from "@/lib/data";
 import type { Property } from "@/types";
 import CategoryBar from "@/components/category-bar";
@@ -188,12 +188,8 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
 
       <main>
         <section className="home-intro section-wrap">
-          <h1>{t.heroFirst} <span>{t.heroSecond}</span></h1>
-          <ul className="home-trust">
-            <li><ShieldCheck size={16} /> {t.trustReviewed}</li>
-            <li><MessageCircle size={16} /> {t.trustDirect}</li>
-            <li><BadgeCheck size={16} /> {t.trustFree}</li>
-          </ul>
+          <h1>{t.heroFirst} {t.heroSecond}</h1>
+          <p className="home-trust">{t.trustReviewed} · {t.trustDirect} · {t.trustFree}</p>
         </section>
 
         <section className="listings-section section-wrap" id="homes" aria-labelledby="homes-title">
@@ -204,9 +200,9 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
             </div>
             {!showSaved && (
               <label className="listing-sort">
-                <span>{t.sortLabel}</span>
+                <span className="visually-hidden">{t.sortLabel}</span>
                 <span className="select-wrap">
-                  <select value={filters.sort} onChange={(event) => updateFilters({ sort: event.target.value as ListingSort })}>
+                  <select value={filters.sort} aria-label={t.sortLabel} onChange={(event) => updateFilters({ sort: event.target.value as ListingSort })}>
                     <option value="newest">{t.sortNewest}</option>
                     <option value="price_asc">{t.sortPriceAsc}</option>
                     <option value="price_desc">{t.sortPriceDesc}</option>

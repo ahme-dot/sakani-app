@@ -147,7 +147,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
     if (saveError || !saved?.length) {
       console.error("Could not save listing:", saveError ?? "no rows were saved");
       if (uploadedPaths.length) await supabase.storage.from(STORAGE_BUCKET).remove(uploadedPaths);
-      setError(saveError?.message.includes("listing_rate_limit") ? t.rateLimitError : t.formError);
+      setError(saveError?.message.includes("listing_rate_limit") ? t.rateLimitError : saveError?.message.includes("unpaid_fee") ? t.unpaidFeeError : t.formError);
       setSubmitting(false);
       setBusyText("");
       return;
