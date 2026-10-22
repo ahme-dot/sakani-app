@@ -9,7 +9,7 @@ import { SITE_COPY, type SiteLocale } from "@/messages/site";
 /** Owner outreach kit: ready-to-send WhatsApp message, QR code, and a link to the printable flyer. */
 export default function AdminGrow({ locale }: { locale: SiteLocale }) {
   const t = SITE_COPY[locale];
-  const listUrl = `${SITE_URL}/${locale}#owner`;
+  const listUrl = `${SITE_URL}/${locale}/host`;
   const message = t.growMessage(listUrl);
   const [copied, setCopied] = useState(false);
   const [qrSvg, setQrSvg] = useState("");

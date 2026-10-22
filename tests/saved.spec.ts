@@ -8,13 +8,13 @@ test("save a home, find it under Saved, remove it", async ({ page }) => {
   const hearts = page.locator(".property-card .save-button");
   test.skip(await hearts.count() === 0, "no published listings");
 
-  await expect(page.locator(".uni-chip-saved")).toHaveCount(0);
+  await expect(page.locator(".category-saved")).toHaveCount(0);
   const title = (await page.locator(".property-card .property-title").first().textContent())!.trim();
   await hearts.first().click();
   await expect(hearts.first()).toHaveAttribute("aria-pressed", "true");
 
   await page.reload();
-  await page.locator(".uni-chip-saved").click();
+  await page.locator(".category-saved").click();
   await expect(page.locator(".property-card .property-title")).toHaveText([title]);
 
   await page.locator(".property-card .save-button").click();

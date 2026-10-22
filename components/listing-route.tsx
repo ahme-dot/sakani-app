@@ -1,21 +1,19 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowRight,
   BadgeCheck,
-  BedDouble,
-  Building2,
-  Check,
   Clock3,
-  GraduationCap,
+  Flag,
   Info,
   Map as MapIcon,
   MapPin,
+  Mars,
   MessageCircle,
   ShieldAlert,
   ShieldCheck,
+  Sofa,
   Users,
+  Venus,
   Wallet,
   Wifi,
   Wind,
@@ -24,9 +22,9 @@ import ListingGallery from "@/components/listing-gallery";
 import { ReportListing, ShareListingButton } from "@/components/listing-actions";
 import { TrackListingView, WhatsAppLink } from "@/components/listing-tracking";
 import PropertyCard from "@/components/property-card";
+import SaveButton from "@/components/save-button";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { areas, universities } from "@/lib/data";
-import SaveButton from "@/components/save-button";
 import { bilingualMetadata } from "@/lib/metadata";
 import { SITE_URL, listingPath, whatsappLink } from "@/lib/site";
 import { fetchSimilarListings } from "@/lib/supabase/listings";
@@ -50,6 +48,7 @@ export async function generateListingMetadata(locale: SiteLocale, { params }: Li
   });
 }
 
+/** Airbnb-style listing page: title, photo grid, details on one side and a sticky contact card on the other. */
 export default async function ListingRoute({ locale, params }: { locale: SiteLocale } & ListingParams) {
   const { id } = await params;
   const listing = await getApprovedListing(id);
@@ -63,27 +62,31 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const university = universities.find((candidate) => candidate.name_en === listing.university);
   const areaLabel = locale === "ar" ? area?.name ?? listing.area : listing.area;
   const universityLabel = locale === "ar" ? university?.name ?? listing.university : listing.university;
-  const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
-  const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
+  const place = locale === "ar" ? `${areaLabel}، ${t.city}` : `${areaLabel}, ${t.city}`;
+  const intlLocale = locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG";
+  const numberFormat = new Intl.NumberFormat(intlLocale);
+  const dateFormat = new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium" });
+  const monthYear = new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric" });
   const verified = listing.verification_status === "verified";
   const whatsappHref = whatsappLink(listing.whatsapp_number, t.whatsappMessage(title));
   const pageUrl = `${SITE_URL}${listingPath(locale, listing.id)}`;
   const serverClient = getSupabaseServerClient();
   const similar = serverClient ? await fetchSimilarListings(serverClient, listing) : [];
+  const mapQuery = encodeURIComponent(`${listing.area}, Giza, Egypt`);
 
-  const facts = [
-    { icon: Building2, label: t.propertyType, value: t[listing.property_type] },
-    { icon: Users, label: t.adminDetailsGender, value: t[listing.gender] },
-    { icon: BedDouble, label: t.beds, value: t.bedsSummary(listing.available_beds, listing.total_beds) },
-    { icon: Clock3, label: t.walkingDistance, value: t.walkingMinutes(listing.walking_distance_minutes) },
-    { icon: GraduationCap, label: t.university, value: universityLabel },
-    { icon: Wallet, label: t.deposit, value: listing.deposit > 0 ? numberFormat.format(listing.deposit) : t.noDeposit },
+  const amenityList = [
+    { icon: Sofa, label: t.furnished, available: listing.furnished },
+    { icon: Wifi, label: t.wifi, available: listing.wifi },
+    { icon: Wind, label: t.airConditioning, available: listing.air_conditioning },
+    { icon: ShieldCheck, label: t.secure, available: listing.security },
   ];
-  const amenities: Array<{ icon: typeof Check; label: string }> = [
-    ...(listing.furnished ? [{ icon: Check, label: t.furnished }] : []),
-    ...(listing.wifi ? [{ icon: Wifi, label: t.wifi }] : []),
-    ...(listing.air_conditioning ? [{ icon: Wind, label: t.airConditioning }] : []),
-    ...(listing.security ? [{ icon: ShieldCheck, label: t.secure }] : []),
+  const genderHighlight = t.highlightGender[listing.gender];
+  const highlights = [
+    verified
+      ? { icon: BadgeCheck, title: t.highlightVerifiedTitle, text: listing.verified_at ? t.highlightVerifiedText(monthYear.format(new Date(listing.verified_at))) : t.listingVerifiedNote }
+      : { icon: Info, title: t.highlightReviewedTitle, text: t.listingUnverifiedNote },
+    { icon: listing.gender === "female" ? Venus : listing.gender === "male" ? Mars : Users, title: genderHighlight.title, text: genderHighlight.text },
+    { icon: Clock3, title: t.highlightWalkTitle(listing.walking_distance_minutes), text: universityLabel },
   ];
 
   const structuredData = {
@@ -91,100 +94,100 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
     "@type": "Accommodation",
     name: title,
     description,
-    url: `${SITE_URL}${listingPath(locale, listing.id)}`,
+    url: pageUrl,
     image: listing.images,
     numberOfBedrooms: listing.total_beds,
     address: { "@type": "PostalAddress", addressLocality: listing.area, addressRegion: "Giza", addressCountry: "EG" },
-    amenityFeature: amenities.map((amenity) => ({ "@type": "LocationFeatureSpecification", name: amenity.label, value: true })),
+    amenityFeature: amenityList.filter((amenity) => amenity.available).map((amenity) => ({ "@type": "LocationFeatureSpecification", name: amenity.label, value: true })),
     offers: { "@type": "Offer", price: listing.monthly_price, priceCurrency: "EGP", availability: "https://schema.org/InStock" },
   };
 
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
-      <SiteHeader locale={locale} sectionBase={`/${locale}`} switchHref={listingPath(otherLocale, listing.id)} />
+      <SiteHeader locale={locale} switchHref={listingPath(otherLocale, listing.id)} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
       />
 
       <TrackListingView listingId={listing.id} />
-      <main className="listing2 section-wrap">
-        <Link className="listing-back" href={`/${locale}#homes`}>
-          <ArrowRight size={16} /> {t.backToListings}
-        </Link>
+      <main className="listing3 section-wrap">
+        <div className="listing3-top">
+          <h1>{title}</h1>
+          <div className="listing3-actions">
+            <ShareListingButton locale={locale} title={title} url={pageUrl} className="listing3-action" />
+            <SaveButton locale={locale} listingId={listing.id} title={title} variant="page" />
+          </div>
+        </div>
 
-        <ListingGallery images={listing.images} altFor={listing.images.map((_, index) => t.photoAlt(title, index + 1))} />
+        <ListingGallery locale={locale} images={listing.images} altFor={listing.images.map((_, index) => t.photoAlt(title, index + 1))} />
 
-        <div className="listing2-layout">
-          <div className="listing2-main">
-            <div className="listing2-badges">
-              {verified && (
-                <span className="listing2-badge is-verified">
-                  <BadgeCheck size={14} /> {listing.verified_at ? t.verifiedOn(new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { month: "long", year: "numeric" }).format(new Date(listing.verified_at))) : t.verified}
-                </span>
-              )}
-              <span className="listing2-badge">{t[listing.property_type]}</span>
-              <span className="listing2-badge">{t[listing.gender]}</span>
-            </div>
-            <h1>{title}</h1>
-            <p className="listing2-location">
-              <span><MapPin size={16} /> {locale === "ar" ? `${areaLabel}، ${t.city}` : `${areaLabel}, ${t.city}`}</span>
-              <span><GraduationCap size={16} /> {universityLabel}</span>
-            </p>
-            <p className="listing2-maps">
-              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${listing.area}, Giza, Egypt`)}`} target="_blank" rel="noreferrer">
-                <MapIcon size={16} /> {t.openInMaps}
-              </a>
-              <small>{t.mapsHint}</small>
-            </p>
+        <div className="listing3-layout">
+          <div className="listing3-main">
+            <section className="listing3-summary">
+              <h2>{t.homesIn(t[listing.property_type], areaLabel)} · {t[listing.gender]}</h2>
+              <p>{t.bedsSummary(listing.available_beds, listing.total_beds)} · {t.walkTo(listing.walking_distance_minutes, universityLabel)}</p>
+              <p className="listing3-location"><MapPin size={15} /> {place}</p>
+            </section>
 
-            <dl className="listing2-facts" aria-label={t.listingDetails}>
-              {facts.map(({ icon: Icon, label, value }) => (
-                <div key={label}>
-                  <span className="listing2-fact-icon"><Icon size={18} /></span>
-                  <dt>{label}</dt>
-                  <dd>{value}</dd>
-                </div>
+            <ul className="listing3-highlights">
+              {highlights.map(({ icon: Icon, title: highlightTitle, text }) => (
+                <li key={highlightTitle}>
+                  <Icon size={24} strokeWidth={1.6} />
+                  <div><strong>{highlightTitle}</strong><span>{text}</span></div>
+                </li>
               ))}
-            </dl>
+            </ul>
 
-            <section className="listing2-section" aria-labelledby="listing-description-title">
-              <h2 id="listing-description-title">{t.listingDetails}</h2>
+            <section className="listing3-section" aria-labelledby="listing-description-title">
+              <h2 id="listing-description-title">{t.aboutHome}</h2>
               <p className="listing-description">{description}</p>
             </section>
 
-            {amenities.length > 0 && (
-              <section className="listing2-section" aria-labelledby="listing-amenities-title">
-                <h2 id="listing-amenities-title">{t.amenitiesTitle}</h2>
-                <ul className="listing-amenities">
-                  {amenities.map(({ icon: Icon, label }) => <li key={label}><Icon size={16} /> {label}</li>)}
-                </ul>
-              </section>
-            )}
+            <section className="listing3-section" aria-labelledby="listing-amenities-title">
+              <h2 id="listing-amenities-title">{t.offersTitle}</h2>
+              <ul className="listing3-offers">
+                {amenityList.map(({ icon: Icon, label, available }) => (
+                  <li key={label} className={available ? "" : "is-missing"}>
+                    <Icon size={22} strokeWidth={1.6} />
+                    <span>{label}</span>
+                    {!available && <span className="visually-hidden">({t.notAvailable})</span>}
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-            <div className="listing-safety">
-              <ShieldAlert size={18} />
-              <div><strong>{t.safetyTitle}</strong><p>{t.safetyText}</p></div>
-            </div>
+            <section className="listing3-section" aria-labelledby="listing-map-title">
+              <h2 id="listing-map-title">{t.whereTitle}</h2>
+              <p className="listing3-map-place">{place}</p>
+              <div className="listing3-map">
+                <iframe
+                  title={t.mapTitle(areaLabel)}
+                  src={`https://maps.google.com/maps?q=${mapQuery}&z=14&hl=${locale}&output=embed`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              <p className="listing2-maps">
+                <small>{t.mapsHint}</small>
+                <a href={`https://www.google.com/maps/search/?api=1&query=${mapQuery}`} target="_blank" rel="noreferrer">
+                  <MapIcon size={16} /> {t.openInMaps}
+                </a>
+              </p>
+            </section>
           </div>
 
-          <aside className="listing2-aside">
-            <div className="listing2-card">
-              <p className="listing2-price">
-                <strong>{numberFormat.format(listing.monthly_price)}</strong>
-                <span>{t.perMonth}</span>
-              </p>
-              <ul className="listing2-card-meta">
-                <li><Wallet size={15} /> {listing.deposit > 0 ? t.depositLine(numberFormat.format(listing.deposit)) : t.noDeposit}</li>
-                <li><BedDouble size={15} /> {t.availableBedsLine(listing.available_beds, listing.total_beds)}</li>
-              </ul>
+          <aside className="listing3-aside">
+            <div className="listing3-card">
+              <p className="listing3-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</p>
+              <dl className="listing3-terms">
+                <div><dt>{t.deposit}</dt><dd>{listing.deposit > 0 ? numberFormat.format(listing.deposit) : t.noDeposit}</dd></div>
+                <div><dt>{t.beds}</dt><dd>{t.bedsSummary(listing.available_beds, listing.total_beds)}</dd></div>
+              </dl>
               <WhatsAppLink listingId={listing.id} className="button button-primary listing2-whatsapp" href={whatsappHref}>
                 <MessageCircle size={18} /> {t.contactOwner}
               </WhatsAppLink>
-              <div className="listing2-secondary">
-                <SaveButton locale={locale} listingId={listing.id} title={title} variant="page" />
-                <ShareListingButton locale={locale} title={title} url={pageUrl} className="listing2-share" />
-              </div>
+              <p className="listing3-nofee">{t.noFees}</p>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>
                 {verified ? <BadgeCheck size={16} /> : <Info size={16} />}
                 {verified ? t.listingVerifiedNote : t.listingUnverifiedNote}
@@ -196,12 +199,20 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                 )}
               </p>
             </div>
-            <ReportListing locale={locale} listingId={listing.id} />
           </aside>
         </div>
 
+        <section className="listing3-know" aria-labelledby="know-title">
+          <h2 id="know-title">{t.thingsToKnow}</h2>
+          <div className="listing3-know-grid">
+            <div><ShieldAlert size={22} strokeWidth={1.6} /><strong>{t.safetyTitle}</strong><p>{t.safetyText}</p></div>
+            <div><Wallet size={22} strokeWidth={1.6} /><strong>{t.beforePayTitle}</strong><p>{t.beforePayText}</p></div>
+            <div><Flag size={22} strokeWidth={1.6} /><strong>{t.knowReportTitle}</strong><p>{t.knowReportText}</p><ReportListing locale={locale} listingId={listing.id} /></div>
+          </div>
+        </section>
+
         {similar.length > 0 && (
-          <section className="listing2-similar" aria-labelledby="similar-title">
+          <section className="listing3-similar" aria-labelledby="similar-title">
             <h2 id="similar-title">{t.similarListings(universityLabel)}</h2>
             <div className="property-grid">
               {similar.map((item) => <PropertyCard key={item.id} property={item} locale={locale} />)}
@@ -212,16 +223,13 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
 
       {/* Phones: price and contact always within reach. */}
       <div className="listing2-bar">
-        <p className="listing2-price">
-          <strong>{numberFormat.format(listing.monthly_price)}</strong>
-          <span>{t.perMonth}</span>
-        </p>
+        <p className="listing3-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</p>
         <WhatsAppLink listingId={listing.id} className="button button-primary" href={whatsappHref}>
           <MessageCircle size={18} /> {t.contactShort}
         </WhatsAppLink>
       </div>
 
-      <SiteFooter locale={locale} sectionBase={`/${locale}`} switchHref={listingPath(otherLocale, listing.id)} />
+      <SiteFooter locale={locale} switchHref={listingPath(otherLocale, listing.id)} tab={false} />
     </div>
   );
 }

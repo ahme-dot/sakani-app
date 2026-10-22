@@ -94,7 +94,7 @@ export default function OwnerAccount({ locale, initialMode = "login" }: { locale
 
   async function finishSignedIn(client: SupabaseClient) {
     await claimGuestListings(client);
-    router.replace(`/${locale}#owner`);
+    router.replace(`/${locale}/host`);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -224,7 +224,7 @@ export default function OwnerAccount({ locale, initialMode = "login" }: { locale
         <h1>{(user.user_metadata?.full_name as string | undefined) || t.navAccount}</h1>
         <p className="auth-lead">{t.accountSignedInAs(user.email ?? "")}</p>
         {notice && <p className="auth-message is-success" role="status">{notice}</p>}
-        <Link className="auth-submit auth-spaced" href={`/${locale}#owner`}>{t.accountGoToListings}</Link>
+        <Link className="auth-submit auth-spaced" href={`/${locale}/host`}>{t.accountGoToListings}</Link>
         <button className="auth-link auth-switch" type="button" onClick={() => void signOut()}><LogOut size={14} /> {t.accountSignOut}</button>
       </AuthLayout>
     );

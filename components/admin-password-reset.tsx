@@ -70,7 +70,7 @@ export default function AdminPasswordReset({ locale }: { locale: SiteLocale }) {
     }
     // Owners reach this page from the account page (?next=account); admins from the admin sign-in.
     const forOwner = new URLSearchParams(window.location.search).get("next") === "account";
-    router.replace(forOwner ? `/${locale}#owner` : `/${locale}/admin`);
+    router.replace(forOwner ? `/${locale}/host` : `/${locale}/admin`);
   }
 
   return (

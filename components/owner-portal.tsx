@@ -13,7 +13,11 @@ import { PUBLIC_LISTING_COLUMNS, listingImages, type MarketplaceListing } from "
 
 const OWNER_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},rejection_reason`;
 
-type Props = { locale: SiteLocale };
+type Props = {
+  locale: SiteLocale;
+  /** The host page has its own introduction, so it hides the side intro. */
+  showIntro?: boolean;
+};
 type PortalState = "loading" | "unconfigured" | "signed-out" | "signed-in";
 type OwnerListing = Omit<MarketplaceListing, "owner_id">;
 
@@ -25,7 +29,7 @@ async function fetchOwnerListings(client: SupabaseClient, ownerId: string) {
     .order("created_at", { ascending: false });
 }
 
-export default function OwnerPortal({ locale }: Props) {
+export default function OwnerPortal({ locale, showIntro = true }: Props) {
   const t = SITE_COPY[locale];
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [user, setUser] = useState<User | null>(null);
@@ -242,8 +246,8 @@ export default function OwnerPortal({ locale }: Props) {
 
   return (
     <section className="owner-section" id="owner">
-      <div className="section-wrap owner-layout">
-        <div className="owner-intro">
+      <div className={`section-wrap owner-layout${showIntro ? "" : " is-standalone"}`}>
+        {showIntro && <div className="owner-intro">
           <span className="section-kicker">{t.ownerKicker}</span>
           <h2>{t.ownerTitle}</h2>
           <p>{t.ownerDescription}</p>
@@ -251,7 +255,7 @@ export default function OwnerPortal({ locale }: Props) {
             <span className="promotion-icon"><Sparkles size={19} /></span>
             <span className="promotion-copy"><small>{t.promotionKicker}</small><strong>{t.promotionTitle}</strong><span>{t.promotionText}</span></span>
           </div>
-        </div>
+        </div>}
 
         <div className="owner-panel">
           {portalState === "unconfigured" && (

@@ -13,7 +13,7 @@ export default function LegalPage({ locale, kind }: { locale: SiteLocale; kind: 
 
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
-      <SiteHeader locale={locale} sectionBase={`/${locale}`} switchHref={`/${otherLocale}/${kind}`} />
+      <SiteHeader locale={locale} switchHref={`/${otherLocale}/${kind}`} />
       <main className="legal-page section-wrap">
         <Link className="listing-back" href={`/${locale}`}><ArrowRight size={16} /> {t.adminBackHome}</Link>
         <article className="legal-article">
@@ -26,10 +26,10 @@ export default function LegalPage({ locale, kind }: { locale: SiteLocale; kind: 
               {section.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             </section>
           ))}
-          <a className="button button-primary legal-contact" href={`/${locale}#contact`}>{legal.contactCta}</a>
+          <Link className="button button-primary legal-contact" href={`/${locale}/help#contact`}>{legal.contactCta}</Link>
         </article>
       </main>
-      <SiteFooter locale={locale} sectionBase={`/${locale}`} switchHref={`/${otherLocale}/${kind}`} />
+      <SiteFooter locale={locale} switchHref={`/${otherLocale}/${kind}`} />
     </div>
   );
 }

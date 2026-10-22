@@ -1,37 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useSavedListings } from "@/lib/saved";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import {
-  BadgeCheck,
-  ChevronDown,
-  GraduationCap,
-  House,
-  MapPin,
-  Heart,
-  MessageCircle,
-  Search,
-  Share2,
-  ShieldCheck,
-  SlidersHorizontal,
-  Sparkles,
-} from "lucide-react";
-import { areas, properties as sampleProperties, universities } from "@/lib/data";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { BadgeCheck, ChevronDown, Heart, House, MessageCircle, Search, Share2, ShieldCheck } from "lucide-react";
+import { properties as sampleProperties } from "@/lib/data";
 import type { Property } from "@/types";
-import ContactForm from "@/components/contact-form";
-import OwnerPortal from "@/components/owner-portal";
+import CategoryBar from "@/components/category-bar";
+import FiltersModal from "@/components/filters-modal";
 import PropertyCard from "@/components/property-card";
+import SearchPill from "@/components/search-pill";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
+import { useSavedListings } from "@/lib/saved";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
-  AMENITY_FILTERS,
   EMPTY_FILTERS,
   fetchApprovedListings,
   fetchListingsByIds,
+  filtersToParams,
   hasActiveFilters,
-  type AmenityFilter,
   type ListingFilters,
   type ListingSort,
 } from "@/lib/supabase/listings";
@@ -43,16 +32,24 @@ type HomePageProps = {
   initialListings: Property[] | null;
   initialTotal: number;
   initialError: boolean;
+  /** Filters from the page address (?university=…), so searches from other pages and shared links work. */
+  initialFilters: ListingFilters;
+  initialSaved: boolean;
 };
 
+const FAQ_PREVIEW = 4;
+
 function filterSamples(filters: ListingFilters) {
+  const minPrice = Number(filters.minPrice);
   const maxPrice = Number(filters.maxPrice);
   const matches = sampleProperties.filter((property) =>
     (!filters.university || property.university === filters.university) &&
     (!filters.area || property.area === filters.area) &&
     (!filters.gender || property.gender === filters.gender) &&
     (!filters.propertyType || property.property_type === filters.propertyType) &&
+    (!minPrice || property.monthly_price >= minPrice) &&
     (!maxPrice || property.monthly_price <= maxPrice) &&
+    (!filters.verified || property.verification_status === "verified") &&
     filters.amenities.every((amenity) => property[amenity]),
   );
   if (filters.sort === "price_asc") matches.sort((a, b) => a.monthly_price - b.monthly_price);
@@ -60,22 +57,32 @@ function filterSamples(filters: ListingFilters) {
   return matches;
 }
 
-export default function HomePage({ locale, initialListings, initialTotal, initialError }: HomePageProps) {
+export default function HomePage({ locale, initialListings, initialTotal, initialError, initialFilters, initialSaved }: HomePageProps) {
   const t = SITE_COPY[locale];
+  const router = useRouter();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const isDemoMode = initialListings === null;
-  const [filters, setFilters] = useState<ListingFilters>(EMPTY_FILTERS);
-  const [listings, setListings] = useState<Property[]>(initialListings ?? sampleProperties.slice(0, 6));
-  const [total, setTotal] = useState(initialListings ? initialTotal : sampleProperties.length);
+  const [filters, setFilters] = useState<ListingFilters>(initialFilters);
+  const [listings, setListings] = useState<Property[]>(initialListings ?? filterSamples(initialFilters));
+  const [total, setTotal] = useState(initialListings ? initialTotal : filterSamples(initialFilters).length);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState<"none" | "replace" | "more">("none");
   const [listingError, setListingError] = useState(initialError);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const requestId = useRef(0);
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const savedIds = useSavedListings();
   const savedKey = savedIds.join(",");
-  const [showSaved, setShowSaved] = useState(false);
+  const [showSaved, setShowSaved] = useState(initialSaved);
   const [savedListings, setSavedListings] = useState<Property[] | null>(null);
+  const filtersActive = hasActiveFilters(filters);
+  const otherLocale: SiteLocale = locale === "ar" ? "en" : "ar";
+
+  // Old links to sections that moved to their own pages (QR codes, shared messages).
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === "#owner") router.replace(`/${locale}/host`);
+    else if (hash === "#contact" || hash === "#faq") router.replace(`/${locale}/help${hash}`);
+  }, [locale, router]);
 
   // Saved view: load the saved homes, and reload when one is un-saved.
   useEffect(() => {
@@ -90,26 +97,19 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
       mounted = false;
     };
   }, [showSaved, savedKey, supabase]);
-  const filtersActive = hasActiveFilters(filters);
-  const extraFilterCount = [filters.propertyType, filters.maxPrice].filter(Boolean).length + filters.amenities.length;
-  const amenityLabels: Record<AmenityFilter, string> = {
-    furnished: t.furnished,
-    wifi: t.wifi,
-    air_conditioning: t.airConditioning,
-    security: t.secure,
-  };
 
-  function toggleAmenity(amenity: AmenityFilter) {
-    const amenities = filters.amenities.includes(amenity)
-      ? filters.amenities.filter((item) => item !== amenity)
-      : [...filters.amenities, amenity];
-    updateFilters({ amenities });
+  /** Keeps the address bar in step with the search, so it can be shared or reloaded. */
+  function syncAddress(next: ListingFilters, saved: boolean) {
+    const params = filtersToParams(next);
+    if (saved) params.set("saved", "1");
+    const query = params.toString();
+    window.history.replaceState(null, "", `/${locale}${query ? `?${query}` : ""}${window.location.hash}`);
   }
 
   async function loadListings(nextFilters: ListingFilters, nextPage: number) {
     if (isDemoMode) {
       const matches = filterSamples(nextFilters);
-      setListings(hasActiveFilters(nextFilters) ? matches : matches.slice(0, 6));
+      setListings(matches);
       setTotal(matches.length);
       return;
     }
@@ -132,183 +132,94 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
     setLoading("none");
   }
 
-  function updateFilters(patch: Partial<ListingFilters>, { reload = true } = {}) {
+  function applyFilters(next: ListingFilters) {
     setShowSaved(false);
-    const next = { ...filters, ...patch };
     setFilters(next);
-    if (reload) void loadListings(next, 0);
+    syncAddress(next, false);
+    void loadListings(next, 0);
   }
 
-  function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void loadListings(filters, 0);
-    document.getElementById("homes")?.scrollIntoView({ behavior: "smooth" });
+  function updateFilters(patch: Partial<ListingFilters>) {
+    applyFilters({ ...filters, ...patch });
   }
 
-  function resetFilters() {
-    setFilters(EMPTY_FILTERS);
-    void loadListings(EMPTY_FILTERS, 0);
+  function toggleSaved() {
+    const next = !showSaved;
+    setSavedListings(null);
+    setShowSaved(next);
+    syncAddress(filters, next);
   }
 
+  const closeFilters = useCallback(() => setFiltersOpen(false), []);
+
+  // Count of Filters-window settings not visible as a category or in the search pill.
+  const extraCount = [filters.minPrice, filters.maxPrice].filter(Boolean).length + filters.amenities.filter((item) => item !== "furnished").length;
   const hasMore = !isDemoMode && listings.length < total;
+  const searchValue = { university: filters.university, area: filters.area, gender: filters.gender };
 
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
-      <SiteHeader locale={locale} switchHref={locale === "ar" ? "/en" : "/ar"} />
+      <SiteHeader
+        locale={locale}
+        switchHref={`/${otherLocale}`}
+        search={(
+          <SearchPill
+            key={`${searchValue.university}|${searchValue.area}|${searchValue.gender}`}
+            locale={locale}
+            value={searchValue}
+            onSearch={(values) => {
+              updateFilters(values);
+              document.getElementById("homes")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          />
+        )}
+      >
+        <CategoryBar
+          locale={locale}
+          filters={filters}
+          onChange={updateFilters}
+          onOpenFilters={() => setFiltersOpen(true)}
+          extraCount={extraCount}
+          savedCount={isDemoMode ? 0 : savedIds.length}
+          showSaved={showSaved}
+          onToggleSaved={toggleSaved}
+        />
+      </SiteHeader>
 
       <main>
-        <section className="hero2" id="search" aria-labelledby="hero-title">
-          <Image
-            className="hero2-photo"
-            src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2000&q=80"
-            alt=""
-            fill
-            sizes="100vw"
-            priority
-          />
-          <div className="hero2-inner section-wrap">
-            <span className="hero2-badge"><Sparkles size={15} /> {t.heroBadge}</span>
-            <h1 id="hero-title">{t.heroFirst} <span>{t.heroSecond}</span></h1>
-            <p className="hero2-text">{t.heroDescription}</p>
-
-          <div className="search-panel hero2-search">
-            <form className="search-form" onSubmit={handleSearch} aria-label={t.searchTitle}>
-              <div className="search-main">
-              <label className="field">
-                <span>{t.university}</span>
-                <span className="select-wrap">
-                  <select value={filters.university} onChange={(event) => updateFilters({ university: event.target.value })}>
-                    <option value="">{t.allUniversities}</option>
-                    {universities.map((university) => <option key={university.id} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}
-                  </select>
-                  <ChevronDown size={16} />
-                </span>
-              </label>
-              <label className="field">
-                <span>{t.area}</span>
-                <span className="select-wrap">
-                  <select value={filters.area} onChange={(event) => updateFilters({ area: event.target.value })}>
-                    <option value="">{t.allAreas}</option>
-                    {areas.map((area) => <option key={area.id} value={area.name_en}>{locale === "ar" ? area.name : area.name_en}</option>)}
-                  </select>
-                  <ChevronDown size={16} />
-                </span>
-              </label>
-              <label className="field">
-                <span>{t.housing}</span>
-                <span className="select-wrap">
-                  <select value={filters.gender} onChange={(event) => updateFilters({ gender: event.target.value })}>
-                    <option value="">{t.all}</option>
-                    <option value="female">{t.female}</option>
-                    <option value="male">{t.male}</option>
-                    <option value="mixed">{t.mixed}</option>
-                  </select>
-                  <ChevronDown size={16} />
-                </span>
-              </label>
-              <button className="button button-primary search-button" type="submit"><Search size={18} /> {t.searchButton}</button>
-              </div>
-
-              <div className="search-extra-bar">
-                <button className="search-more-toggle" type="button" aria-expanded={showMoreFilters} aria-controls="search-extra" onClick={() => setShowMoreFilters((value) => !value)}>
-                  <SlidersHorizontal size={15} /> {showMoreFilters ? t.hideFilters : t.moreFilters}
-                  {extraFilterCount > 0 && <span className="search-more-count">{extraFilterCount}</span>}
-                </button>
-                {filtersActive && <button className="reset-button" type="button" onClick={resetFilters}>{t.clearFilters}</button>}
-              </div>
-
-              <div className="search-extra" id="search-extra" hidden={!showMoreFilters}>
-              <label className="field">
-                <span>{t.propertyType}</span>
-                <span className="select-wrap">
-                  <select value={filters.propertyType} onChange={(event) => updateFilters({ propertyType: event.target.value })}>
-                    <option value="">{t.allTypes}</option>
-                    <option value="room">{t.room}</option>
-                    <option value="apartment">{t.apartment}</option>
-                    <option value="bed">{t.bed}</option>
-                  </select>
-                  <ChevronDown size={16} />
-                </span>
-              </label>
-              <label className="field">
-                <span>{t.maxPrice}</span>
-                <input
-                  className="field-input"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  step="100"
-                  placeholder={t.anyPrice}
-                  value={filters.maxPrice}
-                  onChange={(event) => updateFilters({ maxPrice: event.target.value }, { reload: false })}
-                  dir="ltr"
-                />
-              </label>
-              <div className="field search-amenities" role="group" aria-label={t.filterAmenities}>
-                <span>{t.filterAmenities}</span>
-                <div className="choice-row">
-                  {AMENITY_FILTERS.map((amenity) => (
-                    <label className="choice" key={amenity}>
-                      <input type="checkbox" checked={filters.amenities.includes(amenity)} onChange={() => toggleAmenity(amenity)} />
-                      <span>{amenityLabels[amenity]}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              </div>
-            </form>
-          </div>
-
-            <ul className="hero2-trust">
-              <li><ShieldCheck size={17} /> {t.trustReviewed}</li>
-              <li><MessageCircle size={17} /> {t.trustDirect}</li>
-              <li><BadgeCheck size={17} /> {t.trustFree}</li>
-            </ul>
-          </div>
+        <section className="home-intro section-wrap">
+          <h1>{t.heroFirst} <span>{t.heroSecond}</span></h1>
+          <ul className="home-trust">
+            <li><ShieldCheck size={16} /> {t.trustReviewed}</li>
+            <li><MessageCircle size={16} /> {t.trustDirect}</li>
+            <li><BadgeCheck size={16} /> {t.trustFree}</li>
+          </ul>
         </section>
 
-        <section className="listings-section section-wrap" id="homes">
-          <div className="section-heading">
+        <section className="listings-section section-wrap" id="homes" aria-labelledby="homes-title">
+          <div className="listings-head">
             <div>
-              <span className="section-kicker">{t.featuredKicker}</span>
-              <h2>{showSaved ? t.savedTitle : filtersActive ? t.filteredTitle : t.featuredTitle}</h2>
+              <h2 id="homes-title">{showSaved ? t.savedTitle : filtersActive ? t.filteredTitle : t.featuredTitle}</h2>
               <p aria-live="polite">{showSaved ? t.savedCount(savedIds.length) : filtersActive ? t.resultCount(total) : isDemoMode ? t.browseHint : t.approvedListingCount(total)}</p>
             </div>
-            <label className="listing-sort">
-              <span>{t.sortLabel}</span>
-              <span className="select-wrap">
-                <select value={filters.sort} onChange={(event) => updateFilters({ sort: event.target.value as ListingSort })}>
-                  <option value="newest">{t.sortNewest}</option>
-                  <option value="price_asc">{t.sortPriceAsc}</option>
-                  <option value="price_desc">{t.sortPriceDesc}</option>
-                </select>
-                <ChevronDown size={16} />
-              </span>
-            </label>
-          </div>
-          <div className="uni-chips" role="group" aria-label={t.university}>
-            <button type="button" className={!showSaved && !filters.university ? "is-active" : ""} aria-pressed={!showSaved && !filters.university} onClick={() => updateFilters({ university: "" })}>
-              {t.allUniversities}
-            </button>
-            {universities.map((university) => (
-              <button
-                key={university.id}
-                type="button"
-                className={!showSaved && filters.university === university.name_en ? "is-active" : ""}
-                aria-pressed={!showSaved && filters.university === university.name_en}
-                onClick={() => updateFilters({ university: university.name_en })}
-              >
-                <GraduationCap size={15} /> {locale === "ar" ? university.name : university.name_en}
-              </button>
-            ))}
-            {!isDemoMode && (savedIds.length > 0 || showSaved) && (
-              <button type="button" className={`uni-chip-saved${showSaved ? " is-active" : ""}`} aria-pressed={showSaved} onClick={() => { setSavedListings(null); setShowSaved((value) => !value); }}>
-                <Heart size={15} fill={showSaved ? "currentColor" : "none"} /> {t.savedFilter(savedIds.length)}
-              </button>
+            {!showSaved && (
+              <label className="listing-sort">
+                <span>{t.sortLabel}</span>
+                <span className="select-wrap">
+                  <select value={filters.sort} onChange={(event) => updateFilters({ sort: event.target.value as ListingSort })}>
+                    <option value="newest">{t.sortNewest}</option>
+                    <option value="price_asc">{t.sortPriceAsc}</option>
+                    <option value="price_desc">{t.sortPriceDesc}</option>
+                  </select>
+                  <ChevronDown size={16} />
+                </span>
+              </label>
             )}
           </div>
+
           {isDemoMode && <p className="demo-notice">{t.demoNotice}</p>}
           {listingError && <p className="owner-feedback owner-feedback-error" role="alert">{t.feedError}</p>}
+
           {showSaved ? (
             savedListings === null ? (
               <div className="listings-loading">{t.loadingListings}</div>
@@ -318,10 +229,10 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
               </div>
             ) : (
               <div className="empty-state">
-                <Heart size={24} />
+                <Heart size={26} />
                 <h3>{t.savedEmptyTitle}</h3>
                 <p>{t.savedEmptyText}</p>
-                <button className="button button-outline" type="button" onClick={() => setShowSaved(false)}>{t.savedBack}</button>
+                <button className="button button-outline" type="button" onClick={toggleSaved}>{t.savedBack}</button>
               </div>
             )
           ) : loading === "replace" ? (
@@ -339,90 +250,79 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
                 </div>
               )}
             </>
+          ) : filtersActive ? (
+            <div className="empty-state">
+              <Search size={26} />
+              <h3>{t.noMatchTitle}</h3>
+              <p>{t.noMatchText}</p>
+              <button className="button button-outline" type="button" onClick={() => applyFilters(EMPTY_FILTERS)}>{t.showAll}</button>
+            </div>
           ) : (
-            filtersActive ? (
-              <div className="empty-state">
-                <Search size={24} />
-                <h3>{t.noMatchTitle}</h3>
-                <p>{t.noMatchText}</p>
-                <button className="button button-outline" type="button" onClick={resetFilters}>{t.showAll}</button>
+            <div className="empty-launch">
+              <span className="empty-launch-icon"><House size={26} /></span>
+              <h3>{t.emptyTitle}</h3>
+              <p>{t.emptyText}</p>
+              <div className="empty-launch-actions">
+                <Link className="button button-primary" href={`/${locale}/host`}>{t.emptyOwnerCta}</Link>
+                <a
+                  className="button button-outline"
+                  href={`https://wa.me/?text=${encodeURIComponent(`${t.emptyShareMessage} ${SITE_URL}/${locale}`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Share2 size={16} /> {t.emptyShareCta}
+                </a>
               </div>
-            ) : (
-              <div className="empty-launch">
-                <span className="empty-launch-icon"><House size={26} /></span>
-                <h3>{t.emptyTitle}</h3>
-                <p>{t.emptyText}</p>
-                <div className="empty-launch-actions">
-                  <a className="button button-primary" href="#owner">{t.emptyOwnerCta}</a>
-                  <a
-                    className="button button-outline"
-                    href={`https://wa.me/?text=${encodeURIComponent(`${t.emptyShareMessage} ${SITE_URL}/${locale}`)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <Share2 size={16} /> {t.emptyShareCta}
-                  </a>
-                </div>
-              </div>
-            )
+            </div>
           )}
         </section>
 
-        <section className="why2" id="why-sakani">
-          <div className="section-wrap">
-            <div className="why2-heading">
-              <span className="section-kicker">{t.whyKicker}</span>
-              <h2>{t.whyTitleFirst} {t.whyTitleSecond}</h2>
-              <p>{t.whyDescription}</p>
+        <section className="host-banner section-wrap" aria-labelledby="host-banner-title">
+          <div className="host-banner-card">
+            <div className="host-banner-copy">
+              <h2 id="host-banner-title">{t.hostBannerTitle}</h2>
+              <p>{t.hostBannerText}</p>
+              <Link className="button button-primary" href={`/${locale}/host`}>{t.navOwner}</Link>
             </div>
-            <div className="why2-grid">
-              {[
-                { icon: ShieldCheck, tone: "mint", title: t.benefitOneTitle, text: t.benefitOneText },
-                { icon: MapPin, tone: "peach", title: t.benefitTwoTitle, text: t.benefitTwoText },
-                { icon: MessageCircle, tone: "lavender", title: t.benefitThreeTitle, text: t.benefitThreeText },
-              ].map(({ icon: Icon, tone, title, text }, index) => (
-                <article className="why2-card" key={title}>
-                  <span className={`why2-icon ${tone}`}><Icon size={24} /></span>
-                  <span className="why2-step">{String(index + 1).padStart(2, "0")}</span>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
-                </article>
-              ))}
+            <div className="host-banner-photo">
+              <Image
+                src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=75"
+                alt=""
+                fill
+                sizes="(max-width: 760px) 100vw, 50vw"
+              />
             </div>
           </div>
         </section>
 
-        <OwnerPortal locale={locale} />
-
         <section className="faq-section section-wrap" id="faq" aria-labelledby="faq-title">
-          <div className="faq-heading">
-            <span className="section-kicker">{t.faqKicker}</span>
-            <h2 id="faq-title">{t.faqTitle}</h2>
-          </div>
+          <h2 id="faq-title">{t.faqTitle}</h2>
           <div className="faq-list">
-            {t.faqItems.map((item, index) => (
-              <details className="faq-item" key={item.q} open={index === 0}>
+            {t.faqItems.slice(0, FAQ_PREVIEW).map((item) => (
+              <details className="faq-item" key={item.q}>
                 <summary>{item.q}<ChevronDown size={18} aria-hidden="true" /></summary>
                 <p>{item.a}</p>
               </details>
             ))}
           </div>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "FAQPage",
-                mainEntity: t.faqItems.map((item) => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })),
-              }).replace(/</g, "\\u003c"),
-            }}
-          />
+          <Link className="text-link" href={`/${locale}/help#faq`}>{t.menuHelp} {locale === "ar" ? "←" : "→"}</Link>
         </section>
-
-        <ContactForm locale={locale} />
       </main>
 
-      <SiteFooter locale={locale} switchHref={locale === "ar" ? "/en" : "/ar"} />
+      <SiteFooter locale={locale} switchHref={`/${otherLocale}`} tab={showSaved ? "saved" : "explore"} />
+
+      {filtersOpen && (
+        <FiltersModal
+          locale={locale}
+          filters={filters}
+          supabase={isDemoMode ? null : supabase}
+          onClose={closeFilters}
+          onApply={(next) => {
+            setFiltersOpen(false);
+            applyFilters(next);
+          }}
+        />
+      )}
     </div>
   );
 }

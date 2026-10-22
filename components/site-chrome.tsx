@@ -1,109 +1,89 @@
-"use client";
-
-import type { MouseEvent } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowUpLeft, Building2, Menu, UserRound } from "lucide-react";
+import { Building2, Globe } from "lucide-react";
+import BottomTabs, { type BottomTab } from "@/components/bottom-tabs";
+import SearchPill from "@/components/search-pill";
+import UserMenu from "@/components/user-menu";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
-type ChromeProps = {
-  locale: SiteLocale;
-  /** Prefix for in-page section links: "" on the home page, "/ar" or "/en" elsewhere. */
-  sectionBase?: string;
-};
-
-export function Brand({ locale, href = "#top" }: { locale: SiteLocale; href?: string }) {
+export function Brand({ locale, href }: { locale: SiteLocale; href?: string }) {
   const t = SITE_COPY[locale];
   return (
-    <a className="brand" href={href} aria-label={t.brandAria}>
+    <Link className="brand" href={href ?? `/${locale}`} aria-label={t.brandAria}>
       <span className="brand-mark"><Building2 size={21} strokeWidth={2.2} /></span>
       <span className={`brand-name${locale === "en" ? " brand-name-latin" : ""}`}>{t.brandLabel}<span className="brand-period">.</span></span>
-    </a>
+    </Link>
   );
 }
 
-export function SiteHeader({ locale, sectionBase = "", switchHref }: ChromeProps & { switchHref: string }) {
+type HeaderProps = {
+  locale: SiteLocale;
+  /** The same page in the other language. */
+  switchHref: string;
+  /** The home page passes its own controlled search; other pages get one that opens the home page. */
+  search?: ReactNode;
+  /** Shown under the header row, inside the sticky header (the home page's category bar). */
+  children?: ReactNode;
+};
+
+export function SiteHeader({ locale, switchHref, search, children }: HeaderProps) {
   const t = SITE_COPY[locale];
-  const links = [
-    { href: `${sectionBase}#homes`, label: t.navListings },
-    { href: `${sectionBase}#why-sakani`, label: t.navWhy },
-    { href: `${sectionBase}#owner`, label: t.navOwner },
-    { href: `${sectionBase}#contact`, label: t.navContact },
-  ];
-
-  function closeMobileMenu(event: MouseEvent<HTMLAnchorElement>) {
-    event.currentTarget.closest("details")?.removeAttribute("open");
-  }
-
   return (
     <header className="site-header" id="top">
       <div className="header-inner">
-        <Brand locale={locale} href={sectionBase ? sectionBase : "#top"} />
-        <div className="mobile-menu">
-          <details>
-            <summary className="menu-toggle" aria-label={t.openMenu}>
-              <Menu size={21} />
-            </summary>
-            <nav className="main-nav" aria-label={t.navLabel}>
-              {links.map((link) => <a key={link.href} href={link.href} onClick={closeMobileMenu}>{link.label}</a>)}
-            </nav>
-          </details>
-        </div>
-        <nav className="main-nav desktop-nav" aria-label={t.navLabel}>
-          {links.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}
-        </nav>
+        <Brand locale={locale} />
+        <div className="header-search">{search ?? <SearchPill locale={locale} />}</div>
         <div className="header-actions">
-          <Link className="language-toggle" href={switchHref} hrefLang={locale === "ar" ? "en" : "ar"} aria-label={`${t.languageName} language`}>
-            {t.localeLabel}
+          <Link className="header-host" href={`/${locale}/host`}>{t.navOwner}</Link>
+          <Link className="header-lang" href={switchHref} hrefLang={locale === "ar" ? "en" : "ar"} aria-label={t.languageName} title={t.languageName}>
+            <Globe size={18} />
           </Link>
-          <Link className="account-link" href={`/${locale}/account`} aria-label={t.navAccount} title={t.navAccount}>
-            <UserRound size={18} />
-            <span>{t.navAccount}</span>
-          </Link>
-          <a className="header-cta" href={`${sectionBase}#search`} aria-label={t.headerSearch}>
-            <span className="header-cta-label">{t.headerSearch}</span>
-            <ArrowUpLeft size={17} />
-          </a>
+          <UserMenu locale={locale} switchHref={switchHref} />
         </div>
       </div>
+      {children}
     </header>
   );
 }
 
-export function SiteFooter({ locale, sectionBase = "", switchHref }: ChromeProps & { switchHref?: string }) {
+export function SiteFooter({ locale, switchHref, tab }: { locale: SiteLocale; switchHref?: string; tab?: BottomTab | false }) {
   const t = SITE_COPY[locale];
   const otherLocale: SiteLocale = locale === "ar" ? "en" : "ar";
   return (
-    <footer className="site-footer footer2">
-      <div className="footer-inner footer2-grid">
-        <div className="footer2-brand">
-          <Brand locale={locale} href={sectionBase || "#top"} />
-          <p>{t.footerText}</p>
+    <>
+      <footer className="site-footer">
+        <div className="footer-inner footer-columns">
+          <nav aria-label={t.footerSupport}>
+            <h3>{t.footerSupport}</h3>
+            <Link href={`/${locale}/help`}>{t.footerHelp}</Link>
+            <Link href={`/${locale}/help#contact`}>{t.navContact}</Link>
+            <Link href={`/${locale}/help#faq`}>{t.faqKicker}</Link>
+          </nav>
+          <nav aria-label={t.footerForOwners}>
+            <h3>{t.footerForOwners}</h3>
+            <Link href={`/${locale}/host`}>{t.navOwner}</Link>
+            <Link href={`/${locale}/account`}>{t.footerOwnerAccount}</Link>
+            <Link href={`/${locale}/sign-in`} rel="nofollow">{t.adminNav}</Link>
+          </nav>
+          <nav aria-label={t.footerSakani}>
+            <h3>{t.footerSakani}</h3>
+            <Link href={`/${locale}`}>{t.headerSearch}</Link>
+            <Link href={`/${locale}?saved=1#homes`}>{t.menuSaved}</Link>
+            <p className="footer-about">{t.footerText}</p>
+          </nav>
         </div>
-        <nav aria-label={t.footerExplore}>
-          <h3>{t.footerExplore}</h3>
-          <a href={`${sectionBase}#search`}>{t.headerSearch}</a>
-          <a href={`${sectionBase}#homes`}>{t.navListings}</a>
-          <a href={`${sectionBase}#why-sakani`}>{t.footerAbout}</a>
-          <a href={`${sectionBase}#faq`}>{t.faqKicker}</a>
-        </nav>
-        <nav aria-label={t.footerForOwners}>
-          <h3>{t.footerForOwners}</h3>
-          <a href={`${sectionBase}#owner`}>{t.navOwner}</a>
-          <Link href={`/${locale}/sign-in`} rel="nofollow">{t.adminNav}</Link>
-        </nav>
-        <div>
-          <h3>{t.footerLanguage}</h3>
-          <Link href={switchHref ?? `/${otherLocale}`} hrefLang={otherLocale}>{t.languageName}</Link>
+        <div className="footer-inner footer-bottom">
+          <p>
+            © {new Date().getFullYear()} {t.brandLabel}
+            <span aria-hidden="true"> · </span><Link href={`/${locale}/privacy`}>{t.privacyLink}</Link>
+            <span aria-hidden="true"> · </span><Link href={`/${locale}/terms`}>{t.termsLink}</Link>
+          </p>
+          <Link className="footer-lang" href={switchHref ?? `/${otherLocale}`} hrefLang={otherLocale}>
+            <Globe size={16} /> {t.languageName}
+          </Link>
         </div>
-      </div>
-      <div className="footer-inner footer2-bottom">
-        <p>© {new Date().getFullYear()} {t.brandLabel}. {t.allRights}</p>
-        <p className="footer2-legal">
-          <Link href={`/${locale}/privacy`}>{t.privacyLink}</Link>
-          <Link href={`/${locale}/terms`}>{t.termsLink}</Link>
-          <span>{t.city}</span>
-        </p>
-      </div>
-    </footer>
+      </footer>
+      {tab !== false && <BottomTabs locale={locale} active={tab} />}
+    </>
   );
 }

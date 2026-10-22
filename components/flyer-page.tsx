@@ -8,7 +8,7 @@ import { SITE_COPY, type SiteLocale } from "@/messages/site";
 /** Printable A4 flyer inviting owners to list their homes; the QR code opens "List a home". */
 export default async function FlyerPage({ locale }: { locale: SiteLocale }) {
   const t = SITE_COPY[locale];
-  const listUrl = `${SITE_URL}/${locale}#owner`;
+  const listUrl = `${SITE_URL}/${locale}/host`;
   const qrSvg = await QRCode.toString(listUrl, { type: "svg", margin: 0, width: 300, color: { dark: "#174d3d", light: "#ffffff" } });
 
   return (

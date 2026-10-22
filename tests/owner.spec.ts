@@ -5,7 +5,7 @@ import { TEST_TAG, hasAdmin, watchErrors } from "./helpers";
 test("guest owner submits a listing for review", async ({ page }) => {
   test.skip(!hasAdmin, "needs admin login so the test listing can be cleaned up");
   const errors = watchErrors(page);
-  await page.goto("/en#owner");
+  await page.goto("/en/host");
   await page.locator(".owner-guest-button").click();
   const form = page.locator("#owner-form");
   await expect(form).toBeVisible();

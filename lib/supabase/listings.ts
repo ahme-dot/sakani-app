@@ -48,8 +48,10 @@ export type ListingFilters = {
   area: string;
   gender: string;
   propertyType: string;
+  minPrice: string;
   maxPrice: string;
   amenities: AmenityFilter[];
+  verified: boolean;
   sort: ListingSort;
 };
 
@@ -58,13 +60,54 @@ export const EMPTY_FILTERS: ListingFilters = {
   area: "",
   gender: "",
   propertyType: "",
+  minPrice: "",
   maxPrice: "",
   amenities: [],
+  verified: false,
   sort: "newest",
 };
 
 export function hasActiveFilters(filters: ListingFilters) {
-  return Boolean(filters.university || filters.area || filters.gender || filters.propertyType || filters.maxPrice || filters.amenities.length);
+  return Boolean(filters.university || filters.area || filters.gender || filters.propertyType || filters.minPrice || filters.maxPrice || filters.amenities.length || filters.verified);
+}
+
+const SORTS: ListingSort[] = ["newest", "price_asc", "price_desc"];
+const PRICE_PATTERN = /^d{1,7}$/;
+
+/** Filters from the page address (?university=…&area=…), so searches can be linked and shared. */
+export function filtersFromParams(params: Record<string, string | string[] | undefined>): ListingFilters {
+  const one = (key: string) => {
+    const value = params[key];
+    return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
+  };
+  const amenities = one("amenities").split(",").filter((item): item is AmenityFilter => (AMENITY_FILTERS as readonly string[]).includes(item));
+  const sort = one("sort") as ListingSort;
+  return {
+    university: one("university").slice(0, 80),
+    area: one("area").slice(0, 80),
+    gender: ["female", "male", "mixed"].includes(one("gender")) ? one("gender") : "",
+    propertyType: ["room", "apartment", "bed"].includes(one("type")) ? one("type") : "",
+    minPrice: PRICE_PATTERN.test(one("min")) ? one("min") : "",
+    maxPrice: PRICE_PATTERN.test(one("max")) ? one("max") : "",
+    amenities,
+    verified: one("verified") === "1",
+    sort: SORTS.includes(sort) ? sort : "newest",
+  };
+}
+
+/** The reverse of filtersFromParams; empty values are left out. */
+export function filtersToParams(filters: ListingFilters) {
+  const params = new URLSearchParams();
+  if (filters.university) params.set("university", filters.university);
+  if (filters.area) params.set("area", filters.area);
+  if (filters.gender) params.set("gender", filters.gender);
+  if (filters.propertyType) params.set("type", filters.propertyType);
+  if (filters.minPrice) params.set("min", filters.minPrice);
+  if (filters.maxPrice) params.set("max", filters.maxPrice);
+  if (filters.amenities.length) params.set("amenities", filters.amenities.join(","));
+  if (filters.verified) params.set("verified", "1");
+  if (filters.sort !== "newest") params.set("sort", filters.sort);
+  return params;
 }
 
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -97,24 +140,45 @@ export async function fetchListingsByIds(client: SupabaseClient, ids: string[]) 
   return { listings: valid.flatMap((id) => byId.get(id) ?? []), error };
 }
 
+/** The filter methods shared by list and count queries (each returns the same builder). */
+interface Filterable {
+  eq(column: string, value: unknown): Filterable;
+  gte(column: string, value: unknown): Filterable;
+  lte(column: string, value: unknown): Filterable;
+}
+
+// Typed loosely on purpose: Supabase's fully generic builder types are too deep for TypeScript here.
+function applyFilters<T>(query: T, filters: ListingFilters): T {
+  let next = query as unknown as Filterable;
+  if (filters.university) next = next.eq("university", filters.university);
+  if (filters.area) next = next.eq("area", filters.area);
+  if (filters.gender) next = next.eq("gender", filters.gender);
+  if (filters.propertyType) next = next.eq("property_type", filters.propertyType);
+  const minPrice = Number(filters.minPrice);
+  if (filters.minPrice && Number.isFinite(minPrice) && minPrice > 0) next = next.gte("monthly_price", minPrice);
+  const maxPrice = Number(filters.maxPrice);
+  if (filters.maxPrice && Number.isFinite(maxPrice) && maxPrice > 0) next = next.lte("monthly_price", maxPrice);
+  for (const amenity of filters.amenities) next = next.eq(amenity, true);
+  if (filters.verified) next = next.eq("verified", true);
+  return next as unknown as T;
+}
+
+/** How many published listings match, for the "Show N homes" button in the filters window. */
+export async function countApprovedListings(client: SupabaseClient, filters: ListingFilters) {
+  const { count, error } = await applyFilters(client.from("properties").select("id", { count: "exact", head: true }).eq("status", "approved"), filters);
+  return error ? null : count ?? 0;
+}
+
 /** Runs the public feed query with filtering, sorting and pagination done by the database. */
 export async function fetchApprovedListings(
   client: SupabaseClient,
   filters: ListingFilters,
   page: number,
 ): Promise<{ listings: Property[]; total: number; error: unknown }> {
-  let query = client
+  let query = applyFilters(client
     .from("properties")
     .select(PUBLIC_LISTING_COLUMNS, { count: "exact" })
-    .eq("status", "approved");
-
-  if (filters.university) query = query.eq("university", filters.university);
-  if (filters.area) query = query.eq("area", filters.area);
-  if (filters.gender) query = query.eq("gender", filters.gender);
-  if (filters.propertyType) query = query.eq("property_type", filters.propertyType);
-  const maxPrice = Number(filters.maxPrice);
-  if (filters.maxPrice && Number.isFinite(maxPrice) && maxPrice > 0) query = query.lte("monthly_price", maxPrice);
-  for (const amenity of filters.amenities) query = query.eq(amenity, true);
+    .eq("status", "approved"), filters);
 
   if (filters.sort === "price_asc") query = query.order("monthly_price", { ascending: true });
   else if (filters.sort === "price_desc") query = query.order("monthly_price", { ascending: false });

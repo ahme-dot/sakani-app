@@ -7,7 +7,7 @@ export default function ListingSkeleton({ locale }: { locale: SiteLocale }) {
 
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
-      <SiteHeader locale={locale} sectionBase={`/${locale}`} switchHref={locale === "ar" ? "/en" : "/ar"} />
+      <SiteHeader locale={locale} switchHref={locale === "ar" ? "/en" : "/ar"} />
       <main className="listing2 section-wrap" aria-busy="true">
         <span className="visually-hidden" role="status">{t.loading}</span>
         <div className="skeleton skeleton-gallery" />
