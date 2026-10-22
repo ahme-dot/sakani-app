@@ -12,6 +12,8 @@ function supabaseStoragePattern(): URL[] {
 }
 
 const nextConfig: NextConfig = {
+  // Dev server only: let phones on the same Wi-Fi load the page scripts (http://192.168.x.x:3000).
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*"],
   images: {
     remotePatterns: [
       // Listing photos uploaded by owners.
