@@ -30,6 +30,13 @@ The site uses Supabase for email-free owner submissions, image uploads, private 
    1. [`supabase/migrations/20261018000000_sakani_marketplace.sql`](./supabase/migrations/20261018000000_sakani_marketplace.sql)
    2. [`supabase/migrations/20261018010000_sakani_admin_users.sql`](./supabase/migrations/20261018010000_sakani_admin_users.sql)
    3. [`supabase/migrations/20261020000000_sakani_publishing.sql`](./supabase/migrations/20261020000000_sakani_publishing.sql) — multiple photos, the "verified" flag, review notes, owner edits, and a limit of 5 new listings per owner per day.
+   4. [`supabase/migrations/20261021000000_sakani_admin_team.sql`](./supabase/migrations/20261021000000_sakani_admin_team.sql) — add and remove admins from the admin panel.
+   5. [`supabase/migrations/20261022000000_sakani_owner_accounts.sql`](./supabase/migrations/20261022000000_sakani_owner_accounts.sql) — owner accounts and moving guest listings to an account.
+   6. [`supabase/migrations/20261023000000_sakani_admin_user_directory.sql`](./supabase/migrations/20261023000000_sakani_admin_user_directory.sql) — the admin Users list.
+   7. [`supabase/migrations/20261024000000_sakani_listing_reports.sql`](./supabase/migrations/20261024000000_sakani_listing_reports.sql) — "Report this listing".
+   8. [`supabase/migrations/20261025000000_sakani_contact_and_photos.sql`](./supabase/migrations/20261025000000_sakani_contact_and_photos.sql) — contact form inbox and photo rules.
+   9. [`supabase/migrations/20261026000000_sakani_launch.sql`](./supabase/migrations/20261026000000_sakani_launch.sql) — in-person visit verification, views and WhatsApp-click counts.
+   10. [`supabase/migrations/20261027000000_sakani_availability.sql`](./supabase/migrations/20261027000000_sakani_availability.sql) — owners mark homes "Rented / full" and confirm "Still available".
 4. Create an administrator in Supabase Authentication with an email and password. This email is only for the administrator; listing submitters do not need one.
 5. In the Supabase SQL Editor, add that Auth user's ID to the admin allowlist by running this query after replacing the placeholder with the exact administrator email:
 
@@ -55,6 +62,19 @@ Until Supabase is configured, the home page explicitly labels its built-in prope
 - **Approve and publish** makes a listing public. **Reject** asks for a reason, which the owner sees in their portal; they can then edit and resubmit.
 - **Visited: mark verified** adds the "Verified" badge. Only use it after someone from your team has actually seen the property. Approved but unvisited listings are shown without the badge.
 - **Unpublish** takes a live listing down; **Delete permanently** removes it and its photos.
+- Owners can hide a published home themselves with **Rented / full** (it moves to the **Paused** tab) and confirm **Still available** each month. On the **Published** tab, **Not updated in 30+ days** lists homes to follow up on.
+
+## Automated tests
+
+The Playwright suite in `tests/` checks every page in Arabic and English on desktop and phone (errors, layout, fonts, form controls), saved homes, the owner form, the admin panel and the database security rules. It uses the Microsoft Edge already installed on Windows.
+
+```powershell
+$env:SAKANI_ADMIN_EMAIL = "admin email"; $env:SAKANI_ADMIN_PASSWORD = "admin password"
+npm test            # starts a local dev server on port 3100 and tests it
+npm run test:live   # tests the live site
+```
+
+Without the two admin variables, tests that need listings or the admin panel are skipped. The suite creates its own `[E2E TEST]` listings and deletes them (with their photos) when it finishes. To test a dev server that is already running, set `$env:SAKANI_TEST_URL = "http://localhost:3000"`.
 
 ## Publish to the internet (Vercel)
 
