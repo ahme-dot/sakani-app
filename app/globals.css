@@ -6552,3 +6552,14 @@ button {
   color: var(--muted);
   font-size: 12.5px;
 }
+
+/* Owner welcome: matching buttons and a proper heading. */
+.owner-signin h3 {
+  font-weight: 800;
+}
+
+.owner-signin .button {
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 700;
+}
