@@ -35,6 +35,15 @@ test("Filters window counts matches and applies a price limit", async ({ page })
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
+test("price filters from a shared link are restored in the filters window", async ({ page }) => {
+  await page.goto("/en?min=1000&max=7000");
+  await page.locator(".filters-button").click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Minimum")).toHaveValue("1000");
+  await expect(dialog.getByLabel("Maximum")).toHaveValue("7000");
+});
+
 test("header search on another page opens the home page with that search", async ({ page }) => {
   await page.goto("/en/help");
   await page.locator(".search-pill select").nth(2).selectOption("female");

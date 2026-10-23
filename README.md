@@ -38,6 +38,7 @@ The site uses Supabase for email-free owner submissions, image uploads, private 
    9. [`supabase/migrations/20261026000000_sakani_launch.sql`](./supabase/migrations/20261026000000_sakani_launch.sql) — in-person visit verification, views and WhatsApp-click counts.
    10. [`supabase/migrations/20261027000000_sakani_availability.sql`](./supabase/migrations/20261027000000_sakani_availability.sql) — owners mark homes "Rented / full" and confirm "Still available".
    11. [`supabase/migrations/20261028000000_sakani_payments.sql`](./supabase/migrations/20261028000000_sakani_payments.sql) — owner success fee paid by InstaPay / Vodafone Cash, and payment settings.
+   12. [`supabase/migrations/20261029000000_sakani_egypt.sql`](./supabase/migrations/20261029000000_sakani_egypt.sql) ? adds governorates for Egypt-wide listings, backfills existing homes as Giza, and adds location constraints and an index.
 4. Create an administrator in Supabase Authentication with an email and password. This email is only for the administrator; listing submitters do not need one.
 5. In the Supabase SQL Editor, add that Auth user's ID to the admin allowlist by running this query after replacing the placeholder with the exact administrator email:
 

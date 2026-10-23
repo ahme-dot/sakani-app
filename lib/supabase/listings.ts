@@ -75,7 +75,7 @@ export function hasActiveFilters(filters: ListingFilters) {
 }
 
 const SORTS: ListingSort[] = ["newest", "price_asc", "price_desc"];
-const PRICE_PATTERN = /^d{1,7}$/;
+const PRICE_PATTERN = /^\d{1,7}$/;
 
 /** Filters from the page address (?university=…&area=…), so searches can be linked and shared. */
 export function filtersFromParams(params: Record<string, string | string[] | undefined>): ListingFilters {
