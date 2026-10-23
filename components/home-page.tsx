@@ -188,14 +188,48 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
       </SiteHeader>
 
       <main>
-        <section className="home-intro section-wrap">
-          <h1>{t.heroFirst} {t.heroSecond}</h1>
-          <p className="home-trust">{t.trustReviewed} · {t.trustDirect} · {t.trustFree}</p>
+        <section className="home-intro home-hero section-wrap" aria-labelledby="home-hero-title">
+          <Image
+            className="home-hero-image"
+            src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1800&q=85"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 760px) 100vw, 92vw"
+          />
+          <div className="home-hero-shade" />
+          <div className="home-hero-inner">
+            <div className="home-hero-copy">
+              <span className="home-hero-badge"><House size={15} /> {t.heroBadge}</span>
+              <h1 id="home-hero-title">{t.heroFirst}<span>{t.heroSecond}</span></h1>
+              <p className="home-hero-description">{t.heroDescription}</p>
+              <div className="home-hero-actions">
+                <a className="button button-primary" href="#homes"><Search size={17} /> {t.heroAction}</a>
+                <Link className="home-hero-secondary" href={`/${locale}/host`}>{t.navOwner}</Link>
+              </div>
+              <ul className="home-hero-trust">
+                <li>{t.trustReviewed}</li>
+                <li>{t.trustDirect}</li>
+                <li>{t.trustFree}</li>
+              </ul>
+            </div>
+            <div className="home-hero-notes" aria-label={t.heroFoot}>
+              <div className="home-hero-note">
+                <span className="home-hero-note-icon"><Search size={17} /></span>
+                <span><strong>{t.heroNoteTitle}</strong><small>{t.heroNoteText}</small></span>
+              </div>
+              <div className="home-hero-note home-hero-note-campus">
+                <span className="home-hero-note-icon"><House size={17} /></span>
+                <span><strong>{t.heroCardTitle}</strong><small>{t.heroCardText}</small></span>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="listings-section section-wrap" id="homes" aria-labelledby="homes-title">
           <div className="listings-head">
             <div>
+              {!showSaved && !filtersActive && <span className="section-kicker">{t.featuredKicker}</span>}
               <h2 id="homes-title">{showSaved ? t.savedTitle : filtersActive ? t.filteredTitle : t.featuredTitle}</h2>
               <p aria-live="polite">{showSaved ? t.savedCount(savedIds.length) : filtersActive ? t.resultCount(total) : isDemoMode ? t.browseHint : t.approvedListingCount(total)}</p>
             </div>
@@ -277,6 +311,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
         <section className="host-banner section-wrap" aria-labelledby="host-banner-title">
           <div className="host-banner-card">
             <div className="host-banner-copy">
+              <span className="section-kicker">{t.ownerKicker}</span>
               <h2 id="host-banner-title">{t.hostBannerTitle}</h2>
               <p>{t.hostBannerText}</p>
               <Link className="button button-primary" href={`/${locale}/host`}>{t.navOwner}</Link>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Check, ClipboardList, MessageCircle, ShieldCheck } from "lucide-react";
 import OwnerPortal from "@/components/owner-portal";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -20,8 +21,27 @@ export default async function HostPage({ locale }: { locale: SiteLocale }) {
       <SiteHeader locale={locale} switchHref={`/${otherLocale}/host`} />
       <main>
         <section className="host-hero section-wrap">
-          <h1>{t.hostHeroTitle}</h1>
-          <p>{t.hostHeroText}</p>
+          <div className="host-hero-main">
+            <div className="host-hero-copy">
+              <span className="host-hero-kicker">{t.ownerKicker}</span>
+              <h1>{t.hostHeroTitle}</h1>
+              <p>{t.hostHeroText}</p>
+              <a className="button button-primary host-start" href="#owner">{t.hostStart}</a>
+            </div>
+            <div className="host-hero-visual">
+              <Image
+                src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80"
+                alt=""
+                fill
+                sizes="(max-width: 760px) 100vw, 48vw"
+                priority
+              />
+              <div className="host-hero-image-note">
+                <span className="host-hero-image-check"><Check size={17} /></span>
+                <span><strong>{t.heroNoteTitle}</strong><small>{t.heroNoteText}</small></span>
+              </div>
+            </div>
+          </div>
           <ol className="host-steps">
             {t.hostSteps.map((step, index) => {
               const Icon = STEP_ICONS[index];
@@ -34,7 +54,6 @@ export default async function HostPage({ locale }: { locale: SiteLocale }) {
               );
             })}
           </ol>
-          <a className="button button-primary host-start" href="#owner">{t.hostStart}</a>
         </section>
         <section className="host-pricing section-wrap" aria-labelledby="pricing-title">
           <h2 id="pricing-title">{t.pricingTitle}</h2>
