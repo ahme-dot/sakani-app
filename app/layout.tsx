@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   title: SITE_COPY.ar.metaTitle,
   description: SITE_COPY.ar.metaDescription,
   applicationName: "Sakani",
-  keywords: ["سكن طلابي", "الجيزة", "القاهرة", "سكني", "student housing", "Giza", "Sakani"],
+  keywords: ["سكن طلابي", "سكن طلاب مصر", "القاهرة", "الجيزة", "الإسكندرية", "سكني", "student housing Egypt", "Sakani"],
   authors: [{ name: "Sakani Team" }],
   robots: { index: true, follow: true },
   formatDetection: { telephone: false },

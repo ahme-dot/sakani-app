@@ -49,11 +49,11 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { PUBLIC_LISTING_COLUMNS, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
 import { storagePathFromPublicUrl } from "@/lib/images";
 import { listingPath, whatsappLink } from "@/lib/site";
-import { areas, universities } from "@/lib/data";
+import { placeLabel, universityLabel as universityName } from "@/lib/egypt";
 
 const ADMIN_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},owner_id,rejection_reason`;
 const STORAGE_BUCKET = "sakani-listings";
-const SEARCH_COLUMNS = ["title_ar", "title_en", "area", "university", "whatsapp_number"];
+const SEARCH_COLUMNS = ["title_ar", "title_en", "governorate", "area", "university", "whatsapp_number"];
 const SEARCH_DEBOUNCE_MS = 300;
 /** Published listings not updated or confirmed for this long are flagged as possibly out of date. */
 const STALE_DAYS = 30;
@@ -654,8 +654,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                   const title = locale === "ar" ? listing.title_ar : listing.title_en;
                   const images = listingImages(listing);
                   const busy = updatingId === listing.id;
-                  const area = areas.find((candidate) => candidate.name_en === listing.area);
-                  const university = universities.find((candidate) => candidate.name_en === listing.university);
+                  const place = placeLabel(locale, listing.area, listing.governorate);
+                  const universityText = universityName(locale, listing.university);
 
                   if (editingId === listing.id && supabase) {
                     return (
@@ -700,8 +700,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
 
                         <h2>{title}</h2>
                         <p className="admin-card-meta">
-                          <span><MapPin size={14} /> {locale === "ar" ? area?.name ?? listing.area : listing.area}</span>
-                          <span><GraduationCap size={14} /> {locale === "ar" ? university?.name ?? listing.university : listing.university}</span>
+                          <span><MapPin size={14} /> {place}</span>
+                          <span><GraduationCap size={14} /> {universityText}</span>
                         </p>
                         <p className="admin-card-desc">{locale === "ar" ? listing.description_ar : listing.description_en}</p>
 

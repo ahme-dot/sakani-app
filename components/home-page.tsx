@@ -43,8 +43,9 @@ function filterSamples(filters: ListingFilters) {
   const minPrice = Number(filters.minPrice);
   const maxPrice = Number(filters.maxPrice);
   const matches = sampleProperties.filter((property) =>
+    (!filters.governorate || property.city === filters.governorate) &&
     (!filters.university || property.university === filters.university) &&
-    (!filters.area || property.area === filters.area) &&
+    (!filters.area || property.area.toLowerCase().includes(filters.area.trim().toLowerCase())) &&
     (!filters.gender || property.gender === filters.gender) &&
     (!filters.propertyType || property.property_type === filters.propertyType) &&
     (!minPrice || property.monthly_price >= minPrice) &&
@@ -155,7 +156,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
   // Count of Filters-window settings not visible as a category or in the search pill.
   const extraCount = [filters.minPrice, filters.maxPrice].filter(Boolean).length + filters.amenities.filter((item) => item !== "furnished").length;
   const hasMore = !isDemoMode && listings.length < total;
-  const searchValue = { university: filters.university, area: filters.area, gender: filters.gender };
+  const searchValue = { governorate: filters.governorate, university: filters.university, gender: filters.gender };
 
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
@@ -164,7 +165,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
         switchHref={`/${otherLocale}`}
         search={(
           <SearchPill
-            key={`${searchValue.university}|${searchValue.area}|${searchValue.gender}`}
+            key={`${searchValue.governorate}|${searchValue.university}|${searchValue.gender}`}
             locale={locale}
             value={searchValue}
             onSearch={(values) => {

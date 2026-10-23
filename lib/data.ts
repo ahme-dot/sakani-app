@@ -1,28 +1,6 @@
 import { Property } from "@/types";
 
-export const universities = [
-  { id: "1", name: "جامعة القاهرة", name_en: "Cairo University" },
-  { id: "2", name: "جامعة عين شمس", name_en: "Ain Shams University" },
-  {
-    id: "3",
-    name: "الجامعة الأمريكية بالقاهرة",
-    name_en: "AUC",
-  },
-  {
-    id: "4",
-    name: "جامعة 6 أكتوبر",
-    name_en: "October 6 University",
-  },
-];
-
-export const areas = [
-  { id: "1", name: "الدقي", name_en: "Dokki" },
-  { id: "2", name: "بين السرايات", name_en: "Bayn Al Sarayat" },
-  { id: "3", name: "المهندسين", name_en: "Mohandessin" },
-  { id: "4", name: "فيصل", name_en: "Faisal" },
-  { id: "5", name: "حدائق أكتوبر", name_en: "October Gardens" },
-  { id: "6", name: "الواحات", name_en: "Oasis" },
-];
+// Locations (governorates, neighbourhoods, universities) live in lib/egypt.ts.
 
 export const properties: Property[] = [
   {

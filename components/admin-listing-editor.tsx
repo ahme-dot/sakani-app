@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { areas, universities } from "@/lib/data";
+import { GOVERNORATES, OTHER_UNIVERSITY, UNIVERSITIES, areaLabel, normalizeArea, universityLabel } from "@/lib/egypt";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import type { MarketplaceListing } from "@/lib/supabase/listings";
 
@@ -38,7 +38,8 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       title_en: String(formData.get("title_en")).trim(),
       description_ar: String(formData.get("description_ar")).trim(),
       description_en: String(formData.get("description_en")).trim(),
-      area: String(formData.get("area")),
+      governorate: String(formData.get("governorate")),
+      area: normalizeArea(String(formData.get("area"))),
       university: String(formData.get("university")),
       gender: String(formData.get("gender")),
       property_type: String(formData.get("property_type")),
@@ -81,8 +82,11 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
         <label className="owner-field"><span>{t.descriptionEnglish}</span><textarea name="description_en" required minLength={20} rows={4} maxLength={2000} dir="ltr" defaultValue={listing.description_en} /></label>
       </div>
       <div className="owner-form-grid owner-form-grid-three">
-        <label className="owner-field"><span>{t.area}</span><select name="area" required defaultValue={listing.area}>{!areas.some((area) => area.name_en === listing.area) && <option value={listing.area}>{listing.area}</option>}{areas.map((area) => <option key={area.id} value={area.name_en}>{locale === "ar" ? area.name : area.name_en}</option>)}</select></label>
-        <label className="owner-field"><span>{t.university}</span><select name="university" required defaultValue={listing.university}>{!universities.some((university) => university.name_en === listing.university) && <option value={listing.university}>{listing.university}</option>}{universities.map((university) => <option key={university.id} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}</select></label>
+        <label className="owner-field"><span>{t.governorate}</span><select name="governorate" required defaultValue={listing.governorate || "Giza"}>{GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}</select></label>
+        <label className="owner-field"><span>{t.area}</span><input name="area" required minLength={2} maxLength={60} defaultValue={areaLabel(locale, listing.area)} /></label>
+        <label className="owner-field"><span>{t.university}</span><select name="university" required defaultValue={listing.university}>{!UNIVERSITIES.some((university) => university.name_en === listing.university) && listing.university !== OTHER_UNIVERSITY && <option value={listing.university}>{listing.university}</option>}{UNIVERSITIES.map((university) => <option key={university.name_en} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}<option value={OTHER_UNIVERSITY}>{universityLabel(locale, OTHER_UNIVERSITY)}</option></select></label>
+      </div>
+      <div className="owner-form-grid owner-form-grid-three">
         <label className="owner-field"><span>{t.housing}</span><select name="gender" required defaultValue={listing.gender}><option value="female">{t.female}</option><option value="male">{t.male}</option><option value="mixed">{t.mixed}</option></select></label>
       </div>
       <div className="owner-form-grid owner-form-grid-three">

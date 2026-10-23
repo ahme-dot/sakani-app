@@ -84,3 +84,16 @@ test.describe("phone", () => {
     await expect(page.locator(".photo-mobile")).toBeVisible();
   });
 });
+
+test("searching a governorate narrows the universities and is kept in the address", async ({ page }) => {
+  await page.goto("/en/help");
+  const selects = page.locator(".search-pill select");
+  await selects.nth(0).selectOption("Alexandria");
+  const universities = await selects.nth(1).locator("option").allTextContents();
+  expect(universities).toContain("Alexandria University");
+  expect(universities).not.toContain("Cairo University");
+  await selects.nth(1).selectOption("Alexandria University");
+  await page.locator(".search-pill-go").click();
+  await expect(page).toHaveURL(/gov=Alexandria/);
+  await expect(page.locator(".search-pill .search-seg-value").first()).toHaveText("Alexandria");
+});

@@ -5,7 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ImagePlus } from "lucide-react";
 import VisitChecklist, { readVisit } from "@/components/visit-checklist";
-import { areas, universities } from "@/lib/data";
+import { GOVERNORATES, OTHER_UNIVERSITY, areaLabel, areaSuggestions, normalizeArea, universitiesIn } from "@/lib/egypt";
 import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
 import { listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
@@ -45,6 +45,9 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
   const [error, setError] = useState("");
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [visited, setVisited] = useState(false);
+  // Chosen governorate: narrows the university list and the neighbourhood suggestions.
+  const [governorate, setGovernorate] = useState(editing?.governorate ?? "");
+  const universityOptions = universitiesIn(governorate);
 
   useEffect(() => {
     return () => {
@@ -119,7 +122,8 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
       title_en: title,
       description_ar: description,
       description_en: description,
-      area: String(formData.get("area")),
+      governorate: String(formData.get("governorate")),
+      area: normalizeArea(String(formData.get("area"))),
       university: String(formData.get("university")),
       gender: String(formData.get("gender")),
       property_type: String(formData.get("property_type")),
@@ -228,9 +232,23 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
 
       <fieldset className="form-section">
         <legend><span className="form-step">2</span> {t.formSectionLocation}</legend>
-        <div className="owner-form-grid owner-form-grid-three">
-          <label className="owner-field"><span>{t.area}</span><select name="area" required defaultValue={editing?.area ?? ""}><option value="" disabled>{t.chooseArea}</option>{areas.map((area) => <option key={area.id} value={area.name_en}>{locale === "ar" ? area.name : area.name_en}</option>)}</select></label>
-          <label className="owner-field"><span>{t.university}</span><select name="university" required defaultValue={editing?.university ?? ""}><option value="" disabled>{t.chooseUniversity}</option>{universities.map((university) => <option key={university.id} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}</select></label>
+        <div className="owner-form-grid">
+          <label className="owner-field">
+            <span>{t.governorate}</span>
+            <select name="governorate" required value={governorate} onChange={(event) => setGovernorate(event.target.value)}>
+              <option value="" disabled>{t.chooseGovernorate}</option>
+              {GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}
+            </select>
+          </label>
+          <label className="owner-field">
+            <span>{t.area}</span>
+            <input name="area" required minLength={2} maxLength={60} list="area-suggestions" autoComplete="off" defaultValue={editing ? areaLabel(locale, editing.area) : ""} />
+            <datalist id="area-suggestions">
+              {areaSuggestions(locale, governorate).map((name) => <option key={name} value={name} />)}
+            </datalist>
+            <small className="field-hint">{t.areaTypeHint}</small>
+          </label>
+          <label className="owner-field"><span>{t.university}</span><select key={governorate} name="university" required defaultValue={editing?.university ?? ""}><option value="" disabled>{t.chooseUniversity}</option>{universityOptions.map((university) => <option key={university.name_en} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}<option value={OTHER_UNIVERSITY}>{t.otherUniversity}</option></select></label>
           <label className="owner-field"><span>{t.walkingDistance}</span><input name="walking_distance_minutes" type="number" inputMode="numeric" min="0" max="300" defaultValue={editing?.walking_distance_minutes ?? 0} required /></label>
         </div>
       </fieldset>

@@ -19,7 +19,8 @@ test("guest owner submits a listing for review", async ({ page }) => {
   await form.locator('input[name="title"]').fill(`${TEST_TAG} Owner form room`);
   await form.locator('textarea[name="description"]').fill("A quiet furnished room for students, close to transport and shops.");
   await form.locator('input[name="gender"][value="female"]').check({ force: true });
-  await form.locator('select[name="area"]').selectOption("Dokki");
+  await form.locator('select[name="governorate"]').selectOption("Giza");
+  await form.locator('input[name="area"]').fill("Dokki");
   await form.locator('select[name="university"]').selectOption("Cairo University");
   await form.locator('input[name="monthly_price"]').fill("3000");
   await form.locator('input[name="images"]').setInputFiles({ name: "room.jpg", mimeType: "image/jpeg", buffer: photo });

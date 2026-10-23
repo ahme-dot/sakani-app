@@ -78,7 +78,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "ما هو سكني",
           body: [
-            "سكني منصة تعرض إعلانات سكن الطلاب في الجيزة وتتيح التواصل المباشر مع المُلّاك. التصفح والتواصل مجانيان للطلاب، ونشر الإعلانات مجاني للمُلّاك. لسنا طرفاً في أي اتفاق إيجار، ولا نستلم إيجاراً أو تأميناً من الطلاب.",
+            "سكني منصة تعرض إعلانات سكن الطلاب في مصر وتتيح التواصل المباشر مع المُلّاك. التصفح والتواصل مجانيان للطلاب، ونشر الإعلانات مجاني للمُلّاك. لسنا طرفاً في أي اتفاق إيجار، ولا نستلم إيجاراً أو تأميناً من الطلاب.",
           ],
         },
         {
@@ -188,7 +188,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "What Sakani is",
           body: [
-            "Sakani shows student housing listings in Giza and lets students contact owners directly. Browsing and contacting owners is free for students, and listing a home is free for owners. We are not a party to any rental agreement and we never receive rent or deposits from students.",
+            "Sakani shows student housing listings across Egypt and lets students contact owners directly. Browsing and contacting owners is free for students, and listing a home is free for owners. We are not a party to any rental agreement and we never receive rent or deposits from students.",
           ],
         },
         {

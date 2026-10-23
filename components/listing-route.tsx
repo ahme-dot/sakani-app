@@ -24,7 +24,7 @@ import { TrackListingView, WhatsAppLink } from "@/components/listing-tracking";
 import PropertyCard from "@/components/property-card";
 import SaveButton from "@/components/save-button";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
-import { areas, universities } from "@/lib/data";
+import { areaLabel as areaName, governorateLabel, placeLabel, universityLabel as universityName } from "@/lib/egypt";
 import { bilingualMetadata } from "@/lib/metadata";
 import { SITE_URL, listingPath, whatsappLink } from "@/lib/site";
 import { fetchSimilarListings } from "@/lib/supabase/listings";
@@ -58,11 +58,9 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const otherLocale: SiteLocale = locale === "ar" ? "en" : "ar";
   const title = locale === "ar" ? listing.title_ar : listing.title_en;
   const description = locale === "ar" ? listing.description_ar : listing.description_en;
-  const area = areas.find((candidate) => candidate.name_en === listing.area);
-  const university = universities.find((candidate) => candidate.name_en === listing.university);
-  const areaLabel = locale === "ar" ? area?.name ?? listing.area : listing.area;
-  const universityLabel = locale === "ar" ? university?.name ?? listing.university : listing.university;
-  const place = locale === "ar" ? `${areaLabel}، ${t.city}` : `${areaLabel}, ${t.city}`;
+  const areaLabel = areaName(locale, listing.area);
+  const universityLabel = universityName(locale, listing.university);
+  const place = placeLabel(locale, listing.area, listing.city);
   const intlLocale = locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG";
   const numberFormat = new Intl.NumberFormat(intlLocale);
   const dateFormat = new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium" });
@@ -72,7 +70,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const pageUrl = `${SITE_URL}${listingPath(locale, listing.id)}`;
   const serverClient = getSupabaseServerClient();
   const similar = serverClient ? await fetchSimilarListings(serverClient, listing) : [];
-  const mapQuery = encodeURIComponent(`${listing.area}, Giza, Egypt`);
+  const mapQuery = encodeURIComponent(`${listing.area}, ${listing.city}, Egypt`);
 
   const amenityList = [
     { icon: Sofa, label: t.furnished, available: listing.furnished },
@@ -97,7 +95,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
     url: pageUrl,
     image: listing.images,
     numberOfBedrooms: listing.total_beds,
-    address: { "@type": "PostalAddress", addressLocality: listing.area, addressRegion: "Giza", addressCountry: "EG" },
+    address: { "@type": "PostalAddress", addressLocality: listing.area, addressRegion: governorateLabel("en", listing.city), addressCountry: "EG" },
     amenityFeature: amenityList.filter((amenity) => amenity.available).map((amenity) => ({ "@type": "LocationFeatureSpecification", name: amenity.label, value: true })),
     offers: { "@type": "Offer", price: listing.monthly_price, priceCurrency: "EGP", availability: "https://schema.org/InStock" },
   };

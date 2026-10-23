@@ -8831,3 +8831,78 @@ body:has(.site-shell) {
     font-size: 16px;
   }
 }
+
+/* ---- Calm account / sign-in pages ---- */
+.auth-page {
+  background: #f7f7f7;
+}
+
+.auth-card {
+  border-color: #ebebeb;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 7%);
+}
+
+.auth-brand {
+  background: #f2f6f3;
+  color: #222;
+}
+
+.auth-brand::after {
+  display: none;
+}
+
+.auth-logo .brand-mark {
+  background: var(--green);
+  color: #fff;
+}
+
+.auth-brand-copy h2 {
+  font-weight: 700;
+}
+
+.auth-brand-copy p,
+.auth-brand > small {
+  color: #717171;
+}
+
+.auth-brand-copy li span {
+  background: #fff;
+  color: var(--green);
+}
+
+/* ---- Calm admin panel ---- */
+.admin-shell {
+  --ink: #222;
+  --muted: #717171;
+  --line: #e4e4e4;
+  background: #f7f7f7;
+  color: var(--ink);
+}
+
+.admin-shell .admin-card,
+.admin-shell .admin-stat,
+.admin-shell .admin-table-wrap,
+.admin-shell .admin-empty-state {
+  border-color: #e4e4e4;
+  box-shadow: none;
+}
+
+.admin-shell h1,
+.admin-shell h2 {
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+body:has(.auth-page),
+body:has(.admin-page) {
+  background: #f7f7f7;
+}
+
+.admin-page {
+  background: #f7f7f7;
+}
+
+.admin-page .not-found-panel {
+  border-color: #ebebeb;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 7%);
+}

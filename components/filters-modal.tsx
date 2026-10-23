@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { X } from "lucide-react";
-import { areas } from "@/lib/data";
+import { GOVERNORATES, areaSuggestions } from "@/lib/egypt";
 import { AMENITY_FILTERS, EMPTY_FILTERS, countApprovedListings, type AmenityFilter, type ListingFilters } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -104,13 +104,23 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
           </section>
 
           <section>
-            <h3>{t.area}</h3>
-            <label className="owner-field">
-              <select value={draft.area} onChange={(event) => set({ area: event.target.value })} aria-label={t.area}>
-                <option value="">{t.searchAnyArea}</option>
-                {areas.map((area) => <option key={area.id} value={area.name_en}>{locale === "ar" ? area.name : area.name_en}</option>)}
-              </select>
-            </label>
+            <h3>{t.searchWhere}</h3>
+            <div className="owner-form-grid">
+              <label className="owner-field">
+                <span>{t.governorate}</span>
+                <select value={draft.governorate} onChange={(event) => set({ governorate: event.target.value, university: "" })}>
+                  <option value="">{t.searchAnywhere}</option>
+                  {GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}
+                </select>
+              </label>
+              <label className="owner-field">
+                <span>{t.area}</span>
+                <input value={draft.area} maxLength={60} list="filter-area-suggestions" autoComplete="off" placeholder={t.searchAnyArea} onChange={(event) => set({ area: event.target.value })} />
+                <datalist id="filter-area-suggestions">
+                  {areaSuggestions(locale, draft.governorate).map((name) => <option key={name} value={name} />)}
+                </datalist>
+              </label>
+            </div>
           </section>
 
           <section>
@@ -138,7 +148,7 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
         </div>
 
         <div className="filters-foot">
-          <button type="button" className="text-button" onClick={() => setDraft({ ...EMPTY_FILTERS, sort: draft.sort, university: draft.university })}>{t.filtersClear}</button>
+          <button type="button" className="text-button" onClick={() => setDraft({ ...EMPTY_FILTERS, sort: draft.sort })}>{t.filtersClear}</button>
           <button type="button" className="button button-primary" disabled={count === 0} onClick={() => onApply(draft)}>{showLabel}</button>
         </div>
       </div>

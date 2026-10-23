@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "سكني · Sakani",
     short_name: "Sakani",
-    description: "سكن طلابي في الجيزة — Student housing in Giza",
+    description: "سكن طلابي في كل مصر — Student housing across Egypt",
     start_url: "/ar",
     scope: "/",
     display: "standalone",

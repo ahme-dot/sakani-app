@@ -8,6 +8,7 @@ export type MarketplaceListing = {
   title_en: string;
   description_ar: string;
   description_en: string;
+  governorate: string;
   area: string;
   university: string;
   gender: Property["gender"];
@@ -34,7 +35,7 @@ export type MarketplaceListing = {
 
 /** Columns that are safe to show to anyone. Excludes owner_id and review notes. */
 export const PUBLIC_LISTING_COLUMNS =
-  "id,title_ar,title_en,description_ar,description_en,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,whatsapp_number,image_url,image_urls,verified,verified_at,status,created_at,updated_at";
+  "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,whatsapp_number,image_url,image_urls,verified,verified_at,status,created_at,updated_at";
 
 export const LISTINGS_PAGE_SIZE = 12;
 
@@ -44,6 +45,7 @@ export const AMENITY_FILTERS = ["furnished", "wifi", "air_conditioning", "securi
 export type AmenityFilter = (typeof AMENITY_FILTERS)[number];
 
 export type ListingFilters = {
+  governorate: string;
   university: string;
   area: string;
   gender: string;
@@ -56,6 +58,7 @@ export type ListingFilters = {
 };
 
 export const EMPTY_FILTERS: ListingFilters = {
+  governorate: "",
   university: "",
   area: "",
   gender: "",
@@ -68,7 +71,7 @@ export const EMPTY_FILTERS: ListingFilters = {
 };
 
 export function hasActiveFilters(filters: ListingFilters) {
-  return Boolean(filters.university || filters.area || filters.gender || filters.propertyType || filters.minPrice || filters.maxPrice || filters.amenities.length || filters.verified);
+  return Boolean(filters.governorate || filters.university || filters.area || filters.gender || filters.propertyType || filters.minPrice || filters.maxPrice || filters.amenities.length || filters.verified);
 }
 
 const SORTS: ListingSort[] = ["newest", "price_asc", "price_desc"];
@@ -83,6 +86,7 @@ export function filtersFromParams(params: Record<string, string | string[] | und
   const amenities = one("amenities").split(",").filter((item): item is AmenityFilter => (AMENITY_FILTERS as readonly string[]).includes(item));
   const sort = one("sort") as ListingSort;
   return {
+    governorate: one("gov").slice(0, 40),
     university: one("university").slice(0, 80),
     area: one("area").slice(0, 80),
     gender: ["female", "male", "mixed"].includes(one("gender")) ? one("gender") : "",
@@ -98,6 +102,7 @@ export function filtersFromParams(params: Record<string, string | string[] | und
 /** The reverse of filtersFromParams; empty values are left out. */
 export function filtersToParams(filters: ListingFilters) {
   const params = new URLSearchParams();
+  if (filters.governorate) params.set("gov", filters.governorate);
   if (filters.university) params.set("university", filters.university);
   if (filters.area) params.set("area", filters.area);
   if (filters.gender) params.set("gender", filters.gender);
@@ -143,6 +148,7 @@ export async function fetchListingsByIds(client: SupabaseClient, ids: string[]) 
 /** The filter methods shared by list and count queries (each returns the same builder). */
 interface Filterable {
   eq(column: string, value: unknown): Filterable;
+  ilike(column: string, pattern: string): Filterable;
   gte(column: string, value: unknown): Filterable;
   lte(column: string, value: unknown): Filterable;
 }
@@ -150,8 +156,11 @@ interface Filterable {
 // Typed loosely on purpose: Supabase's fully generic builder types are too deep for TypeScript here.
 function applyFilters<T>(query: T, filters: ListingFilters): T {
   let next = query as unknown as Filterable;
+  if (filters.governorate) next = next.eq("governorate", filters.governorate);
   if (filters.university) next = next.eq("university", filters.university);
-  if (filters.area) next = next.eq("area", filters.area);
+  // Neighbourhoods are typed by owners, so match part of the name ("Dokki" finds "Dokki, Tahrir St").
+  const areaTerm = filters.area.replace(/[%_\\,()*]/g, " ").trim();
+  if (areaTerm) next = next.ilike("area", `%${areaTerm}%`);
   if (filters.gender) next = next.eq("gender", filters.gender);
   if (filters.propertyType) next = next.eq("property_type", filters.propertyType);
   const minPrice = Number(filters.minPrice);
@@ -207,7 +216,7 @@ export function toProperty(listing: MarketplaceListing): Property {
     title_en: listing.title_en,
     description_ar: listing.description_ar,
     description_en: listing.description_en,
-    city: "Giza",
+    city: listing.governorate || "Giza",
     area: listing.area,
     university: listing.university,
     gender: listing.gender,
@@ -227,7 +236,7 @@ export function toProperty(listing: MarketplaceListing): Property {
     verification_status: listing.verified ? "verified" : "pending",
     verified_at: listing.verified_at ?? null,
     walking_distance_minutes: listing.walking_distance_minutes,
-    address_text: `${listing.area}, Giza, Egypt`,
+    address_text: `${listing.area}, ${listing.governorate || "Giza"}, Egypt`,
     whatsapp_number: listing.whatsapp_number,
     phone_number: listing.whatsapp_number,
     images: listingImages(listing),
