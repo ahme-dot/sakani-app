@@ -82,6 +82,17 @@ test.describe("visit requests", () => {
       const ownerFees = await api<Array<{ payer: string }>>(`/rest/v1/rental_fees?select=payer&request_id=eq.${requestId}`, { token: owner.access_token });
       expect(ownerFees.data.map((fee) => fee.payer)).toEqual(["owner"]);
 
+      // The student pays on the site through the fee's private link.
+      const studentFee = (await api<Array<{ pay_token: string; amount: number }>>(`/rest/v1/rental_fees?select=pay_token,amount&request_id=eq.${requestId}&payer=eq.student`, { token: admin })).data[0];
+      const shown = await api<Array<{ amount: number; status: string; payer: string }>>("/rest/v1/rpc/fee_by_token", { method: "POST", body: { token: studentFee.pay_token } });
+      expect(shown.data[0]).toMatchObject({ amount: studentFee.amount, status: "due", payer: "student" });
+      const wrongToken = await api<unknown[]>("/rest/v1/rpc/fee_by_token", { method: "POST", body: { token: "00000000-0000-0000-0000-000000000000" } });
+      expect(wrongToken.data).toEqual([]);
+      expect((await api("/rest/v1/rpc/submit_payment_by_token", { method: "POST", body: { token: studentFee.pay_token, pay_method: "cash", pay_reference: "TX-1", pay_phone: "01112223334" } })).status).toBeGreaterThanOrEqual(400);
+      expect((await api("/rest/v1/rpc/submit_payment_by_token", { method: "POST", body: { token: studentFee.pay_token, pay_method: "vodafone_cash", pay_reference: "VF-778899", pay_phone: "01112223334" } })).status).toBeLessThan(300);
+      const afterPay = await api<Array<{ status: string }>>("/rest/v1/rpc/fee_by_token", { method: "POST", body: { token: studentFee.pay_token } });
+      expect(afterPay.data[0].status).toBe("submitted");
+
       // Closing twice does not create more fees.
       await api(`/rest/v1/rpc/admin_close_request`, { token: admin, method: "POST", body: { target_request: requestId } });
       expect((await api<unknown[]>(`/rest/v1/rental_fees?select=id&request_id=eq.${requestId}`, { token: admin })).data).toHaveLength(2);
@@ -115,4 +126,9 @@ test.describe("visit requests", () => {
       await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "DELETE" });
     }
   });
+});
+
+test("an invalid payment link shows a clear message", async ({ page }) => {
+  await page.goto("/en/pay/not-a-real-link");
+  await expect(page.getByRole("alert")).toContainText("payment link");
 });

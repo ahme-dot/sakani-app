@@ -20,6 +20,8 @@ export type FeePayer = "owner" | "student";
 
 export type RentalFee = {
   id: string;
+  /** Private link token for the payment page (/pay/<token>). */
+  pay_token: string;
   payer: FeePayer;
   request_id: string | null;
   payer_name: string | null;
@@ -52,7 +54,7 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
 };
 
 export const RENTAL_FEE_COLUMNS =
-  "id,payer,request_id,payer_name,payer_contact,listing_id,owner_id,listing_title,monthly_price,amount,status,method,reference,payer_phone,admin_note,created_by_admin,created_at,submitted_at,decided_at";
+  "id,pay_token,payer,request_id,payer_name,payer_contact,listing_id,owner_id,listing_title,monthly_price,amount,status,method,reference,payer_phone,admin_note,created_by_admin,created_at,submitted_at,decided_at";
 
 /** A fee is overdue after this many days; owners then can't add new listings (enforced in the database). */
 export const FEE_GRACE_DAYS = 14;

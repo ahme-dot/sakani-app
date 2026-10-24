@@ -18,7 +18,7 @@ type Props = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function CopyValue({ label, value, copyLabel, copiedLabel }: { label: string; value: string; copyLabel: string; copiedLabel: string }) {
+export function CopyValue({ label, value, copyLabel, copiedLabel }: { label: string; value: string; copyLabel: string; copiedLabel: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="pay-account">

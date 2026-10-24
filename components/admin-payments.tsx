@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Check, LoaderCircle, MessageCircle, RotateCcw, Wallet, X } from "lucide-react";
+import { Check, LoaderCircle, MessageCircle, RotateCcw, Wallet, X, Link2 } from "lucide-react";
 import {
   DEFAULT_PAYMENT_SETTINGS,
   RENTAL_FEE_COLUMNS,
@@ -12,7 +12,7 @@ import {
   type PaymentSettings,
   type RentalFee,
 } from "@/lib/payments";
-import { whatsappLink } from "@/lib/site";
+import { SITE_URL, whatsappLink } from "@/lib/site";
 import { fetchPrivateContacts } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -161,12 +161,30 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
                   {(fee.status === "due" || fee.status === "submitted") && (
                     <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void decide(fee, "waived")}><X size={15} /> {t.markWaived}</button>
                   )}
-                  {fee.payer === "owner" && owner && (
-                    <a className="admin-btn admin-btn-ghost" href={whatsappLink(owner.whatsapp_number)} target="_blank" rel="noreferrer"><MessageCircle size={15} /> {t.feeOwnerPhone}</a>
-                  )}
-                  {fee.payer === "student" && fee.payer_contact && (
-                    <a className="admin-btn admin-btn-ghost" href={whatsappLink(fee.payer_contact)} target="_blank" rel="noreferrer"><MessageCircle size={15} /> {t.payerStudent}</a>
-                  )}
+                  {(() => {
+                    // Every fee is paid on the site through its private link; send it to whoever owes it.
+                    const payUrl = `${SITE_URL}/${locale}/pay/${fee.pay_token}`;
+                    const phone = fee.payer === "student" ? fee.payer_contact : owner?.whatsapp_number;
+                    return (
+                      <>
+                        {phone && fee.status === "due" && (
+                          <a className="admin-btn admin-btn-ghost" href={whatsappLink(phone, t.payLinkMessage(numberFormat.format(fee.amount), payUrl))} target="_blank" rel="noreferrer"><MessageCircle size={15} /> {t.adminSendPayLink}</a>
+                        )}
+                        {phone && fee.status !== "due" && (
+                          <a className="admin-btn admin-btn-ghost" href={whatsappLink(phone)} target="_blank" rel="noreferrer"><MessageCircle size={15} /> {fee.payer === "student" ? t.payerStudent : t.feeOwnerPhone}</a>
+                        )}
+                        <button
+                          className="admin-btn admin-btn-ghost"
+                          type="button"
+                          onClick={() => {
+                            void navigator.clipboard?.writeText(payUrl).then(() => setMessage(t.payLinkCopied), () => setMessage(payUrl));
+                          }}
+                        >
+                          <Link2 size={15} /> {t.adminCopyPayLink}
+                        </button>
+                      </>
+                    );
+                  })()}
                 </div>
               </article>
             );

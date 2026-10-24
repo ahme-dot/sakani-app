@@ -10306,3 +10306,45 @@ body:has(.auth-page) { background: #f8f6ee; }
   gap: 4px;
   text-decoration: underline;
 }
+
+/* ---- Private payment page (/pay/<token>) ---- */
+.site-shell .pay-page {
+  display: grid;
+  gap: 14px;
+  max-width: 640px;
+  padding-block: 40px 64px;
+}
+
+.site-shell .pay-page h1 {
+  margin: 0;
+  font-size: clamp(26px, 3.4vw, 34px);
+}
+
+.site-shell .pay-page > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.pay-page-card .fee-card-head strong {
+  display: block;
+  margin: 2px 0;
+  font-size: 28px;
+}
+
+.pay-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: #eef3fb;
+  color: #3c5a85;
+  font-weight: 600;
+}
+
+.pay-state.is-paid {
+  background: var(--green-pale);
+  color: var(--green-dark);
+}
