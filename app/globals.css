@@ -10175,3 +10175,9 @@ body:has(.auth-page) { background: #f8f6ee; }
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+@media (max-width: 760px) {
+  .site-shell .listing3-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

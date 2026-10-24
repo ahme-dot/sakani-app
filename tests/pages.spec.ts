@@ -33,6 +33,7 @@ for (const locale of LOCALES) {
         await page.goto((await link.getAttribute("href"))!);
         await expect(page.locator("h1")).toBeVisible();
         await expect(page.locator(".listing2-whatsapp")).toBeVisible();
+        await expect.poll(async () => (await page.locator(".listing3-main").boundingBox())?.width ?? 0).toBeGreaterThan(0);
         await page.waitForLoadState("networkidle");
         await scrollThrough(page);
         expect(await designProblems(page)).toEqual([]);
