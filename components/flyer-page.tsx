@@ -9,7 +9,7 @@ import { SITE_COPY, type SiteLocale } from "@/messages/site";
 export default async function FlyerPage({ locale }: { locale: SiteLocale }) {
   const t = SITE_COPY[locale];
   const listUrl = `${SITE_URL}/${locale}/host`;
-  const qrSvg = await QRCode.toString(listUrl, { type: "svg", margin: 0, width: 300, color: { dark: "#174d3d", light: "#ffffff" } });
+  const qrSvg = await QRCode.toString(listUrl, { type: "svg", margin: 0, width: 300, color: { dark: "#26372e", light: "#ffffff" } });
 
   return (
     <main className="flyer-shell" dir={locale === "ar" ? "rtl" : "ltr"}>
