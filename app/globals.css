@@ -10164,3 +10164,14 @@ body:has(.auth-page) { background: #f8f6ee; }
 .flyer-points svg { border-radius: 4px; background: #f3e5dc; color: #a95839; }
 .flyer-qr-block { border-color: #c78a6e; border-radius: 4px; background: #f8f6ee; }
 .flyer-foot { color: #59695f; }
+
+.site-shell .listing3-main,
+.site-shell .listing3-summary,
+.site-shell .listing3-section,
+.site-shell .listing3-top h1,
+.site-shell .listing3-summary h2,
+.site-shell .listing-description,
+.site-shell .listing3-map-place {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
