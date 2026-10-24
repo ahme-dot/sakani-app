@@ -10181,3 +10181,22 @@ body:has(.auth-page) { background: #f8f6ee; }
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Fixes: the round search button kept the off-white field background (white icon on white), and the
+   owner banner heading inherited the dark editorial heading colour on the dark banner. */
+.site-shell .search-pill .search-pill-go {
+  border-color: #cb7756;
+  background: #cb7756;
+  color: #fff;
+  box-shadow: none;
+}
+
+.site-shell .search-pill .search-pill-go:hover {
+  border-color: #b96040;
+  background: #b96040;
+}
+
+.site-shell .host-banner-copy h2,
+.site-shell[lang="ar"] .host-banner-copy h2 {
+  color: #fff;
+}

@@ -17,8 +17,9 @@ function loadEnv(): Record<string, string> {
 const env = loadEnv();
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-export const ADMIN_EMAIL = process.env.SAKANI_ADMIN_EMAIL ?? "";
-export const ADMIN_PASSWORD = process.env.SAKANI_ADMIN_PASSWORD ?? "";
+// From the environment, or from .env.local (never committed or deployed).
+export const ADMIN_EMAIL = process.env.SAKANI_ADMIN_EMAIL ?? env.SAKANI_ADMIN_EMAIL ?? "";
+export const ADMIN_PASSWORD = process.env.SAKANI_ADMIN_PASSWORD ?? env.SAKANI_ADMIN_PASSWORD ?? "";
 export const hasAdmin = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD && SUPABASE_URL);
 export const TEST_TAG = "[E2E TEST]";
 export const LOCALES = ["ar", "en"] as const;
