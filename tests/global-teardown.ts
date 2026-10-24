@@ -14,5 +14,8 @@ export default async function globalTeardown() {
     headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ prefixes: paths }),
   });
+  // Requests and fees outlive their listing (their link is set to null), so remove them explicitly.
+  await api("/rest/v1/rental_fees?listing_title=like.*E2E%20TEST*", { token, method: "DELETE" });
+  await api("/rest/v1/listing_requests?listing_title=like.*E2E%20TEST*", { token, method: "DELETE" });
   await api("/rest/v1/properties?title_en=like.*E2E%20TEST*", { token, method: "DELETE" });
 }

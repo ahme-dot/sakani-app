@@ -10200,3 +10200,109 @@ body:has(.auth-page) { background: #f8f6ee; }
 .site-shell[lang="ar"] .host-banner-copy h2 {
   color: #fff;
 }
+
+/* ---- Sakani as middleman: reference code, visit request, owner/student fee chips ---- */
+.site-shell .listing3-ref {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.site-shell .listing3-ref strong {
+  color: var(--ink);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: .04em;
+}
+
+.site-shell .listing3-middleman {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.site-shell .listing3-middleman svg {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--green);
+}
+
+.request-visit {
+  margin-top: 10px;
+  border: 1px solid #e4ddd2;
+  border-radius: 6px;
+  background: #fffefa;
+}
+
+.request-visit summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 14px;
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+
+.request-visit summary::-webkit-details-marker {
+  display: none;
+}
+
+.request-visit[open] summary {
+  border-bottom: 1px solid #e4ddd2;
+}
+
+.request-visit form {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.request-visit .button {
+  min-height: 44px;
+}
+
+.request-sent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: var(--green-pale);
+  color: var(--green-dark);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.payer-chip {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.payer-chip.is-owner {
+  background: #eef3fb;
+  color: #3c5a85;
+}
+
+.payer-chip.is-student {
+  background: #fbf1e6;
+  color: #94582f;
+}
+
+.admin-request .admin-fee-main a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: underline;
+}

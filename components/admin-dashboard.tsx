@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
+  CalendarCheck,
   BadgeCheck,
   BedDouble,
   Building2,
@@ -37,6 +38,7 @@ import {
 } from "lucide-react";
 import AdminGrow from "@/components/admin-grow";
 import AdminPayments from "@/components/admin-payments";
+import AdminRequests from "@/components/admin-requests";
 import AdminInbox from "@/components/admin-inbox";
 import ListingForm from "@/components/listing-form";
 import VisitChecklist, { readVisit } from "@/components/visit-checklist";
@@ -46,21 +48,22 @@ import AdminTeam from "@/components/admin-team";
 import AdminUsers, { type DirectoryUser } from "@/components/admin-users";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { PUBLIC_LISTING_COLUMNS, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
+import { PUBLIC_LISTING_COLUMNS, fetchPrivateContacts, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
 import { storagePathFromPublicUrl } from "@/lib/images";
 import { listingPath, whatsappLink } from "@/lib/site";
 import { placeLabel, universityLabel as universityName } from "@/lib/egypt";
 
 const ADMIN_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},owner_id,rejection_reason`;
 const STORAGE_BUCKET = "sakani-listings";
-const SEARCH_COLUMNS = ["title_ar", "title_en", "governorate", "area", "university", "whatsapp_number"];
+// Owner numbers are private columns (read through listing_private_contacts), so they are not searchable here.
+const SEARCH_COLUMNS = ["title_ar", "title_en", "governorate", "area", "university"];
 const SEARCH_DEBOUNCE_MS = 300;
 /** Published listings not updated or confirmed for this long are flagged as possibly out of date. */
 const STALE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
-type AdminView = "listings" | "add" | "reports" | "inbox" | "payments" | "users" | "grow" | "team";
+type AdminView = "listings" | "add" | "requests" | "reports" | "inbox" | "payments" | "users" | "grow" | "team";
 type ListingStats = { views: number; whatsapp_clicks: number };
 type AdminListing = MarketplaceListing;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
@@ -101,6 +104,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [openReports, setOpenReports] = useState(0);
   const [openMessages, setOpenMessages] = useState(0);
   const [feesToCheck, setFeesToCheck] = useState(0);
+  const [newRequests, setNewRequests] = useState(0);
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(true);
   const [directoryError, setDirectoryError] = useState("");
@@ -193,9 +197,14 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           setListings([]);
           setError(t.adminLoadError);
         } else {
-          setListings((data ?? []) as unknown as AdminListing[]);
+          const rows = (data ?? []) as unknown as AdminListing[];
+          setListings(rows);
           setLoadedAt(Date.now());
           setError("");
+          // Owner numbers are private: fetch them for these listings through the admin-only function.
+          void fetchPrivateContacts(supabase, rows.map((row) => row.id)).then((numbers) => {
+            if (mounted) setListings((current) => current.map((item) => ({ ...item, whatsapp_number: numbers[item.id] ?? item.whatsapp_number })));
+          });
         }
         setLoadingListings(false);
       });
@@ -273,6 +282,14 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       .eq("status", "open")
       .then(({ count: messageCount }) => {
         if (mounted) setOpenMessages(messageCount ?? 0);
+      });
+    // New visit requests from students (0 until the middleman migration is installed).
+    void supabase
+      .from("listing_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new")
+      .then(({ count: requestCount, error: requestError }) => {
+        if (mounted) setNewRequests(requestError ? 0 : requestCount ?? 0);
       });
     // Fees with a transfer to check (0 until the payments migration is installed).
     void supabase
@@ -503,6 +520,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const navItems: Array<{ value: AdminView; label: string; icon: typeof Users; badge?: number }> = [
     { value: "listings", label: t.adminViewListings, icon: LayoutList, badge: counts?.pending },
     { value: "add", label: t.adminViewAddListing, icon: PlusCircle },
+    { value: "requests", label: t.adminViewRequests, icon: CalendarCheck, badge: newRequests },
     { value: "reports", label: t.adminViewReports, icon: Flag, badge: openReports },
     { value: "inbox", label: t.adminViewInbox, icon: Inbox, badge: openMessages },
     { value: "payments", label: t.adminViewPayments, icon: Wallet, badge: feesToCheck },
@@ -516,6 +534,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     reports: { title: t.reportsTitle, description: t.reportsDescription },
     inbox: { title: t.inboxTitle, description: t.inboxDescription },
     payments: { title: t.adminViewPayments, description: t.paymentsAdminDescription },
+    requests: { title: t.adminViewRequests, description: t.requestsDescription },
     users: { title: t.usersTitle, description: t.usersDescription },
     grow: { title: t.growTitle, description: t.growDescription },
     team: { title: t.teamTitle, description: t.teamDescription },
@@ -576,6 +595,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
               />
             </div>
           </section>
+        ) : view === "requests" ? (
+          <AdminRequests locale={locale} supabase={supabase!} onChanged={refreshCounts} />
         ) : view === "payments" ? (
           <AdminPayments locale={locale} supabase={supabase!} onChanged={refreshCounts} />
         ) : view === "grow" ? (
@@ -717,7 +738,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                             </li>
                           )}
                           <li>
-                            <a href={whatsappLink(listing.whatsapp_number)} target="_blank" rel="noreferrer" dir="ltr"><MessageCircle size={14} /> {listing.whatsapp_number}</a>
+                            {listing.whatsapp_number ? <a href={whatsappLink(listing.whatsapp_number)} target="_blank" rel="noreferrer" dir="ltr"><MessageCircle size={14} /> {listing.whatsapp_number}</a> : <span dir="ltr"><MessageCircle size={14} /> …</span>}
                           </li>
                         </ul>
 

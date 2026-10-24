@@ -22,7 +22,8 @@ export type MarketplaceListing = {
   available_beds: number;
   total_beds: number;
   walking_distance_minutes: number;
-  whatsapp_number: string;
+  /** Private: only the owner and admins can read it (see listing_private_contacts). */
+  whatsapp_number?: string;
   image_url: string;
   image_urls: string[];
   verified: boolean;
@@ -35,7 +36,23 @@ export type MarketplaceListing = {
 
 /** Columns that are safe to show to anyone. Excludes owner_id and review notes. */
 export const PUBLIC_LISTING_COLUMNS =
-  "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,whatsapp_number,image_url,image_urls,verified,verified_at,status,created_at,updated_at";
+  "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,image_url,image_urls,verified,verified_at,status,created_at,updated_at";
+
+/** Short reference students quote to the Sakani team, e.g. "SK-3F9A2C". */
+export function listingRef(id: string) {
+  return `SK-${id.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
+}
+
+/** Owner phone numbers for listings the signed-in user owns (or all, for admins). */
+export async function fetchPrivateContacts(client: SupabaseClient, ids: string[]) {
+  if (!ids.length) return {} as Record<string, string>;
+  const { data, error } = await client.rpc("listing_private_contacts", { listing_ids: ids });
+  if (error) {
+    console.error("Could not load owner numbers:", error);
+    return {} as Record<string, string>;
+  }
+  return Object.fromEntries(((data ?? []) as Array<{ listing_id: string; whatsapp_number: string }>).map((row) => [row.listing_id, row.whatsapp_number]));
+}
 
 export const LISTINGS_PAGE_SIZE = 12;
 
@@ -237,8 +254,8 @@ export function toProperty(listing: MarketplaceListing): Property {
     verified_at: listing.verified_at ?? null,
     walking_distance_minutes: listing.walking_distance_minutes,
     address_text: `${listing.area}, ${listing.governorate || "Giza"}, Egypt`,
-    whatsapp_number: listing.whatsapp_number,
-    phone_number: listing.whatsapp_number,
+    whatsapp_number: listing.whatsapp_number ?? "",
+    phone_number: listing.whatsapp_number ?? "",
     images: listingImages(listing),
     amenities: [
       ...(listing.wifi ? ["Wi-Fi"] : []),

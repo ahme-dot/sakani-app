@@ -13,6 +13,7 @@ import {
   type RentalFee,
 } from "@/lib/payments";
 import { whatsappLink } from "@/lib/site";
+import { fetchPrivateContacts } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 type Props = { locale: SiteLocale; supabase: SupabaseClient; onChanged: () => void };
@@ -54,8 +55,8 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
       // Owner WhatsApp numbers, to remind owners about due fees.
       const listingIds = [...new Set(rows.map((fee) => fee.listing_id).filter((id): id is string => Boolean(id)))];
       if (listingIds.length) {
-        const { data: contacts } = await supabase.from("properties").select("id,whatsapp_number").in("id", listingIds);
-        if (mounted) setPhones(Object.fromEntries(((contacts ?? []) as Array<{ id: string; whatsapp_number: string }>).map((row) => [row.id, row.whatsapp_number])));
+        const numbers = await fetchPrivateContacts(supabase, listingIds);
+        if (mounted) setPhones(numbers);
       }
     });
     return () => {
@@ -75,6 +76,9 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
       vodafone_cash_number: String(form.get("vodafone_cash_number") ?? "").trim(),
       fee_percent: Number(form.get("fee_percent")),
       fee_minimum: Number(form.get("fee_minimum")),
+      team_whatsapp: String(form.get("team_whatsapp") ?? "").trim(),
+      student_fee_percent: Number(form.get("student_fee_percent")),
+      student_fee_minimum: Number(form.get("student_fee_minimum")),
     }).eq("id", 1);
     setBusy(false);
     if (saveError) {
@@ -136,8 +140,9 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
             return (
               <article className="admin-fee" key={fee.id}>
                 <div className="admin-fee-main">
-                  <strong>{numberFormat.format(fee.amount)} EGP</strong>
+                  <strong>{numberFormat.format(fee.amount)} EGP <span className={`payer-chip is-${fee.payer}`}>{fee.payer === "student" ? t.payerStudent : t.payerOwner}</span></strong>
                   <span>{fee.listing_title}</span>
+                  {fee.payer === "student" && fee.payer_name && <span>{fee.payer_name} · <span dir="ltr">{fee.payer_contact}</span></span>}
                   <small>{dateFormat.format(new Date(fee.submitted_at ?? fee.created_at))}{fee.created_by_admin ? " · admin" : ""}</small>
                 </div>
                 {fee.reference && (
@@ -156,8 +161,11 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
                   {(fee.status === "due" || fee.status === "submitted") && (
                     <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void decide(fee, "waived")}><X size={15} /> {t.markWaived}</button>
                   )}
-                  {owner && (
+                  {fee.payer === "owner" && owner && (
                     <a className="admin-btn admin-btn-ghost" href={whatsappLink(owner.whatsapp_number)} target="_blank" rel="noreferrer"><MessageCircle size={15} /> {t.feeOwnerPhone}</a>
+                  )}
+                  {fee.payer === "student" && fee.payer_contact && (
+                    <a className="admin-btn admin-btn-ghost" href={whatsappLink(fee.payer_contact)} target="_blank" rel="noreferrer"><MessageCircle size={15} /> {t.payerStudent}</a>
                   )}
                 </div>
               </article>
@@ -174,6 +182,9 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
           <label className="owner-field"><span>{t.settingsPayee}</span><input name="payee_name" defaultValue={settings.payee_name} maxLength={80} /></label>
           <label className="owner-field"><span>{t.settingsPercent}</span><input name="fee_percent" type="number" min="0" max="100" step="0.5" required defaultValue={settings.fee_percent} dir="ltr" /></label>
           <label className="owner-field"><span>{t.settingsMinimum}</span><input name="fee_minimum" type="number" min="0" max="100000" step="10" required defaultValue={settings.fee_minimum} dir="ltr" /></label>
+          <label className="owner-field"><span>{t.settingsTeamWhatsapp}</span><input name="team_whatsapp" defaultValue={settings.team_whatsapp} maxLength={20} pattern="[0-9+ \(\)\-]{8,20}" inputMode="tel" dir="ltr" placeholder="010xxxxxxxx" /></label>
+          <label className="owner-field"><span>{t.settingsStudentPercent}</span><input name="student_fee_percent" type="number" min="0" max="100" step="0.5" required defaultValue={settings.student_fee_percent} dir="ltr" /></label>
+          <label className="owner-field"><span>{t.settingsStudentMinimum}</span><input name="student_fee_minimum" type="number" min="0" max="100000" step="10" required defaultValue={settings.student_fee_minimum} dir="ltr" /></label>
         </div>
         <button className="admin-btn admin-btn-primary" type="submit" disabled={busy}>{t.settingsSave}</button>
       </form>

@@ -22,12 +22,14 @@ import ListingGallery from "@/components/listing-gallery";
 import { ReportListing, ShareListingButton } from "@/components/listing-actions";
 import { TrackListingView, WhatsAppLink } from "@/components/listing-tracking";
 import PropertyCard from "@/components/property-card";
+import RequestVisit from "@/components/request-visit";
 import SaveButton from "@/components/save-button";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { areaLabel as areaName, governorateLabel, placeLabel, universityLabel as universityName } from "@/lib/egypt";
 import { bilingualMetadata } from "@/lib/metadata";
 import { SITE_URL, listingPath, whatsappLink } from "@/lib/site";
-import { fetchSimilarListings } from "@/lib/supabase/listings";
+import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings } from "@/lib/payments";
+import { fetchSimilarListings, listingRef } from "@/lib/supabase/listings";
 import { getApprovedListing, getSupabaseServerClient } from "@/lib/supabase/server";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -66,10 +68,15 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const dateFormat = new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium" });
   const monthYear = new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric" });
   const verified = listing.verification_status === "verified";
-  const whatsappHref = whatsappLink(listing.whatsapp_number, t.whatsappMessage(title));
+  const ref = listingRef(listing.id);
   const pageUrl = `${SITE_URL}${listingPath(locale, listing.id)}`;
   const serverClient = getSupabaseServerClient();
-  const similar = serverClient ? await fetchSimilarListings(serverClient, listing) : [];
+  const [similar, settings] = serverClient
+    ? await Promise.all([fetchSimilarListings(serverClient, listing), fetchPaymentSettings(serverClient)])
+    : [[], null];
+  const fees = settings ?? DEFAULT_PAYMENT_SETTINGS;
+  // Students reach the Sakani team, never the owner directly; the team checks with the owner first.
+  const teamHref = fees.team_whatsapp ? whatsappLink(fees.team_whatsapp, t.askSakaniMessage(ref, title, pageUrl)) : null;
   const mapQuery = encodeURIComponent(`${listing.area}, ${listing.city}, Egypt`);
 
   const amenityList = [
@@ -182,10 +189,17 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                 <div><dt>{t.deposit}</dt><dd>{listing.deposit > 0 ? numberFormat.format(listing.deposit) : t.noDeposit}</dd></div>
                 <div><dt>{t.beds}</dt><dd>{t.bedsSummary(listing.available_beds, listing.total_beds)}</dd></div>
               </dl>
-              <WhatsAppLink listingId={listing.id} className="button button-primary listing2-whatsapp" href={whatsappHref}>
-                <MessageCircle size={18} /> {t.contactOwner}
-              </WhatsAppLink>
-              <p className="listing3-nofee">{t.noFees}</p>
+              <p className="listing3-ref">{t.listingRefLabel}: <strong dir="ltr">{ref}</strong></p>
+              {teamHref && (
+                <WhatsAppLink listingId={listing.id} className="button button-primary listing2-whatsapp" href={teamHref}>
+                  <MessageCircle size={18} /> {t.askSakani}
+                </WhatsAppLink>
+              )}
+              <div id="request-visit">
+                <RequestVisit locale={locale} listingId={listing.id} listingTitle={title} />
+              </div>
+              <p className="listing3-nofee">{t.studentFeeNote(numberFormat.format(fees.student_fee_percent), numberFormat.format(fees.student_fee_minimum))}</p>
+              <p className="listing3-middleman"><ShieldCheck size={16} /> {t.middlemanNote}</p>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>
                 {verified ? <BadgeCheck size={16} /> : <Info size={16} />}
                 {verified ? t.listingVerifiedNote : t.listingUnverifiedNote}
@@ -222,9 +236,13 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
       {/* Phones: price and contact always within reach. */}
       <div className="listing2-bar">
         <p className="listing3-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</p>
-        <WhatsAppLink listingId={listing.id} className="button button-primary" href={whatsappHref}>
-          <MessageCircle size={18} /> {t.contactShort}
-        </WhatsAppLink>
+        {teamHref ? (
+          <WhatsAppLink listingId={listing.id} className="button button-primary" href={teamHref}>
+            <MessageCircle size={18} /> {t.askSakaniShort}
+          </WhatsAppLink>
+        ) : (
+          <a className="button button-primary" href="#request-visit">{t.requestTitle}</a>
+        )}
       </div>
 
       <SiteFooter locale={locale} switchHref={listingPath(otherLocale, listing.id)} tab={false} />

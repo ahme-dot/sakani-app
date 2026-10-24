@@ -7,13 +7,23 @@ export type PaymentSettings = {
   vodafone_cash_number: string;
   fee_percent: number;
   fee_minimum: number;
+  /** WhatsApp number students use to reach the Sakani team. */
+  team_whatsapp: string;
+  student_fee_percent: number;
+  student_fee_minimum: number;
 };
 
 export type FeeStatus = "due" | "submitted" | "paid" | "waived";
 export type PaymentMethod = "instapay" | "vodafone_cash";
 
+export type FeePayer = "owner" | "student";
+
 export type RentalFee = {
   id: string;
+  payer: FeePayer;
+  request_id: string | null;
+  payer_name: string | null;
+  payer_contact: string | null;
   listing_id: string | null;
   owner_id: string;
   listing_title: string;
@@ -36,10 +46,13 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
   vodafone_cash_number: "",
   fee_percent: 20,
   fee_minimum: 150,
+  team_whatsapp: "",
+  student_fee_percent: 10,
+  student_fee_minimum: 200,
 };
 
 export const RENTAL_FEE_COLUMNS =
-  "id,listing_id,owner_id,listing_title,monthly_price,amount,status,method,reference,payer_phone,admin_note,created_by_admin,created_at,submitted_at,decided_at";
+  "id,payer,request_id,payer_name,payer_contact,listing_id,owner_id,listing_title,monthly_price,amount,status,method,reference,payer_phone,admin_note,created_by_admin,created_at,submitted_at,decided_at";
 
 /** A fee is overdue after this many days; owners then can't add new listings (enforced in the database). */
 export const FEE_GRACE_DAYS = 14;
@@ -47,16 +60,27 @@ export const FEE_GRACE_DAYS = 14;
 export async function fetchPaymentSettings(client: SupabaseClient): Promise<PaymentSettings | null> {
   const { data, error } = await client
     .from("app_settings")
-    .select("payee_name,instapay_address,vodafone_cash_number,fee_percent,fee_minimum")
+    .select("payee_name,instapay_address,vodafone_cash_number,fee_percent,fee_minimum,team_whatsapp,student_fee_percent,student_fee_minimum")
     .eq("id", 1)
     .maybeSingle();
   if (error || !data) return null;
-  return { ...data, fee_percent: Number(data.fee_percent), fee_minimum: Number(data.fee_minimum) } as PaymentSettings;
+  return {
+    ...data,
+    fee_percent: Number(data.fee_percent),
+    fee_minimum: Number(data.fee_minimum),
+    student_fee_percent: Number(data.student_fee_percent),
+    student_fee_minimum: Number(data.student_fee_minimum),
+  } as PaymentSettings;
 }
 
 /** Same formula as the database function success_fee_for, for showing the amount before confirming. */
 export function successFee(monthlyPrice: number, settings: PaymentSettings) {
   return Math.max(settings.fee_minimum, Math.round((monthlyPrice * settings.fee_percent) / 100));
+}
+
+/** Same formula as the database function student_fee_for. */
+export function studentFee(monthlyPrice: number, settings: PaymentSettings) {
+  return Math.max(settings.student_fee_minimum, Math.round((monthlyPrice * settings.student_fee_percent) / 100));
 }
 
 /** True when the database has not been updated with the payments migration yet. */

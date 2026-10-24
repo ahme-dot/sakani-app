@@ -63,7 +63,8 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       setSaving(false);
       return;
     }
-    onSaved(data[0] as unknown as AdminListing);
+    // The number is a private column, so it is not returned; keep the value that was just saved.
+    onSaved({ ...(data[0] as unknown as AdminListing), whatsapp_number: values.whatsapp_number });
   }
 
   return (

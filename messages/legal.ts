@@ -4,7 +4,7 @@ import type { SiteLocale } from "@/messages/site";
  * DRAFT legal pages. Written to describe what the site actually does; not legal advice.
  * The site operator should have them reviewed (Egypt Personal Data Protection Law No. 151 of 2020) before relying on them.
  */
-export const LEGAL_UPDATED = "2026-10-22";
+export const LEGAL_UPDATED = "2026-10-25";
 
 type LegalSection = { heading: string; body: string[] };
 type LegalPage = { title: string; intro: string; sections: LegalSection[] };
@@ -23,7 +23,8 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
             "المُلّاك: الاسم والبريد الإلكتروني وكلمة المرور (تُحفظ مشفرة ولا يمكن لأحد قراءتها)، وتفاصيل الإعلان، ورقم واتساب، وصور السكن.",
             "الضيوف (بدون حساب): نحفظ جلسة مجهولة في متصفحك لتتمكن من متابعة إعلاناتك، دون بريد أو اسم.",
             "الزوار: ما تكتبه بنفسك في نموذج التواصل أو البلاغات، مثل رسالتك ووسيلة التواصل إن أضفتها.",
-            "المدفوعات (للمُلّاك): عند سداد رسوم النجاح نحفظ المبلغ ووسيلة الدفع (إنستاباي أو فودافون كاش) ورقم العملية ورقم الهاتف المستخدم في التحويل، لنتأكد من وصول المبلغ. لا نطلب ولا نحفظ أي بيانات بطاقات بنكية.",
+            "طلبات المعاينة: عند طلب معاينة نحفظ اسمك ورقم هاتفك والوقت المناسب وملاحظتك، ليتواصل معك فريق سكني ومع المالك لترتيب المعاينة. لا يظهر رقم المالك للطلاب، ولا يظهر رقمك للعامة.",
+            "المدفوعات: عند سداد رسوم النجاح أو رسوم الخدمة نحفظ المبلغ ووسيلة الدفع (إنستاباي أو فودافون كاش) ورقم العملية ورقم الهاتف المستخدم في التحويل، لنتأكد من وصول المبلغ. لا نطلب ولا نحفظ أي بيانات بطاقات بنكية.",
             "سجلات تقنية أساسية يحتفظ بها مزودو الاستضافة لأغراض الأمان والتشغيل. لا نستخدم إعلانات أو أدوات تتبع إعلانية.",
           ],
         },
@@ -78,7 +79,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "ما هو سكني",
           body: [
-            "سكني منصة تعرض إعلانات سكن الطلاب في مصر وتتيح التواصل المباشر مع المُلّاك. التصفح والتواصل مجانيان للطلاب، ونشر الإعلانات مجاني للمُلّاك. لسنا طرفاً في أي اتفاق إيجار، ولا نستلم إيجاراً أو تأميناً من الطلاب.",
+            "سكني منصة تعرض إعلانات سكن الطلاب في مصر. يتواصل الطلاب مع فريق سكني، ويتحقق الفريق من المالك ويرتّب المعاينة، ولا تظهر أرقام المُلّاك للطلاب. التصفح والاستفسار مجانيان، ونشر الإعلانات مجاني للمُلّاك. لسنا طرفاً في عقد الإيجار، ولا نستلم إيجاراً أو تأميناً: يُدفعان للمالك مباشرة بعد المعاينة.",
           ],
         },
         {
@@ -102,11 +103,11 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           ],
         },
         {
-          heading: "رسوم النجاح للمُلّاك",
+          heading: "رسوم الخدمة",
           body: [
-            "عندما يؤجر المالك سكنه لطالب وجده عبر سكني، يلتزم بدفع رسوم نجاح لمرة واحدة. تظهر قيمة الرسوم للمالك قبل تأكيدها، وهي نسبة من إيجار شهر واحد بحد أدنى.",
+            "عندما يتم التأجير عن طريق سكني، يدفع المالك رسوم نجاح لمرة واحدة، ويدفع الطالب رسوم خدمة لمرة واحدة. كل منهما نسبة من إيجار شهر واحد بحد أدنى، وتظهر قيمتها قبل التأكيد.",
             "تُدفع الرسوم بتحويل عبر إنستاباي أو فودافون كاش إلى الحساب الموضح في صفحة الدفع، وتُعتبر مدفوعة بعد تأكيد فريق سكني لوصول التحويل.",
-            "يحق لنا إيقاف نشر إعلانات جديدة للمالك إذا تأخر سداد رسوم مستحقة أكثر من 14 يوماً. لا يدفع الطلاب أي رسوم لسكني.",
+            "يحق لنا إيقاف نشر إعلانات جديدة للمالك إذا تأخر سداد رسوم مستحقة أكثر من 14 يوماً. لا يُدفع أي مبلغ لسكني مقابل التصفح أو الاستفسار أو المعاينة.",
           ],
         },
         {
@@ -133,7 +134,8 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
             "Owners: name, email address and password (stored hashed — nobody can read it), listing details, WhatsApp number, and property photos.",
             "Guests (no account): an anonymous session in your browser so you can follow your listings, without an email or name.",
             "Visitors: whatever you type into the contact form or a listing report, such as your message and any contact details you add.",
-            "Payments (owners): when you pay a success fee we keep the amount, the method (InstaPay or Vodafone Cash), the transaction reference and the phone number used for the transfer, so we can confirm it arrived. We never ask for or store bank card details.",
+            "Visit requests: when you request a visit we keep your name, phone number, preferred time and note, so the Sakani team can contact you and the owner to arrange it. Owners' numbers are never shown to students, and yours is never public.",
+            "Payments: when you pay a success fee or a service fee we keep the amount, the method (InstaPay or Vodafone Cash), the transaction reference and the phone number used for the transfer, so we can confirm it arrived. We never ask for or store bank card details.",
             "Basic technical logs kept by our hosting providers for security and operations. We don’t use advertising or ad-tracking tools.",
           ],
         },
@@ -188,7 +190,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "What Sakani is",
           body: [
-            "Sakani shows student housing listings across Egypt and lets students contact owners directly. Browsing and contacting owners is free for students, and listing a home is free for owners. We are not a party to any rental agreement and we never receive rent or deposits from students.",
+            "Sakani shows student housing listings across Egypt. Students contact the Sakani team, which checks the owner and arranges the visit; owners' numbers are not shown to students. Browsing and asking are free, and listing a home is free for owners. We are not a party to the rental contract and never receive rent or deposits: those are paid to the owner directly, after the visit.",
           ],
         },
         {
@@ -212,11 +214,11 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           ],
         },
         {
-          heading: "Success fee for owners",
+          heading: "Service fees",
           body: [
-            "When an owner rents their home to a student who found it on Sakani, the owner pays a one-time success fee. The owner sees the amount before confirming; it is a percentage of one month’s rent, with a minimum.",
+            "When a home is rented through Sakani, the owner pays a one-time success fee and the student pays a one-time service fee. Each is a percentage of one month’s rent with a minimum, shown before it is confirmed.",
             "The fee is paid by InstaPay or Vodafone Cash transfer to the account shown on the payment page, and counts as paid once the Sakani team confirms the transfer arrived.",
-            "We may stop an owner from publishing new listings while a fee is more than 14 days overdue. Students never pay Sakani anything.",
+            "We may stop an owner from publishing new listings while a fee is more than 14 days overdue. Nothing is paid to Sakani for browsing, asking or visiting.",
           ],
         },
         {

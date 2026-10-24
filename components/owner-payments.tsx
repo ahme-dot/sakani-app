@@ -71,14 +71,16 @@ export default function OwnerPayments({ locale, supabase, fees, settings, loaded
     onChanged();
   }
 
-  if (!fees.length) return null;
+  // Owners only ever see their own success fees (the database also enforces this).
+  const ownerFees = fees.filter((fee) => fee.payer !== "student");
+  if (!ownerFees.length) return null;
 
   return (
     <section className="owner-payments" aria-labelledby="owner-payments-title">
       <h4 id="owner-payments-title"><Wallet size={17} /> {t.paymentsTitle}</h4>
       <p className="owner-payments-intro">{t.paymentsIntro}</p>
 
-      {fees.map((fee) => {
+      {ownerFees.map((fee) => {
         const overdue = fee.status === "due" && loadedAt - new Date(fee.created_at).getTime() > FEE_GRACE_DAYS * DAY_MS;
         return (
           <article className={`fee-card is-${fee.status}`} key={fee.id}>

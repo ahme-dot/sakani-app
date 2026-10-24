@@ -19,7 +19,7 @@ import {
 import { listingPath } from "@/lib/site";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { PUBLIC_LISTING_COLUMNS, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
+import { PUBLIC_LISTING_COLUMNS, fetchPrivateContacts, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
 
 const OWNER_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},rejection_reason`;
 
@@ -32,11 +32,16 @@ type PortalState = "loading" | "unconfigured" | "signed-out" | "signed-in";
 type OwnerListing = Omit<MarketplaceListing, "owner_id">;
 
 async function fetchOwnerListings(client: SupabaseClient, ownerId: string) {
-  return client
+  const result = await client
     .from("properties")
     .select(OWNER_LISTING_COLUMNS)
     .eq("owner_id", ownerId)
     .order("created_at", { ascending: false });
+  if (result.error || !result.data?.length) return result;
+  // The WhatsApp number is private: only the owner (and admins) can read it, through this function.
+  const rows = result.data as unknown as Array<{ id: string }>;
+  const numbers = await fetchPrivateContacts(client, rows.map((row) => row.id));
+  return { ...result, data: rows.map((row) => ({ ...row, whatsapp_number: numbers[row.id] ?? "" })) };
 }
 
 export default function OwnerPortal({ locale, showIntro = true }: Props) {
