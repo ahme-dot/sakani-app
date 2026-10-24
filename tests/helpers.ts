@@ -27,6 +27,11 @@ export const LOCALES = ["ar", "en"] as const;
 type ApiOptions = { token?: string; method?: string; body?: unknown };
 
 export async function api<T = unknown>(path: string, { token, method = "GET", body }: ApiOptions = {}) {
+  // Updates and deletes return only the id unless asked otherwise: some columns (the owner's number)
+  // are private, and asking for the whole row back would be refused.
+  if ((method === "PATCH" || method === "DELETE") && path.startsWith("/rest/v1/") && !path.includes("select=")) {
+    path += `${path.includes("?") ? "&" : "?"}select=id`;
+  }
   const response = await fetch(`${SUPABASE_URL}${path}`, {
     method,
     headers: {
