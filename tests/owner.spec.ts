@@ -10,21 +10,42 @@ test("guest owner submits a listing for review", async ({ page }) => {
   const form = page.locator("#owner-form");
   await expect(form).toBeVisible();
 
-  // Submitting empty is blocked by the form.
-  await form.locator('button[type="submit"]').click();
-  await expect(page.locator(".owner-feedback-success")).toHaveCount(0);
-
-  // A real image to upload: a screenshot of the page itself.
+  // The form goes one screen at a time; Next is blocked until the screen is complete.
+  const next = () => form.locator(".listing-next").click();
   const photo = await page.screenshot({ type: "jpeg", quality: 70 });
-  await form.locator('input[name="title"]').fill(`${TEST_TAG} Owner form room`);
-  await form.locator('textarea[name="description"]').fill("A quiet furnished room for students, close to transport and shops.");
+  await expect(form.locator('[data-step="type"] .listing-screen-title')).toHaveText("What kind of place is it?");
+  await next();
+  await expect(form.locator('[data-step="location"]')).toBeHidden();
   await form.locator('input[name="gender"][value="female"]').check({ force: true });
+  await next();
+
   await form.locator('select[name="governorate"]').selectOption("Giza");
   await form.locator('input[name="area"]').fill("Dokki");
   await form.locator('select[name="university"]').selectOption("Cairo University");
-  await form.locator('input[name="monthly_price"]').fill("3000");
+  await next();
+  await next(); // beds: 1 of 1
+  await form.locator(".tile", { hasText: "Wi-Fi" }).click();
+  await next();
+
+  // Photos are required for a new listing.
+  await next();
+  await expect(page.locator(".owner-feedback-error")).toBeVisible();
   await form.locator('input[name="images"]').setInputFiles({ name: "room.jpg", mimeType: "image/jpeg", buffer: photo });
+  await expect(form.locator(".listing-photo-grid figure")).toHaveCount(1);
+  await next();
+
+  await form.locator('input[name="title"]').fill(`${TEST_TAG} Owner form room`);
+  await form.locator('textarea[name="description"]').fill("A quiet furnished room for students, close to transport and shops.");
+  await next();
+  await form.locator('input[name="monthly_price"]').fill("3000");
+  await expect(form.locator(".listing-fee-note")).toBeVisible();
+  await next();
   await form.locator('input[name="whatsapp_number"]').fill("01000000000");
+  await next();
+
+  // Review shows what was entered, then submit.
+  await expect(form.locator(".listing-review")).toContainText("Owner form room");
+  await expect(form.locator(".listing-review")).toContainText("Dokki");
   await form.locator('button[type="submit"]').click();
 
   await expect(page.locator(".owner-feedback-success")).toBeVisible({ timeout: 60_000 });

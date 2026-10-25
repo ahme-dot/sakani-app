@@ -32,6 +32,12 @@ test("Add listing: verifying needs the full visit checklist", async ({ page }) =
   await page.locator(".admin-nav button", { hasText: "Add listing" }).click();
   const form = page.locator("#owner-form");
   await expect(form).toBeVisible();
+  // Admins can jump straight to the last stage; the publish options are on the review screen.
+  await form.locator(".listing-stage").nth(2).click();
+  await form.locator('input[name="monthly_price"]').fill("3000");
+  await form.locator(".listing-next").click();
+  await form.locator('input[name="whatsapp_number"]').fill("01000000000");
+  await form.locator(".listing-next").click();
   await form.locator(".form-section-admin .choice").nth(1).click();
   await expect(page.locator(".visit-checklist")).toBeVisible();
   await expect(page.locator(".visit-check input")).toHaveCount(5);
