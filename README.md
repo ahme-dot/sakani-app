@@ -1,6 +1,6 @@
 # Sakani
 
-An Arabic- and English-language student-housing marketplace for Giza, built with Next.js 16, Tailwind CSS 4, and Supabase.
+An Arabic- and English-language student-housing marketplace for all of Egypt, built with Next.js 16, Tailwind CSS 4, and Supabase.
 
 ## Run locally
 
@@ -38,7 +38,7 @@ The site uses Supabase for email-free owner submissions, image uploads, private 
    9. [`supabase/migrations/20261026000000_sakani_launch.sql`](./supabase/migrations/20261026000000_sakani_launch.sql) — in-person visit verification, views and WhatsApp-click counts.
    10. [`supabase/migrations/20261027000000_sakani_availability.sql`](./supabase/migrations/20261027000000_sakani_availability.sql) — owners mark homes "Rented / full" and confirm "Still available".
    11. [`supabase/migrations/20261028000000_sakani_payments.sql`](./supabase/migrations/20261028000000_sakani_payments.sql) — owner success fee paid by InstaPay / Vodafone Cash, and payment settings.
-   12. [`supabase/migrations/20261029000000_sakani_egypt.sql`](./supabase/migrations/20261029000000_sakani_egypt.sql) ? adds governorates for Egypt-wide listings, backfills existing homes as Giza, and adds location constraints and an index.
+   12. [`supabase/migrations/20261029000000_sakani_egypt.sql`](./supabase/migrations/20261029000000_sakani_egypt.sql) — adds governorates for Egypt-wide listings, backfills existing homes as Giza, and adds location constraints and an index.
    13. [`supabase/migrations/20261030000000_sakani_middleman.sql`](./supabase/migrations/20261030000000_sakani_middleman.sql) — visit requests, the team WhatsApp number, the student service fee, and fees from both sides.
    14. [`supabase/migrations/20261030010000_sakani_private_numbers.sql`](./supabase/migrations/20261030010000_sakani_private_numbers.sql) — hides owners' numbers from visitors (owners and admins read them through `listing_private_contacts`).
    15. [`supabase/migrations/20261031000000_sakani_pay_links.sql`](./supabase/migrations/20261031000000_sakani_pay_links.sql) — a private payment link for every fee.
