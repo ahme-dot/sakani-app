@@ -33,37 +33,3 @@ export interface Property {
     created_at: string;
     updated_at: string;
   }
-  
-  export interface Inquiry {
-    id: string;
-    property_id: string;
-    full_name: string;
-    phone: string;
-    email: string;
-    message: string;
-    preferred_visit_date: string;
-    status: "pending" | "contacted" | "scheduled" | "completed";
-    created_at: string;
-  }
-  
-  export interface User {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    role: "student" | "landlord" | "admin";
-    university?: string;
-    properties?: string[];
-    created_at: string;
-  }
-  
-  export interface SearchFilters {
-    university?: string;
-    area?: string;
-    gender?: "male" | "female" | "mixed";
-    property_type?: "room" | "apartment" | "bed";
-    min_price?: number;
-    max_price?: number;
-    furnished?: boolean;
-    wifi?: boolean;
-  }
