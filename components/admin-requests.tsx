@@ -20,17 +20,21 @@ type ListingRequest = {
   note: string | null;
   locale: SiteLocale;
   status: RequestStatus;
+  move_in: string | null;
+  months: number | null;
+  guests: number;
   created_at: string;
 };
 
 const TABS: RequestStatus[] = ["new", "contacted", "visit", "rented", "closed"];
-const REQUEST_COLUMNS = "id,listing_id,listing_title,name,contact,preferred_time,note,locale,status,created_at";
+const REQUEST_COLUMNS = "id,listing_id,listing_title,name,contact,preferred_time,note,locale,status,move_in,months,guests,created_at";
 
-/** Admin: student visit requests. The team contacts the owner and the student; "Rented" creates both fees. */
+/** Admin: guests' bookings. The team checks with the host and the guest; "Confirm booking" creates both fees. */
 export default function AdminRequests({ locale, supabase, onChanged }: { locale: SiteLocale; supabase: SupabaseClient; onChanged: () => void }) {
   const t = SITE_COPY[locale];
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
   const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium", timeStyle: "short" });
+  const dayFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
   const [ready, setReady] = useState<boolean | null>(null);
   const [requests, setRequests] = useState<ListingRequest[]>([]);
   const [ownerNumbers, setOwnerNumbers] = useState<Record<string, string>>({});
@@ -135,6 +139,12 @@ export default function AdminRequests({ locale, supabase, onChanged }: { locale:
                 </div>
                 <dl className="admin-fee-ref">
                   <div><dt>{t.requestStudent}</dt><dd>{request.name} · <span dir="ltr">{request.contact}</span></dd></div>
+                  {request.move_in && (
+                    <div>
+                      <dt>{t.bookTitle}</dt>
+                      <dd>{t.bookingFrom(dayFormat.format(new Date(request.move_in)))}{request.months ? ` · ${t.monthsCount(request.months)}` : ""} · {t.guestsCount(request.guests)}</dd>
+                    </div>
+                  )}
                   {request.preferred_time && <div><dt>{t.requestPreferred}</dt><dd>{request.preferred_time}</dd></div>}
                   {request.note && <div><dt>{t.requestNote}</dt><dd>{request.note}</dd></div>}
                   <div><dt>{t.requestOwner}</dt><dd dir="ltr">{ownerNumber ?? "…"}</dd></div>

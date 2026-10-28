@@ -1,11 +1,16 @@
 import { ChevronDown } from "lucide-react";
 import ContactForm from "@/components/contact-form";
+import HowItWorks from "@/components/how-it-works";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
+import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings } from "@/lib/payments";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
-/** Help centre: every question and answer, then the contact form. */
-export default function HelpPage({ locale }: { locale: SiteLocale }) {
+/** Help centre: how Sakani works, every question and answer, then the contact form. */
+export default async function HelpPage({ locale }: { locale: SiteLocale }) {
   const t = SITE_COPY[locale];
+  const client = getSupabaseServerClient();
+  const fees = (client ? await fetchPaymentSettings(client) : null) ?? DEFAULT_PAYMENT_SETTINGS;
   const otherLocale: SiteLocale = locale === "ar" ? "en" : "ar";
 
   return (
@@ -16,6 +21,8 @@ export default function HelpPage({ locale }: { locale: SiteLocale }) {
           <h1>{t.helpTitle}</h1>
           <p>{t.helpIntro}</p>
         </section>
+
+        <HowItWorks locale={locale} fees={fees} />
 
         <section className="faq-section section-wrap" id="faq" aria-labelledby="faq-title">
           <h2 id="faq-title">{t.faqTitle}</h2>

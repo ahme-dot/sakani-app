@@ -13,7 +13,6 @@ import {
   Clock3,
   ExternalLink,
   Flag,
-  GraduationCap,
   Home,
   Images,
   Inbox,
@@ -51,12 +50,12 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { PUBLIC_LISTING_COLUMNS, fetchPrivateContacts, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
 import { storagePathFromPublicUrl } from "@/lib/images";
 import { listingPath, whatsappLink } from "@/lib/site";
-import { placeLabel, universityLabel as universityName } from "@/lib/egypt";
+import { placeLabel } from "@/lib/egypt";
 
 const ADMIN_LISTING_COLUMNS = `${PUBLIC_LISTING_COLUMNS},owner_id,rejection_reason`;
 const STORAGE_BUCKET = "sakani-listings";
 // Owner numbers are private columns (read through listing_private_contacts), so they are not searchable here.
-const SEARCH_COLUMNS = ["title_ar", "title_en", "governorate", "area", "university"];
+const SEARCH_COLUMNS = ["title_ar", "title_en", "governorate", "area"];
 const SEARCH_DEBOUNCE_MS = 300;
 /** Published listings not updated or confirmed for this long are flagged as possibly out of date. */
 const STALE_DAYS = 30;
@@ -283,7 +282,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       .then(({ count: messageCount }) => {
         if (mounted) setOpenMessages(messageCount ?? 0);
       });
-    // New visit requests from students (0 until the middleman migration is installed).
+    // New bookings from guests (0 until the middleman migration is installed).
     void supabase
       .from("listing_requests")
       .select("id", { count: "exact", head: true })
@@ -676,7 +675,6 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                   const images = listingImages(listing);
                   const busy = updatingId === listing.id;
                   const place = placeLabel(locale, listing.area, listing.governorate);
-                  const universityText = universityName(locale, listing.university);
 
                   if (editingId === listing.id && supabase) {
                     return (
@@ -722,7 +720,6 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                         <h2>{title}</h2>
                         <p className="admin-card-meta">
                           <span><MapPin size={14} /> {place}</span>
-                          <span><GraduationCap size={14} /> {universityText}</span>
                         </p>
                         <p className="admin-card-desc">{locale === "ar" ? listing.description_ar : listing.description_en}</p>
 
@@ -731,7 +728,6 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                           <li>{t.adminDepositShort}: {numberFormat.format(listing.deposit)}</li>
                           <li><Building2 size={14} /> {t[listing.property_type]} · {t[listing.gender]}</li>
                           <li><BedDouble size={14} /> {t.bedsSummary(listing.available_beds, listing.total_beds)}</li>
-                          <li><Clock3 size={14} /> {t.walkingMinutes(listing.walking_distance_minutes)}</li>
                           {listing.status === "approved" && listingStats[listing.id] && (
                             <li className="is-stats">
                               <Eye size={14} /> {t.statsViews(numberFormat.format(listingStats[listing.id].views))} · {t.statsWhatsapp(numberFormat.format(listingStats[listing.id].whatsapp_clicks))}

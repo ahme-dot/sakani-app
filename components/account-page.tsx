@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { Eye, EyeOff, Info, KeyRound, LoaderCircle, LogOut, Mail, UserRound } from "lucide-react";
+import { Eye, EyeOff, House, Info, KeyRound, LoaderCircle, Mail, Phone, Search, UserRound } from "lucide-react";
 import AuthLayout from "@/components/auth-layout";
 import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
+import ProfilePage from "@/components/profile-page";
+import { PHONE_PATTERN, safeNext, signOutAccount, useAccount, type AccountRole } from "@/lib/account";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -43,11 +45,25 @@ async function claimGuestListings(supabase: SupabaseClient) {
   return typeof data === "number" ? data : 0;
 }
 
-export default function OwnerAccount({ locale, initialMode = "login" }: { locale: SiteLocale; initialMode?: "login" | "signup" }) {
+type AccountPageProps = {
+  locale: SiteLocale;
+  initialMode?: "login" | "signup";
+  /** Preselected on sign-up: "guest" from Book now, "host" from List your place. */
+  initialRole?: AccountRole | null;
+  /** Where to return after logging in (a page of this site in the same language). */
+  next?: string | null;
+};
+
+/** Log in or sign up (as a guest or a host); once signed in, the account's profile. */
+export default function AccountPage({ locale, initialMode = "login", initialRole = null, next = null }: AccountPageProps) {
   const t = SITE_COPY[locale];
   const router = useRouter();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const account = useAccount(supabase);
+  const returnTo = safeNext(next, locale);
   const [mode, setMode] = useState<Mode>(initialMode);
+  const [role, setRole] = useState<AccountRole | null>(initialRole);
+  const [phone, setPhone] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(Boolean(supabase));
   const [guestListingCount, setGuestListingCount] = useState(0);
@@ -94,7 +110,9 @@ export default function OwnerAccount({ locale, initialMode = "login" }: { locale
 
   async function finishSignedIn(client: SupabaseClient) {
     await claimGuestListings(client);
-    router.replace(`/${locale}/host`);
+    // Back to the listing being booked; otherwise this page shows the new profile.
+    if (returnTo) router.replace(returnTo);
+    else router.refresh();
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -108,8 +126,16 @@ export default function OwnerAccount({ locale, initialMode = "login" }: { locale
       setError(t.adminInvalidEmail);
       return;
     }
+    if (mode === "signup" && !role) {
+      setError(t.accountRoleRequired);
+      return;
+    }
     if (mode === "signup" && !fullName.trim()) {
       setError(t.accountNameRequired);
+      return;
+    }
+    if (mode === "signup" && (role === "guest" || phone.trim()) && !PHONE_PATTERN.test(phone.trim())) {
+      setError(t.accountPhoneRequired);
       return;
     }
     if (mode !== "reset" && password.length < (mode === "signup" ? 8 : 1)) {
@@ -152,7 +178,11 @@ export default function OwnerAccount({ locale, initialMode = "login" }: { locale
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
-          options: { data: { full_name: fullName.trim() }, emailRedirectTo: `${window.location.origin}/${locale}/account`, ...captcha },
+          options: {
+            data: { full_name: fullName.trim(), role, phone: phone.trim() },
+            emailRedirectTo: `${window.location.origin}${returnTo ?? `/${locale}/account`}`,
+            ...captcha,
+          },
         });
         if (signUpError) {
           console.error("Could not create account:", signUpError);
@@ -204,12 +234,14 @@ export default function OwnerAccount({ locale, initialMode = "login" }: { locale
 
   async function signOut() {
     if (!supabase) return;
-    await supabase.auth.signOut();
+    await signOutAccount(supabase);
     setUser(null);
     setMode("login");
+    router.replace(`/${locale}`);
+    router.refresh();
   }
 
-  if (checking) {
+  if (checking || account.status === "loading") {
     return (
       <AuthLayout locale={locale} variant="owner">
         <div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.loading}</div>
@@ -217,17 +249,8 @@ export default function OwnerAccount({ locale, initialMode = "login" }: { locale
     );
   }
 
-  if (user && !user.is_anonymous) {
-    return (
-      <AuthLayout locale={locale} variant="owner">
-        <span className="auth-icon"><UserRound size={20} /></span>
-        <h1>{(user.user_metadata?.full_name as string | undefined) || t.navAccount}</h1>
-        <p className="auth-lead">{t.accountSignedInAs(user.email ?? "")}</p>
-        {notice && <p className="auth-message is-success" role="status">{notice}</p>}
-        <Link className="auth-submit auth-spaced" href={`/${locale}/host`}>{t.accountGoToListings}</Link>
-        <button className="auth-link auth-switch" type="button" onClick={() => void signOut()}><LogOut size={14} /> {t.accountSignOut}</button>
-      </AuthLayout>
-    );
+  if (account.status === "signedIn" && supabase) {
+    return <ProfilePage key={account.user.id} locale={locale} supabase={supabase} user={account.user} profile={account.profile} notice={notice} onSignOut={signOut} />;
   }
 
   const isSignup = mode === "signup";
@@ -255,11 +278,33 @@ export default function OwnerAccount({ locale, initialMode = "login" }: { locale
 
       <form className="auth-form" noValidate onSubmit={handleSubmit}>
         {isSignup && (
+          <div className="role-pick" role="radiogroup" aria-label={t.accountRoleQuestion}>
+            <span className="role-pick-label">{t.accountRoleQuestion}</span>
+            <div className="tile-grid role-pick-tiles">
+              {([["guest", Search, t.roleGuestTitle, t.roleGuestText], ["host", House, t.roleHostTitle, t.roleHostText]] as const).map(([value, Icon, title, text]) => (
+                <label className="tile" key={value}>
+                  <input type="radio" name="role" value={value} checked={role === value} onChange={() => { setRole(value); setError(""); }} />
+                  <span><Icon size={24} strokeWidth={1.6} /><strong>{title}</strong><small>{text}</small></span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+        {isSignup && (
           <label className="auth-field">
             <span>{t.fullName}</span>
             <span className="auth-input">
               <UserRound size={17} aria-hidden="true" />
               <input name="name" autoComplete="name" value={fullName} onChange={(event) => { setFullName(event.target.value); setError(""); }} required />
+            </span>
+          </label>
+        )}
+        {isSignup && (
+          <label className="auth-field">
+            <span>{role === "host" ? t.phoneOptional : t.phoneLabel}</span>
+            <span className="auth-input">
+              <Phone size={17} aria-hidden="true" />
+              <input name="phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="01xxxxxxxxx" value={phone} onChange={(event) => { setPhone(event.target.value); setError(""); }} required={role !== "host"} />
             </span>
           </label>
         )}

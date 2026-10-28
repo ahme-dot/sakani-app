@@ -1,11 +1,10 @@
 import type { SiteLocale } from "@/messages/site";
 
 /**
- * Locations across Egypt. Listings store the English names (governorate, university) as written here;
+ * Locations across Egypt. Listings store the English governorate names as written here;
  * the neighbourhood ("area") is free text, with these areas offered as suggestions.
  */
 export type Governorate = { id: string; name: string; name_en: string; areas: Array<{ name: string; name_en: string }> };
-export type University = { name: string; name_en: string; governorate: string };
 
 const a = (name: string, name_en: string) => ({ name, name_en });
 
@@ -39,68 +38,10 @@ export const GOVERNORATES: Governorate[] = [
   { id: "south-sinai", name: "جنوب سيناء", name_en: "South Sinai", areas: [a("الطور", "El Tor"), a("شرم الشيخ", "Sharm El Sheikh")] },
 ];
 
-const u = (name: string, name_en: string, governorate: string): University => ({ name, name_en, governorate });
-
-/** Main universities by governorate. "Cairo University", "Ain Shams University", "AUC" and "October 6 University" match older listings. */
-export const UNIVERSITIES: University[] = [
-  u("جامعة القاهرة", "Cairo University", "Giza"),
-  u("جامعة 6 أكتوبر", "October 6 University", "Giza"),
-  u("جامعة مصر للعلوم والتكنولوجيا", "Misr University for Science and Technology", "Giza"),
-  u("جامعة أكتوبر للعلوم الحديثة والآداب", "MSA University", "Giza"),
-  u("جامعة النيل", "Nile University", "Giza"),
-  u("جامعة زويل", "Zewail City", "Giza"),
-  u("جامعة عين شمس", "Ain Shams University", "Cairo"),
-  u("الجامعة الأمريكية بالقاهرة", "AUC", "Cairo"),
-  u("جامعة الأزهر", "Al-Azhar University", "Cairo"),
-  u("جامعة حلوان", "Helwan University", "Cairo"),
-  u("الجامعة الألمانية بالقاهرة", "German University in Cairo", "Cairo"),
-  u("الجامعة البريطانية في مصر", "British University in Egypt", "Cairo"),
-  u("جامعة المستقبل", "Future University in Egypt", "Cairo"),
-  u("جامعة مصر الدولية", "Misr International University", "Cairo"),
-  u("جامعة الإسكندرية", "Alexandria University", "Alexandria"),
-  u("الأكاديمية العربية للعلوم والتكنولوجيا", "Arab Academy for Science and Technology", "Alexandria"),
-  u("جامعة فاروس", "Pharos University", "Alexandria"),
-  u("جامعة بنها", "Benha University", "Qalyubia"),
-  u("جامعة الزقازيق", "Zagazig University", "Sharqia"),
-  u("جامعة المنصورة", "Mansoura University", "Dakahlia"),
-  u("جامعة طنطا", "Tanta University", "Gharbia"),
-  u("جامعة المنوفية", "Menoufia University", "Monufia"),
-  u("جامعة كفر الشيخ", "Kafrelsheikh University", "Kafr El Sheikh"),
-  u("جامعة دمنهور", "Damanhour University", "Beheira"),
-  u("جامعة دمياط", "Damietta University", "Damietta"),
-  u("جامعة بورسعيد", "Port Said University", "Port Said"),
-  u("جامعة قناة السويس", "Suez Canal University", "Ismailia"),
-  u("جامعة السويس", "Suez University", "Suez"),
-  u("جامعة الفيوم", "Fayoum University", "Fayoum"),
-  u("جامعة بني سويف", "Beni-Suef University", "Beni Suef"),
-  u("جامعة المنيا", "Minia University", "Minya"),
-  u("جامعة أسيوط", "Assiut University", "Assiut"),
-  u("جامعة سوهاج", "Sohag University", "Sohag"),
-  u("جامعة جنوب الوادي", "South Valley University", "Qena"),
-  u("جامعة الأقصر", "Luxor University", "Luxor"),
-  u("جامعة أسوان", "Aswan University", "Aswan"),
-  u("جامعة الوادي الجديد", "New Valley University", "New Valley"),
-  u("جامعة مطروح", "Matrouh University", "Matrouh"),
-  u("جامعة العريش", "Arish University", "North Sinai"),
-];
-
-/** Saved for homes not near any listed university. */
-export const OTHER_UNIVERSITY = "Other";
-
 export const DEFAULT_GOVERNORATE = "Giza";
-
-export function universitiesIn(governorate: string) {
-  return governorate ? UNIVERSITIES.filter((university) => university.governorate === governorate) : UNIVERSITIES;
-}
 
 export function governorateLabel(locale: SiteLocale, name: string) {
   const match = GOVERNORATES.find((item) => item.name_en === name);
-  return match ? (locale === "ar" ? match.name : match.name_en) : name;
-}
-
-export function universityLabel(locale: SiteLocale, name: string) {
-  if (name === OTHER_UNIVERSITY) return locale === "ar" ? "جامعة أخرى" : "Other university";
-  const match = UNIVERSITIES.find((item) => item.name_en === name);
   return match ? (locale === "ar" ? match.name : match.name_en) : name;
 }
 

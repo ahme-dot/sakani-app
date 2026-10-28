@@ -38,7 +38,7 @@ export type MarketplaceListing = {
 export const PUBLIC_LISTING_COLUMNS =
   "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,image_url,image_urls,verified,verified_at,status,created_at,updated_at";
 
-/** Short reference students quote to the Sakani team, e.g. "SK-3F9A2C". */
+/** Short reference guests quote to the Sakani team, e.g. "SK-3F9A2C". */
 export function listingRef(id: string) {
   return `SK-${id.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
 }
@@ -58,12 +58,11 @@ export const LISTINGS_PAGE_SIZE = 12;
 
 export type ListingSort = "newest" | "price_asc" | "price_desc";
 
-export const AMENITY_FILTERS = ["furnished", "wifi", "air_conditioning", "security"] as const;
+export const AMENITY_FILTERS = ["wifi", "air_conditioning", "security"] as const;
 export type AmenityFilter = (typeof AMENITY_FILTERS)[number];
 
 export type ListingFilters = {
   governorate: string;
-  university: string;
   area: string;
   gender: string;
   propertyType: string;
@@ -76,7 +75,6 @@ export type ListingFilters = {
 
 export const EMPTY_FILTERS: ListingFilters = {
   governorate: "",
-  university: "",
   area: "",
   gender: "",
   propertyType: "",
@@ -88,13 +86,13 @@ export const EMPTY_FILTERS: ListingFilters = {
 };
 
 export function hasActiveFilters(filters: ListingFilters) {
-  return Boolean(filters.governorate || filters.university || filters.area || filters.gender || filters.propertyType || filters.minPrice || filters.maxPrice || filters.amenities.length || filters.verified);
+  return Boolean(filters.governorate || filters.area || filters.gender || filters.propertyType || filters.minPrice || filters.maxPrice || filters.amenities.length || filters.verified);
 }
 
 const SORTS: ListingSort[] = ["newest", "price_asc", "price_desc"];
 const PRICE_PATTERN = /^\d{1,7}$/;
 
-/** Filters from the page address (?university=…&area=…), so searches can be linked and shared. */
+/** Filters from the page address (?gov=…&area=…), so searches can be linked and shared. */
 export function filtersFromParams(params: Record<string, string | string[] | undefined>): ListingFilters {
   const one = (key: string) => {
     const value = params[key];
@@ -104,9 +102,8 @@ export function filtersFromParams(params: Record<string, string | string[] | und
   const sort = one("sort") as ListingSort;
   return {
     governorate: one("gov").slice(0, 40),
-    university: one("university").slice(0, 80),
     area: one("area").slice(0, 80),
-    gender: ["female", "male", "mixed"].includes(one("gender")) ? one("gender") : "",
+    gender: ["female", "male"].includes(one("gender")) ? one("gender") : "",
     propertyType: ["room", "apartment", "bed"].includes(one("type")) ? one("type") : "",
     minPrice: PRICE_PATTERN.test(one("min")) ? one("min") : "",
     maxPrice: PRICE_PATTERN.test(one("max")) ? one("max") : "",
@@ -120,7 +117,6 @@ export function filtersFromParams(params: Record<string, string | string[] | und
 export function filtersToParams(filters: ListingFilters) {
   const params = new URLSearchParams();
   if (filters.governorate) params.set("gov", filters.governorate);
-  if (filters.university) params.set("university", filters.university);
   if (filters.area) params.set("area", filters.area);
   if (filters.gender) params.set("gender", filters.gender);
   if (filters.propertyType) params.set("type", filters.propertyType);
@@ -134,13 +130,14 @@ export function filtersToParams(filters: ListingFilters) {
 
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Other approved listings near the same university, for "More homes near…" on a listing page. */
-export async function fetchSimilarListings(client: SupabaseClient, listing: Pick<Property, "id" | "university">, limit = 3) {
+/** Other approved listings in the same governorate, for "More places in…" on a listing page. */
+export async function fetchSimilarListings(client: SupabaseClient, listing: Pick<Property, "id" | "city" | "gender">, limit = 3) {
   const { data, error } = await client
     .from("properties")
     .select(PUBLIC_LISTING_COLUMNS)
     .eq("status", "approved")
-    .eq("university", listing.university)
+    .eq("governorate", listing.city)
+    .eq("gender", listing.gender)
     .neq("id", listing.id)
     .order("verified", { ascending: false })
     .order("created_at", { ascending: false })
@@ -174,7 +171,6 @@ interface Filterable {
 function applyFilters<T>(query: T, filters: ListingFilters): T {
   let next = query as unknown as Filterable;
   if (filters.governorate) next = next.eq("governorate", filters.governorate);
-  if (filters.university) next = next.eq("university", filters.university);
   // Neighbourhoods are typed by owners, so match part of the name ("Dokki" finds "Dokki, Tahrir St").
   const areaTerm = filters.area.replace(/[%_\\,()*]/g, " ").trim();
   if (areaTerm) next = next.ilike("area", `%${areaTerm}%`);
@@ -259,7 +255,6 @@ export function toProperty(listing: MarketplaceListing): Property {
     images: listingImages(listing),
     amenities: [
       ...(listing.wifi ? ["Wi-Fi"] : []),
-      ...(listing.furnished ? ["Furnished"] : []),
       ...(listing.air_conditioning ? ["Air Conditioning"] : []),
       ...(listing.security ? ["Security"] : []),
     ],

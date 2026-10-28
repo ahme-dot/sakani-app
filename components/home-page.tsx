@@ -9,6 +9,7 @@ import { properties as sampleProperties } from "@/lib/data";
 import type { Property } from "@/types";
 import CategoryBar from "@/components/category-bar";
 import FiltersModal from "@/components/filters-modal";
+import HowItWorks from "@/components/how-it-works";
 import PropertyCard from "@/components/property-card";
 import SearchPill from "@/components/search-pill";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -25,6 +26,7 @@ import {
   type ListingSort,
 } from "@/lib/supabase/listings";
 import { SITE_URL } from "@/lib/site";
+import type { PaymentSettings } from "@/lib/payments";
 
 type HomePageProps = {
   locale: SiteLocale;
@@ -32,9 +34,11 @@ type HomePageProps = {
   initialListings: Property[] | null;
   initialTotal: number;
   initialError: boolean;
-  /** Filters from the page address (?university=…), so searches from other pages and shared links work. */
+  /** Filters from the page address (?gov=…), so searches from other pages and shared links work. */
   initialFilters: ListingFilters;
   initialSaved: boolean;
+  /** Fee settings for "How Sakani works". */
+  fees: PaymentSettings;
 };
 
 const FAQ_PREVIEW = 4;
@@ -44,7 +48,6 @@ function filterSamples(filters: ListingFilters) {
   const maxPrice = Number(filters.maxPrice);
   const matches = sampleProperties.filter((property) =>
     (!filters.governorate || property.city === filters.governorate) &&
-    (!filters.university || property.university === filters.university) &&
     (!filters.area || property.area.toLowerCase().includes(filters.area.trim().toLowerCase())) &&
     (!filters.gender || property.gender === filters.gender) &&
     (!filters.propertyType || property.property_type === filters.propertyType) &&
@@ -58,7 +61,7 @@ function filterSamples(filters: ListingFilters) {
   return matches;
 }
 
-export default function HomePage({ locale, initialListings, initialTotal, initialError, initialFilters, initialSaved }: HomePageProps) {
+export default function HomePage({ locale, initialListings, initialTotal, initialError, initialFilters, initialSaved, fees }: HomePageProps) {
   const t = SITE_COPY[locale];
   const router = useRouter();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -154,9 +157,9 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
   const closeFilters = useCallback(() => setFiltersOpen(false), []);
 
   // Count of Filters-window settings not visible as a category or in the search pill.
-  const extraCount = [filters.minPrice, filters.maxPrice].filter(Boolean).length + filters.amenities.filter((item) => item !== "furnished").length;
+  const extraCount = [filters.minPrice, filters.maxPrice].filter(Boolean).length + filters.amenities.length;
   const hasMore = !isDemoMode && listings.length < total;
-  const searchValue = { governorate: filters.governorate, university: filters.university, gender: filters.gender };
+  const searchValue = { governorate: filters.governorate, propertyType: filters.propertyType, gender: filters.gender };
 
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
@@ -165,7 +168,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
         switchHref={`/${otherLocale}`}
         search={(
           <SearchPill
-            key={`${searchValue.governorate}|${searchValue.university}|${searchValue.gender}`}
+            key={`${searchValue.governorate}|${searchValue.propertyType}|${searchValue.gender}`}
             locale={locale}
             value={searchValue}
             onSearch={(values) => {
@@ -205,12 +208,12 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
               <p className="home-hero-description">{t.heroDescription}</p>
               <div className="home-hero-actions">
                 <a className="button button-primary" href="#homes"><Search size={17} /> {t.heroAction}</a>
-                <Link className="home-hero-secondary" href={`/${locale}/host`}>{t.navOwner}</Link>
+                <Link className="home-hero-secondary" href={`/${locale}/host`}>{t.heroHostAction}</Link>
               </div>
               <ul className="home-hero-trust">
                 <li>{t.trustReviewed}</li>
                 <li>{t.trustDirect}</li>
-                <li>{t.trustFree}</li>
+                <li>{t.trustFees}</li>
               </ul>
             </div>
             <div className="home-hero-notes" aria-label={t.heroFoot}>
@@ -307,6 +310,8 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
             </div>
           )}
         </section>
+
+        <HowItWorks locale={locale} fees={fees} />
 
         <section className="host-banner section-wrap" aria-labelledby="host-banner-title">
           <div className="host-banner-card">

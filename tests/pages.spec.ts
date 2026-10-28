@@ -18,6 +18,9 @@ for (const locale of LOCALES) {
           const errors = watchErrors(page);
           const response = await page.goto(`/${locale}${path}`);
           expect(response?.status()).toBeLessThan(400);
+          // Arabic pages read right to left, English pages left to right.
+          const direction = await page.locator(".site-shell, .auth-page, .flyer-shell").first().getAttribute("dir");
+          expect(direction).toBe(locale === "ar" ? "rtl" : "ltr");
           await page.waitForLoadState("networkidle");
           await scrollThrough(page);
           expect(await designProblems(page)).toEqual([]);

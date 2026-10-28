@@ -23,7 +23,7 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
   const [count, setCount] = useState<number | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
-  const amenityLabels: Record<AmenityFilter, string> = { furnished: t.furnished, wifi: t.wifi, air_conditioning: t.airConditioning, security: t.secure };
+  const amenityLabels: Record<AmenityFilter, string> = { wifi: t.wifi, air_conditioning: t.airConditioning, security: t.secure };
   const set = (patch: Partial<ListingFilters>) => setDraft((current) => ({ ...current, ...patch }));
 
   // Live "Show N homes" count, debounced while typing prices.
@@ -99,7 +99,7 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
             <h3>{t.searchWho}</h3>
             <div className="choice-row">
               {choice("gender", "", draft.gender, t.searchAnyone, () => set({ gender: "" }))}
-              {(["female", "male", "mixed"] as const).map((gender) => choice("gender", gender, draft.gender, t[gender], () => set({ gender })))}
+              {(["female", "male"] as const).map((gender) => choice("gender", gender, draft.gender, t[gender], () => set({ gender })))}
             </div>
           </section>
 
@@ -108,7 +108,7 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
             <div className="owner-form-grid">
               <label className="owner-field">
                 <span>{t.governorate}</span>
-                <select value={draft.governorate} onChange={(event) => set({ governorate: event.target.value, university: "" })}>
+                <select value={draft.governorate} onChange={(event) => set({ governorate: event.target.value })}>
                   <option value="">{t.searchAnywhere}</option>
                   {GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}
                 </select>

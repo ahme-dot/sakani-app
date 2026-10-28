@@ -3,9 +3,9 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowLeft, ArrowRight, BedSingle, Building2, DoorOpen, ImagePlus, Pencil, ShieldCheck, Snowflake, Sofa, Wifi } from "lucide-react";
+import { ArrowLeft, ArrowRight, BedSingle, Building2, DoorOpen, ImagePlus, Mars, Pencil, ShieldCheck, Snowflake, Venus, Wifi } from "lucide-react";
 import VisitChecklist, { readVisit } from "@/components/visit-checklist";
-import { GOVERNORATES, OTHER_UNIVERSITY, areaLabel, areaSuggestions, normalizeArea, placeLabel, universitiesIn, universityLabel } from "@/lib/egypt";
+import { GOVERNORATES, areaLabel, areaSuggestions, normalizeArea, placeLabel } from "@/lib/egypt";
 import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
 import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings, successFee, type PaymentSettings } from "@/lib/payments";
 import { listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
@@ -24,12 +24,12 @@ const STAGE_OF: Record<StepId, number> = { type: 0, location: 0, beds: 0, amenit
 const STAGE_START = [0, 3, 6];
 
 const AMENITIES = [
-  ["furnished", Sofa],
   ["wifi", Wifi],
   ["air_conditioning", Snowflake],
   ["security", ShieldCheck],
 ] as const;
 const TYPE_ICONS = { room: DoorOpen, apartment: Building2, bed: BedSingle } as const;
+const GENDER_ICONS = { male: Mars, female: Venus } as const;
 
 export type EditableListing = Omit<MarketplaceListing, "owner_id">;
 
@@ -102,9 +102,8 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
   const [summary, setSummary] = useState<Record<string, string | string[]>>({});
   const [price, setPrice] = useState(String(editing?.monthly_price ?? text("monthly_price") ?? ""));
   const [fees, setFees] = useState<PaymentSettings | null>(null);
-  // Chosen governorate: narrows the university list and the neighbourhood suggestions.
+  // Chosen governorate: narrows the neighbourhood suggestions.
   const [governorate, setGovernorate] = useState(editing?.governorate ?? text("governorate") ?? "");
-  const universityOptions = universitiesIn(governorate);
   const current: StepId = STEPS[step];
   const isLast = step === STEPS.length - 1;
 
@@ -242,16 +241,13 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
       description_en: description,
       governorate: String(formData.get("governorate")),
       area: normalizeArea(String(formData.get("area"))),
-      university: String(formData.get("university")),
       gender: String(formData.get("gender")),
       property_type: String(formData.get("property_type")),
       monthly_price: Number(formData.get("monthly_price")),
       deposit: Number(formData.get("deposit")),
       available_beds: Number(formData.get("available_beds")),
       total_beds: Number(formData.get("total_beds")),
-      walking_distance_minutes: Number(formData.get("walking_distance_minutes")),
       whatsapp_number: String(formData.get("whatsapp_number")).trim(),
-      furnished: formData.has("furnished"),
       wifi: formData.has("wifi"),
       air_conditioning: formData.has("air_conditioning"),
       security: formData.has("security"),
@@ -381,12 +377,15 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
           <div className="owner-field" role="radiogroup" aria-label={t.adminDetailsGender}>
             <span>{t.adminDetailsGender}</span>
             <div className="tile-grid tile-grid-compact">
-              {(["female", "male", "mixed"] as const).map((gender) => (
-                <label className="tile" key={gender}>
-                  <input type="radio" name="gender" value={gender} required defaultChecked={(editing?.gender ?? text("gender")) === gender} />
-                  <span><strong>{t[gender]}</strong></span>
-                </label>
-              ))}
+              {(["male", "female"] as const).map((gender) => {
+                const Icon = GENDER_ICONS[gender];
+                return (
+                  <label className="tile" key={gender}>
+                    <input type="radio" name="gender" value={gender} required defaultChecked={(editing?.gender ?? text("gender")) === gender} />
+                    <span><Icon size={22} strokeWidth={1.6} /><strong>{t[gender]}</strong></span>
+                  </label>
+                );
+              })}
             </div>
           </div>
         </>
@@ -409,8 +408,6 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
             </datalist>
             <small className="field-hint">{t.areaTypeHint}</small>
           </label>
-          <label className="owner-field"><span>{t.university}</span><select key={governorate} name="university" required defaultValue={editing?.university ?? text("university") ?? ""}><option value="" disabled>{t.chooseUniversity}</option>{universityOptions.map((university) => <option key={university.name_en} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}<option value={OTHER_UNIVERSITY}>{t.otherUniversity}</option></select></label>
-          <label className="owner-field"><span>{t.walkingDistance}</span><input name="walking_distance_minutes" type="number" inputMode="numeric" min="0" max="300" defaultValue={editing?.walking_distance_minutes ?? text("walking_distance_minutes") ?? 0} required /></label>
         </div>
       ))}
 
@@ -426,7 +423,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
           {AMENITIES.map(([name, Icon]) => (
             <label className="tile" key={name}>
               <input name={name} type="checkbox" defaultChecked={editing ? editing[name] : saved[name] !== undefined} />
-              <span><Icon size={26} strokeWidth={1.6} /><strong>{name === "furnished" ? t.furnished : name === "wifi" ? t.wifi : name === "air_conditioning" ? t.airConditioning : t.secure}</strong></span>
+              <span><Icon size={26} strokeWidth={1.6} /><strong>{name === "wifi" ? t.wifi : name === "air_conditioning" ? t.airConditioning : t.secure}</strong></span>
             </label>
           ))}
         </div>
@@ -498,9 +495,9 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
             {photos[0] && <Image className="listing-review-cover" src={photos[0]} alt="" width={640} height={420} unoptimized={photos[0].startsWith("blob:")} />}
             <dl>
               {reviewRow(t.listingTitle, value("title"), "text")}
-              {reviewRow(t.formSectionLocation, `${placeLabel(locale, value("area"), value("governorate"))} · ${universityLabel(locale, value("university"))}`, "location")}
+              {reviewRow(t.formSectionLocation, placeLabel(locale, value("area"), value("governorate")), "location")}
               {reviewRow(t.formSectionHome, `${value("property_type") ? t[value("property_type") as "room"] : ""} · ${value("gender") ? t[value("gender") as "female"] : ""} · ${t.availableBeds}: ${value("available_beds")}/${value("total_beds")}`, "type")}
-              {reviewRow(t.amenitiesTitle, AMENITIES.filter(([name]) => chosen(name)).map(([name]) => (name === "furnished" ? t.furnished : name === "wifi" ? t.wifi : name === "air_conditioning" ? t.airConditioning : t.secure)).join(" · ") || "—", "amenities")}
+              {reviewRow(t.amenitiesTitle, AMENITIES.filter(([name]) => chosen(name)).map(([name]) => (name === "wifi" ? t.wifi : name === "air_conditioning" ? t.airConditioning : t.secure)).join(" · ") || "—", "amenities")}
               {reviewRow(t.formSectionPhotos, numberFormat.format(photos.length), "photos")}
               {reviewRow(t.price, <><strong>{numberFormat.format(Number(value("monthly_price")))}</strong> {t.perMonth} · {t.deposit}: {numberFormat.format(Number(value("deposit")))}</>, "price")}
               {reviewRow(isAdmin ? t.ownerWhatsapp : t.phoneNumber, <span dir="ltr">{value("whatsapp_number")}</span>, "contact")}

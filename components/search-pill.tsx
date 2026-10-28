@@ -4,12 +4,12 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
-import { GOVERNORATES, governorateLabel, universitiesIn, universityLabel } from "@/lib/egypt";
+import { GOVERNORATES, governorateLabel } from "@/lib/egypt";
 import { EMPTY_FILTERS, filtersToParams } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
-export type SearchValues = { governorate: string; university: string; gender: string };
-export const EMPTY_SEARCH: SearchValues = { governorate: "", university: "", gender: "" };
+export type SearchValues = { governorate: string; propertyType: string; gender: string };
+export const EMPTY_SEARCH: SearchValues = { governorate: "", propertyType: "", gender: "" };
 
 type Props = {
   locale: SiteLocale;
@@ -28,9 +28,8 @@ export default function SearchPill({ locale, value = EMPTY_SEARCH, onSearch }: P
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const whereLabel = (name: string) => (name ? governorateLabel(locale, name) : t.searchAnywhere);
-  const uniLabel = (name: string) => (name ? universityLabel(locale, name) : t.searchAnyUniversity);
-  const universityOptions = universitiesIn(draft.governorate);
-  const genderLabel = (gender: string) => (gender === "female" || gender === "male" || gender === "mixed" ? t[gender] : t.searchAnyone);
+  const typeLabel = (type: string) => (type === "room" || type === "apartment" || type === "bed" ? t[type] : t.allTypes);
+  const genderLabel = (gender: string) => (gender === "female" || gender === "male" ? t[gender] : t.searchAnyone);
 
   function run(values: SearchValues) {
     setSheetOpen(false);
@@ -68,26 +67,20 @@ export default function SearchPill({ locale, value = EMPTY_SEARCH, onSearch }: P
       <label className="search-seg">
         <span className="search-seg-label">{t.searchWhere}</span>
         <span className="search-seg-value">{whereLabel(draft.governorate)}</span>
-        <select
-          value={draft.governorate}
-          onChange={(event) => {
-            const governorate = event.target.value;
-            // A university from another governorate no longer fits.
-            const keepUniversity = universitiesIn(governorate).some((item) => item.name_en === draft.university);
-            setDraft({ ...draft, governorate, university: keepUniversity ? draft.university : "" });
-          }}
-        >
+        <select value={draft.governorate} onChange={(event) => setDraft({ ...draft, governorate: event.target.value })}>
           <option value="">{t.searchAnywhere}</option>
           {GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}
         </select>
       </label>
       <span className="search-seg-divider" aria-hidden="true" />
       <label className="search-seg">
-        <span className="search-seg-label">{t.university}</span>
-        <span className="search-seg-value">{uniLabel(draft.university)}</span>
-        <select value={draft.university} onChange={(event) => setDraft({ ...draft, university: event.target.value })}>
-          <option value="">{t.searchAnyUniversity}</option>
-          {universityOptions.map((item) => <option key={item.name_en} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}
+        <span className="search-seg-label">{t.propertyType}</span>
+        <span className="search-seg-value">{typeLabel(draft.propertyType)}</span>
+        <select value={draft.propertyType} onChange={(event) => setDraft({ ...draft, propertyType: event.target.value })}>
+          <option value="">{t.allTypes}</option>
+          <option value="room">{t.room}</option>
+          <option value="apartment">{t.apartment}</option>
+          <option value="bed">{t.bed}</option>
         </select>
       </label>
       <span className="search-seg-divider" aria-hidden="true" />
@@ -98,13 +91,12 @@ export default function SearchPill({ locale, value = EMPTY_SEARCH, onSearch }: P
           <option value="">{t.searchAnyone}</option>
           <option value="female">{t.female}</option>
           <option value="male">{t.male}</option>
-          <option value="mixed">{t.mixed}</option>
         </select>
       </label>
     </>
   );
 
-  const summary = [draft.governorate && whereLabel(draft.governorate), draft.university && uniLabel(draft.university), draft.gender && genderLabel(draft.gender)]
+  const summary = [draft.governorate && whereLabel(draft.governorate), draft.propertyType && typeLabel(draft.propertyType), draft.gender && genderLabel(draft.gender)]
     .filter(Boolean)
     .join(" · ");
 
@@ -121,7 +113,7 @@ export default function SearchPill({ locale, value = EMPTY_SEARCH, onSearch }: P
         <Search size={19} strokeWidth={2.4} />
         <span>
           <strong>{t.searchMobilePrompt}</strong>
-          <small>{summary || `${t.searchAnywhere} · ${t.searchAnyUniversity}`}</small>
+          <small>{summary || `${t.searchAnywhere} · ${t.allTypes}`}</small>
         </span>
       </button>
 

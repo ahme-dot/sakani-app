@@ -68,9 +68,9 @@ export function sampleListing(ownerId: string, title: string, extra: Record<stri
     title_en: `${TEST_TAG} ${title}`,
     description_ar: "Automated test listing. It is removed when the tests finish.",
     description_en: "Automated test listing. It is removed when the tests finish.",
-    area: "Dokki", university: "Cairo University", gender: "female", property_type: "room",
-    monthly_price: 3500, deposit: 1000, available_beds: 1, total_beds: 2, walking_distance_minutes: 10,
-    furnished: true, wifi: true, air_conditioning: true, security: false,
+    governorate: "Giza", area: "Dokki", gender: "female", property_type: "room",
+    monthly_price: 3500, deposit: 1000, available_beds: 1, total_beds: 2,
+    wifi: true, air_conditioning: true, security: false,
     whatsapp_number: "01000000000", image_url: photo, image_urls: [photo], status: "pending",
     ...extra,
   };

@@ -1,16 +1,16 @@
 import { Property } from "@/types";
 
-// Locations (governorates, neighbourhoods, universities) live in lib/egypt.ts.
+// Sample places shown only when the site is not connected to a database. Locations live in lib/egypt.ts.
 
 export const properties: Property[] = [
   {
     id: "1",
-    title_ar: "غرفة مفروشة للطالبات بالقرب من جامعة القاهرة",
-    title_en: "Furnished room for female students near Cairo University",
+    title_ar: "أوضة هادية للستات في الدقي",
+    title_en: "Quiet room for women in Dokki",
     description_ar:
-      "غرفة نظيفة ومفروشة بالكامل، تشمل سرير مريح، دولاب، مكتب وكرسي دراسة. الشقة تتوفر على واي فاي سريع، غسالة، مطبخ مشترك مجهز بكل ما تحتاجينه. المبنى فيه بواب وكاميرات أمان. قريبة جداً من المواصلات والمحلات.",
+      "أوضة نضيفة فيها سرير مريح ودولاب ومكتب. الشقة فيها واي فاي سريع وغسالة ومطبخ مشترك. العمارة فيها بواب وكاميرات. قريبة من المواصلات والمحلات.",
     description_en:
-      "Clean fully furnished room with comfortable bed, wardrobe, desk and study chair. Apartment includes fast Wi-Fi, washing machine, and equipped shared kitchen. Building has security guard and CCTV. Close to transportation and shops.",
+      "Clean room with a comfortable bed, wardrobe and desk. The apartment has fast Wi-Fi, a washing machine and a shared kitchen. The building has a doorman and CCTV. Close to transport and shops.",
     city: "Giza",
     area: "Dokki",
     university: "Cairo University",
@@ -18,7 +18,7 @@ export const properties: Property[] = [
     property_type: "room",
     monthly_price: 3500,
     deposit: 2000,
-    furnished: true,
+    furnished: false,
     wifi: true,
     private_bathroom: false,
     washing_machine: true,
@@ -40,7 +40,7 @@ export const properties: Property[] = [
     ],
     amenities: ["Wi-Fi", "Washing Machine", "Air Conditioning", "Kitchen"],
     rules: [
-      "Female students only",
+      "Women only",
       "No parties",
       "Quiet hours after 10 PM",
     ],
@@ -49,12 +49,12 @@ export const properties: Property[] = [
   },
   {
     id: "2",
-    title_ar: "سرير في شقة طلابية اقتصادية قريبة من الجامعة",
-    title_en: "Bed in affordable student apartment near university",
+    title_ar: "سرير في شقة اقتصادية في بين السرايات",
+    title_en: "Bed in an affordable shared apartment",
     description_ar:
-      "سرير في شقة مشتركة مع 3 طلاب آخرين. الشقة كاملة التجهيزات: واي فاي، ثلاجة، موقد، دولاب مشترك. الموقع ممتاز قريب جداً من جامعة القاهرة والمواصلات. السعر اقتصادي جداً مناسب لكل طالب.",
+      "سرير في شقة مشتركة مع 3 أشخاص. فيها واي فاي وتلاجة وبوتاجاز ودولاب مشترك. مكانها ممتاز وقريب من المواصلات. والسعر اقتصادي جداً.",
     description_en:
-      "Bed in shared apartment with 3 other students. Fully equipped: Wi-Fi, refrigerator, stove, shared wardrobe. Excellent location near Cairo University and transportation. Very affordable price.",
+      "A bed in an apartment shared with 3 others. Wi-Fi, refrigerator, stove and a shared wardrobe. Great location close to transport, at a very affordable price.",
     city: "Giza",
     area: "Bayn Al Sarayat",
     university: "Cairo University",
@@ -62,7 +62,7 @@ export const properties: Property[] = [
     property_type: "bed",
     monthly_price: 2200,
     deposit: 1000,
-    furnished: true,
+    furnished: false,
     wifi: true,
     private_bathroom: false,
     washing_machine: false,
@@ -82,18 +82,18 @@ export const properties: Property[] = [
       "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&h=400&fit=crop",
     ],
     amenities: ["Wi-Fi", "Kitchen", "Shared Wardrobe"],
-    rules: ["Male students only", "No smoking"],
+    rules: ["Men only", "No smoking"],
     created_at: "2024-01-10T10:00:00Z",
     updated_at: "2024-01-10T10:00:00Z",
   },
   {
     id: "3",
-    title_ar: "شقة طلابية فاخرة بالقرب من فيصل",
-    title_en: "Luxury student apartment near Faisal",
+    title_ar: "شقة فاخرة قريبة من فيصل",
+    title_en: "Luxury apartment near Faisal",
     description_ar:
-      "شقة فاخرة مشتركة بين طالبتين. تتضمن: غرفتي نوم، صالة واسعة، مطبخ حديث، حمام خاص، ميني بار. مفروشة بأثاث عصري وفخم. واي فاي سريع جداً، تكييف مركزي، أمان 24/7.",
+      "شقة فاخرة لشخصين: أوضتين نوم، صالة واسعة، مطبخ حديث، حمام خاص. واي فاي سريع جداً، تكييف مركزي، وأمن 24 ساعة.",
     description_en:
-      "Luxury apartment shared by 2 female students. Includes: 2 bedrooms, spacious living room, modern kitchen, private bathroom, mini bar. Furnished with modern elegant furniture. Very fast Wi-Fi, central AC, 24/7 security.",
+      "A luxury apartment for two: 2 bedrooms, a spacious living room, modern kitchen and private bathroom. Very fast Wi-Fi, central AC and 24/7 security.",
     city: "Giza",
     area: "Faisal",
     university: "Cairo University",
@@ -101,7 +101,7 @@ export const properties: Property[] = [
     property_type: "apartment",
     monthly_price: 8500,
     deposit: 5000,
-    furnished: true,
+    furnished: false,
     wifi: true,
     private_bathroom: true,
     washing_machine: true,
@@ -129,18 +129,18 @@ export const properties: Property[] = [
       "Parking",
       "Mini Bar",
     ],
-    rules: ["Female students only", "No smoking", "Quiet environment"],
+    rules: ["Women only", "No smoking", "Quiet environment"],
     created_at: "2024-01-05T10:00:00Z",
     updated_at: "2024-01-05T10:00:00Z",
   },
   {
     id: "4",
-    title_ar: "غرفة للشباب في المهندسين قريبة من جامعة عين شمس",
-    title_en: "Room for male students in Mohandessin near Ain Shams",
+    title_ar: "أوضة للرجالة في المهندسين",
+    title_en: "Room for men in Mohandessin",
     description_ar:
-      "غرفة مشتركة لطالبين، مفروشة بشكل جيد. الشقة بها واي فاي، ثلاجة، مطبخ. آمن وهادئ وقريب من المواصلات. مناسب جداً لطلاب جامعة عين شمس.",
+      "أوضة مشتركة لشخصين. الشقة فيها واي فاي وتلاجة ومطبخ. المكان أمان وهادي وقريب من المواصلات.",
     description_en:
-      "Shared room for 2 male students, well furnished. Apartment has Wi-Fi, refrigerator, kitchen. Safe, quiet and close to transportation. Great for Ain Shams students.",
+      "A shared room for two. The apartment has Wi-Fi, a refrigerator and a kitchen. Safe, quiet and close to transport.",
     city: "Giza",
     area: "Mohandessin",
     university: "Ain Shams University",
@@ -148,7 +148,7 @@ export const properties: Property[] = [
     property_type: "room",
     monthly_price: 3200,
     deposit: 1800,
-    furnished: true,
+    furnished: false,
     wifi: true,
     private_bathroom: false,
     washing_machine: true,
@@ -167,7 +167,7 @@ export const properties: Property[] = [
       "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600&h=400&fit=crop",
     ],
     amenities: ["Wi-Fi", "Washing Machine", "Air Conditioning", "Kitchen"],
-    rules: ["Male students only"],
+    rules: ["Men only"],
     created_at: "2024-01-08T10:00:00Z",
     updated_at: "2024-01-08T10:00:00Z",
   },

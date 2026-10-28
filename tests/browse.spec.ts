@@ -6,13 +6,13 @@ test("a category filters the homes and is kept in the address", async ({ page })
   const errors = watchErrors(page);
   await page.goto("/en");
   test.skip(await page.locator(".property-card").count() === 0, "no published listings");
-  await page.locator(".category-tab", { hasText: "Women only" }).click();
+  await page.locator(".category-tab", { hasText: /^Women$/ }).click();
   await expect(page).toHaveURL(/gender=female/);
-  await expect(page.locator(".category-tab", { hasText: "Women only" })).toHaveAttribute("aria-pressed", "true");
-  for (const meta of await page.locator(".property-card .property-meta").filter({ hasText: "·" }).allTextContents()) {
-    expect(meta).toContain("Women");
+  await expect(page.locator(".category-tab", { hasText: /^Women$/ })).toHaveAttribute("aria-pressed", "true");
+  for (const chip of await page.locator(".property-card .property-gender").allTextContents()) {
+    expect(chip.trim()).toBe("Women");
   }
-  await page.locator(".category-tab", { hasText: "All homes" }).click();
+  await page.locator(".category-tab", { hasText: "All places" }).click();
   await expect(page).not.toHaveURL(/gender=/);
   expect(errors).toEqual([]);
 });
@@ -24,7 +24,7 @@ test("Filters window counts matches and applies a price limit", async ({ page })
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("Maximum").fill("100000");
-  await expect(dialog.locator(".filters-foot .button")).toHaveText(/Show \d+ homes/);
+  await expect(dialog.locator(".filters-foot .button")).toHaveText(/Show \d+ places/);
   await dialog.locator(".filters-foot .button").click();
   await expect(dialog).toHaveCount(0);
   await expect(page).toHaveURL(/max=100000/);
@@ -94,15 +94,43 @@ test.describe("phone", () => {
   });
 });
 
-test("searching a governorate narrows the universities and is kept in the address", async ({ page }) => {
+test("search is by place, type and men or women only", async ({ page }) => {
   await page.goto("/en/help");
   const selects = page.locator(".search-pill select");
+  await expect(selects).toHaveCount(3);
+  const genders = await selects.nth(2).locator("option").evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value));
+  expect(genders).toEqual(["", "female", "male"]);
   await selects.nth(0).selectOption("Alexandria");
-  const universities = await selects.nth(1).locator("option").allTextContents();
-  expect(universities).toContain("Alexandria University");
-  expect(universities).not.toContain("Cairo University");
-  await selects.nth(1).selectOption("Alexandria University");
+  await selects.nth(1).selectOption("apartment");
   await page.locator(".search-pill-go").click();
   await expect(page).toHaveURL(/gov=Alexandria/);
+  await expect(page).toHaveURL(/type=apartment/);
   await expect(page.locator(".search-pill .search-seg-value").first()).toHaveText("Alexandria");
+});
+
+test("cards show the place, a clear price and both actions", async ({ page }) => {
+  await page.goto("/en");
+  const card = page.locator(".property-card").first();
+  test.skip(await card.count() === 0, "no published listings");
+  await expect(card.locator(".property-location")).toBeVisible();
+  await expect(card.locator(".property-price strong")).toBeVisible();
+  await expect(card.locator(".property-details")).toHaveText("View details");
+  await expect(card.locator(".property-book")).toHaveAttribute("href", /\/en\/listings\/.+#book$/);
+});
+
+test("no student-only, university, furnished or mixed wording on the main pages", async ({ page }) => {
+  for (const path of ["/en", "/en/host", "/en/help"]) {
+    await page.goto(path);
+    const text = (await page.locator("body").innerText()).toLowerCase();
+    for (const word of ["student", "university", "campus", "furnished", "mixed"]) {
+      expect(text, `${path} mentions "${word}"`).not.toContain(word);
+    }
+  }
+  for (const path of ["/ar", "/ar/host", "/ar/help"]) {
+    await page.goto(path);
+    const text = await page.locator("body").innerText();
+    for (const word of ["طلاب", "طالب", "جامعة", "مفروش", "مختلط"]) {
+      expect(text, `${path} mentions "${word}"`).not.toContain(word);
+    }
+  }
 });

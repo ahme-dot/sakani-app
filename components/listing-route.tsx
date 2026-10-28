@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   BadgeCheck,
-  Clock3,
+  CalendarCheck,
   Flag,
   Info,
   Map as MapIcon,
@@ -11,21 +11,19 @@ import {
   MessageCircle,
   ShieldAlert,
   ShieldCheck,
-  Sofa,
-  Users,
   Venus,
   Wallet,
   Wifi,
   Wind,
 } from "lucide-react";
+import BookHome from "@/components/book-home";
 import ListingGallery from "@/components/listing-gallery";
 import { ReportListing, ShareListingButton } from "@/components/listing-actions";
 import { TrackListingView, WhatsAppLink } from "@/components/listing-tracking";
 import PropertyCard from "@/components/property-card";
-import RequestVisit from "@/components/request-visit";
 import SaveButton from "@/components/save-button";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
-import { areaLabel as areaName, governorateLabel, placeLabel, universityLabel as universityName } from "@/lib/egypt";
+import { areaLabel as areaName, governorateLabel, placeLabel } from "@/lib/egypt";
 import { bilingualMetadata } from "@/lib/metadata";
 import { SITE_URL, listingPath, whatsappLink } from "@/lib/site";
 import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings } from "@/lib/payments";
@@ -61,7 +59,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const title = locale === "ar" ? listing.title_ar : listing.title_en;
   const description = locale === "ar" ? listing.description_ar : listing.description_en;
   const areaLabel = areaName(locale, listing.area);
-  const universityLabel = universityName(locale, listing.university);
+  const governorate = governorateLabel(locale, listing.city);
   const place = placeLabel(locale, listing.area, listing.city);
   const intlLocale = locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG";
   const numberFormat = new Intl.NumberFormat(intlLocale);
@@ -75,12 +73,11 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
     ? await Promise.all([fetchSimilarListings(serverClient, listing), fetchPaymentSettings(serverClient)])
     : [[], null];
   const fees = settings ?? DEFAULT_PAYMENT_SETTINGS;
-  // Students reach the Sakani team, never the owner directly; the team checks with the owner first.
+  // Guests reach the Sakani team, never the host directly; the team checks with the host first.
   const teamHref = fees.team_whatsapp ? whatsappLink(fees.team_whatsapp, t.askSakaniMessage(ref, title, pageUrl)) : null;
   const mapQuery = encodeURIComponent(`${listing.area}, ${listing.city}, Egypt`);
 
   const amenityList = [
-    { icon: Sofa, label: t.furnished, available: listing.furnished },
     { icon: Wifi, label: t.wifi, available: listing.wifi },
     { icon: Wind, label: t.airConditioning, available: listing.air_conditioning },
     { icon: ShieldCheck, label: t.secure, available: listing.security },
@@ -90,8 +87,8 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
     verified
       ? { icon: BadgeCheck, title: t.highlightVerifiedTitle, text: listing.verified_at ? t.highlightVerifiedText(monthYear.format(new Date(listing.verified_at))) : t.listingVerifiedNote }
       : { icon: Info, title: t.highlightReviewedTitle, text: t.listingUnverifiedNote },
-    { icon: listing.gender === "female" ? Venus : listing.gender === "male" ? Mars : Users, title: genderHighlight.title, text: genderHighlight.text },
-    { icon: Clock3, title: t.highlightWalkTitle(listing.walking_distance_minutes), text: universityLabel },
+    { icon: listing.gender === "female" ? Venus : Mars, title: genderHighlight.title, text: genderHighlight.text },
+    { icon: MapPin, title: areaLabel, text: governorate },
   ];
 
   const structuredData = {
@@ -131,7 +128,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
           <div className="listing3-main">
             <section className="listing3-summary">
               <h2>{t.homesIn(t[listing.property_type], areaLabel)} · {t[listing.gender]}</h2>
-              <p>{t.bedsSummary(listing.available_beds, listing.total_beds)} · {t.walkTo(listing.walking_distance_minutes, universityLabel)}</p>
+              <p>{t.bedsSummary(listing.available_beds, listing.total_beds)}</p>
               <p className="listing3-location"><MapPin size={15} /> {place}</p>
             </section>
 
@@ -190,15 +187,12 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                 <div><dt>{t.beds}</dt><dd>{t.bedsSummary(listing.available_beds, listing.total_beds)}</dd></div>
               </dl>
               <p className="listing3-ref">{t.listingRefLabel}: <strong dir="ltr">{ref}</strong></p>
+              <BookHome locale={locale} listingId={listing.id} listingTitle={title} monthlyPrice={listing.monthly_price} fees={fees} />
               {teamHref && (
-                <WhatsAppLink listingId={listing.id} className="button button-primary listing2-whatsapp" href={teamHref}>
+                <WhatsAppLink listingId={listing.id} className="button button-outline listing2-whatsapp" href={teamHref}>
                   <MessageCircle size={18} /> {t.askSakani}
                 </WhatsAppLink>
               )}
-              <div id="request-visit">
-                <RequestVisit locale={locale} listingId={listing.id} listingTitle={title} />
-              </div>
-              <p className="listing3-nofee">{t.studentFeeNote(numberFormat.format(fees.student_fee_percent), numberFormat.format(fees.student_fee_minimum))}</p>
               <p className="listing3-middleman"><ShieldCheck size={16} /> {t.middlemanNote}</p>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>
                 {verified ? <BadgeCheck size={16} /> : <Info size={16} />}
@@ -225,7 +219,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
 
         {similar.length > 0 && (
           <section className="listing3-similar" aria-labelledby="similar-title">
-            <h2 id="similar-title">{t.similarListings(universityLabel)}</h2>
+            <h2 id="similar-title">{t.similarListings(governorate)}</h2>
             <div className="property-grid">
               {similar.map((item) => <PropertyCard key={item.id} property={item} locale={locale} />)}
             </div>
@@ -233,16 +227,17 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
         )}
       </main>
 
-      {/* Phones: price and contact always within reach. */}
+      {/* Phones: price, booking and the team's WhatsApp always within reach. */}
       <div className="listing2-bar">
         <p className="listing3-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</p>
-        {teamHref ? (
-          <WhatsAppLink listingId={listing.id} className="button button-primary" href={teamHref}>
-            <MessageCircle size={18} /> {t.askSakaniShort}
-          </WhatsAppLink>
-        ) : (
-          <a className="button button-primary" href="#request-visit">{t.requestTitle}</a>
-        )}
+        <div className="listing2-bar-actions">
+          {teamHref && (
+            <WhatsAppLink listingId={listing.id} className="button button-outline listing2-bar-ask" href={teamHref} ariaLabel={t.askSakani}>
+              <MessageCircle size={18} />
+            </WhatsAppLink>
+          )}
+          <a className="button button-primary" href="#book"><CalendarCheck size={17} /> {t.bookNow}</a>
+        </div>
       </div>
 
       <SiteFooter locale={locale} switchHref={listingPath(otherLocale, listing.id)} tab={false} />

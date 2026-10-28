@@ -9,7 +9,7 @@ export default async function globalSetup() {
   const token = await adminToken();
   await api("/rest/v1/properties?title_en=like.*E2E%20TEST*", { token, method: "DELETE" });
   const owner = await guestSession();
-  const titles = ["Furnished room near Cairo University", "Bed in a quiet residence"];
+  const titles = ["Quiet room in Dokki", "Bed in a quiet residence"];
   for (const [index, title] of titles.entries()) {
     const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
       token: owner.access_token, method: "POST", body: sampleListing(owner.user.id, title),

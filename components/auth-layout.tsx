@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowRight, BadgeCheck, Building2, ClipboardCheck, Gift, MessageCircle, Smartphone, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, ClipboardCheck, MessageCircle, Smartphone, Users } from "lucide-react";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 /** Two-panel layout shared by the admin sign-in, password and owner account pages. */
@@ -19,7 +19,7 @@ export default function AuthLayout({
         title: t.accountBrandTitle,
         text: t.accountBrandText,
         points: [
-          { icon: Gift, label: t.accountPointFree },
+          { icon: Building2, label: t.accountPointFree },
           { icon: Smartphone, label: t.accountPointDevices },
           { icon: MessageCircle, label: t.accountPointStudents },
         ],

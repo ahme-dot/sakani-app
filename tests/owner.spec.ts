@@ -21,7 +21,6 @@ test("guest owner submits a listing for review", async ({ page }) => {
 
   await form.locator('select[name="governorate"]').selectOption("Giza");
   await form.locator('input[name="area"]').fill("Dokki");
-  await form.locator('select[name="university"]').selectOption("Cairo University");
   await next();
   await next(); // beds: 1 of 1
   await form.locator(".tile", { hasText: "Wi-Fi" }).click();

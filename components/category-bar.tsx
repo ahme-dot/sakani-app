@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, BedDouble, Building, DoorOpen, Heart, LayoutGrid, Mars, SlidersHorizontal, Sofa, Venus } from "lucide-react";
+import { BadgeCheck, BedDouble, Building, DoorOpen, Heart, LayoutGrid, Mars, SlidersHorizontal, Venus } from "lucide-react";
 import type { ListingFilters } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -18,10 +18,9 @@ type Props = {
 
 type Category = { key: string; label: string; icon: typeof LayoutGrid; active: boolean; patch: Partial<ListingFilters> };
 
-/** Row of icon categories; each one toggles a single filter. Universities live in the search bar. */
+/** Row of icon categories; each one toggles a single filter. Places are searched by governorate in the search bar. */
 export default function CategoryBar({ locale, filters, onChange, onOpenFilters, extraCount, savedCount, showSaved, onToggleSaved }: Props) {
   const t = SITE_COPY[locale];
-  const furnished = filters.amenities.includes("furnished");
   const toggle = <K extends keyof ListingFilters>(key: K, value: ListingFilters[K], empty: ListingFilters[K]) =>
     ({ [key]: filters[key] === value ? empty : value }) as Partial<ListingFilters>;
 
@@ -30,22 +29,15 @@ export default function CategoryBar({ locale, filters, onChange, onOpenFilters, 
       key: "all",
       label: t.categoryAll,
       icon: LayoutGrid,
-      active: !showSaved && !filters.propertyType && !filters.gender && !filters.verified && !furnished,
-      patch: { propertyType: "", gender: "", verified: false, amenities: filters.amenities.filter((item) => item !== "furnished") },
+      active: !showSaved && !filters.propertyType && !filters.gender && !filters.verified,
+      patch: { propertyType: "", gender: "", verified: false },
     },
-    { key: "verified", label: t.categoryVerified, icon: BadgeCheck, active: filters.verified, patch: { verified: !filters.verified } },
-    { key: "female", label: t.categoryWomen, icon: Venus, active: filters.gender === "female", patch: toggle("gender", "female", "") },
-    { key: "male", label: t.categoryMen, icon: Mars, active: filters.gender === "male", patch: toggle("gender", "male", "") },
     { key: "room", label: t.categoryRooms, icon: DoorOpen, active: filters.propertyType === "room", patch: toggle("propertyType", "room", "") },
     { key: "apartment", label: t.categoryApartments, icon: Building, active: filters.propertyType === "apartment", patch: toggle("propertyType", "apartment", "") },
     { key: "bed", label: t.categoryBeds, icon: BedDouble, active: filters.propertyType === "bed", patch: toggle("propertyType", "bed", "") },
-    {
-      key: "furnished",
-      label: t.furnished,
-      icon: Sofa,
-      active: furnished,
-      patch: { amenities: furnished ? filters.amenities.filter((item) => item !== "furnished") : [...filters.amenities, "furnished"] },
-    },
+    { key: "male", label: t.categoryMen, icon: Mars, active: filters.gender === "male", patch: toggle("gender", "male", "") },
+    { key: "female", label: t.categoryWomen, icon: Venus, active: filters.gender === "female", patch: toggle("gender", "female", "") },
+    { key: "verified", label: t.categoryVerified, icon: BadgeCheck, active: filters.verified, patch: { verified: !filters.verified } },
   ];
 
   return (

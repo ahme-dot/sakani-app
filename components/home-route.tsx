@@ -1,4 +1,5 @@
 import HomePage from "@/components/home-page";
+import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings } from "@/lib/payments";
 import { fetchApprovedListings, filtersFromParams } from "@/lib/supabase/listings";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { SiteLocale } from "@/messages/site";
@@ -15,11 +16,11 @@ export default async function HomeRoute({ locale, searchParams }: { locale: Site
 
   const client = getSupabaseServerClient();
   if (!client) {
-    return <HomePage key={key} locale={locale} initialListings={null} initialTotal={0} initialError={false} initialFilters={filters} initialSaved={saved} />;
+    return <HomePage key={key} locale={locale} initialListings={null} initialTotal={0} initialError={false} initialFilters={filters} initialSaved={saved} fees={DEFAULT_PAYMENT_SETTINGS} />;
   }
 
-  const { listings, total, error } = await fetchApprovedListings(client, filters, 0);
+  const [{ listings, total, error }, fees] = await Promise.all([fetchApprovedListings(client, filters, 0), fetchPaymentSettings(client)]);
   if (error) console.error("Could not load published listings:", error);
 
-  return <HomePage key={key} locale={locale} initialListings={listings} initialTotal={total} initialError={Boolean(error)} initialFilters={filters} initialSaved={saved} />;
+  return <HomePage key={key} locale={locale} initialListings={listings} initialTotal={total} initialError={Boolean(error)} initialFilters={filters} initialSaved={saved} fees={fees ?? DEFAULT_PAYMENT_SETTINGS} />;
 }

@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { GOVERNORATES, OTHER_UNIVERSITY, UNIVERSITIES, areaLabel, normalizeArea, universityLabel } from "@/lib/egypt";
+import { GOVERNORATES, areaLabel, normalizeArea } from "@/lib/egypt";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import type { MarketplaceListing } from "@/lib/supabase/listings";
 
@@ -40,16 +40,13 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       description_en: String(formData.get("description_en")).trim(),
       governorate: String(formData.get("governorate")),
       area: normalizeArea(String(formData.get("area"))),
-      university: String(formData.get("university")),
       gender: String(formData.get("gender")),
       property_type: String(formData.get("property_type")),
       monthly_price: Number(formData.get("monthly_price")),
       deposit: Number(formData.get("deposit")),
       available_beds: Number(formData.get("available_beds")),
       total_beds: Number(formData.get("total_beds")),
-      walking_distance_minutes: Number(formData.get("walking_distance_minutes")),
       whatsapp_number: String(formData.get("whatsapp_number")).trim(),
-      furnished: formData.has("furnished"),
       wifi: formData.has("wifi"),
       air_conditioning: formData.has("air_conditioning"),
       security: formData.has("security"),
@@ -85,10 +82,8 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       <div className="owner-form-grid owner-form-grid-three">
         <label className="owner-field"><span>{t.governorate}</span><select name="governorate" required defaultValue={listing.governorate || "Giza"}>{GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}</select></label>
         <label className="owner-field"><span>{t.area}</span><input name="area" required minLength={2} maxLength={60} defaultValue={areaLabel(locale, listing.area)} /></label>
-        <label className="owner-field"><span>{t.university}</span><select name="university" required defaultValue={listing.university}>{!UNIVERSITIES.some((university) => university.name_en === listing.university) && listing.university !== OTHER_UNIVERSITY && <option value={listing.university}>{listing.university}</option>}{UNIVERSITIES.map((university) => <option key={university.name_en} value={university.name_en}>{locale === "ar" ? university.name : university.name_en}</option>)}<option value={OTHER_UNIVERSITY}>{universityLabel(locale, OTHER_UNIVERSITY)}</option></select></label>
-      </div>
-      <div className="owner-form-grid owner-form-grid-three">
-        <label className="owner-field"><span>{t.housing}</span><select name="gender" required defaultValue={listing.gender}><option value="female">{t.female}</option><option value="male">{t.male}</option><option value="mixed">{t.mixed}</option></select></label>
+        {/* Old "mixed" listings must be given men or women before saving. */}
+        <label className="owner-field"><span>{t.housing}</span><select name="gender" required defaultValue={listing.gender === "male" || listing.gender === "female" ? listing.gender : ""}><option value="" disabled>{t.chooseGender}</option><option value="male">{t.male}</option><option value="female">{t.female}</option></select></label>
       </div>
       <div className="owner-form-grid owner-form-grid-three">
         <label className="owner-field"><span>{t.propertyType}</span><select name="property_type" required defaultValue={listing.property_type}><option value="room">{t.room}</option><option value="apartment">{t.apartment}</option><option value="bed">{t.bed}</option></select></label>
@@ -98,13 +93,12 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       <div className="owner-form-grid owner-form-grid-three">
         <label className="owner-field"><span>{t.availableBeds}</span><input name="available_beds" type="number" min="1" max="100" required defaultValue={listing.available_beds} /></label>
         <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" type="number" min="1" max="100" required defaultValue={listing.total_beds} /></label>
-        <label className="owner-field"><span>{t.walkingDistance}</span><input name="walking_distance_minutes" type="number" min="0" max="300" required defaultValue={listing.walking_distance_minutes} /></label>
       </div>
       <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" pattern="[0-9+ \(\)\-]{8,20}" required dir="ltr" defaultValue={listing.whatsapp_number} /></label>
       <fieldset className="amenity-fieldset">
         <legend>{t.amenitiesTitle}</legend>
         <div className="choice-row">
-          {([["furnished", t.furnished], ["wifi", t.wifi], ["air_conditioning", t.airConditioning], ["security", t.secure]] as const).map(([name, label]) => (
+          {([["wifi", t.wifi], ["air_conditioning", t.airConditioning], ["security", t.secure]] as const).map(([name, label]) => (
             <label className="choice" key={name}>
               <input name={name} type="checkbox" defaultChecked={listing[name]} />
               <span>{label}</span>

@@ -1,6 +1,6 @@
 # Sakani
 
-An Arabic- and English-language student-housing marketplace for all of Egypt, built with Next.js 16, Tailwind CSS 4, and Supabase.
+An Arabic- and English-language host–guest marketplace for places to rent across Egypt, built with Next.js 16, Tailwind CSS 4, and Supabase.
 
 ## Run locally
 
@@ -42,6 +42,7 @@ The site uses Supabase for email-free owner submissions, image uploads, private 
    13. [`supabase/migrations/20261030000000_sakani_middleman.sql`](./supabase/migrations/20261030000000_sakani_middleman.sql) — visit requests, the team WhatsApp number, the student service fee, and fees from both sides.
    14. [`supabase/migrations/20261030010000_sakani_private_numbers.sql`](./supabase/migrations/20261030010000_sakani_private_numbers.sql) — hides owners' numbers from visitors (owners and admins read them through `listing_private_contacts`).
    15. [`supabase/migrations/20261031000000_sakani_pay_links.sql`](./supabase/migrations/20261031000000_sakani_pay_links.sql) — a private payment link for every fee.
+   16. [`supabase/migrations/20261101000000_sakani_hosts_guests.sql`](./supabase/migrations/20261101000000_sakani_hosts_guests.sql) — host and guest accounts (profiles), saved places in the account, bookings from signed-in guests, men or women only (mixed listings go back to their hosts), and universities no longer required.
 4. Create an administrator in Supabase Authentication with an email and password. This email is only for the administrator; listing submitters do not need one.
 5. In the Supabase SQL Editor, add that Auth user's ID to the admin allowlist by running this query after replacing the placeholder with the exact administrator email:
 
@@ -71,7 +72,7 @@ Until Supabase is configured, the home page explicitly labels its built-in prope
 
 ## Automated tests
 
-The Playwright suite in `tests/` checks every page in Arabic and English on desktop and phone (errors, layout, fonts, form controls), saved homes, the owner form, the admin panel and the database security rules. It uses the Microsoft Edge already installed on Windows.
+The Playwright suite in `tests/` checks every page in Arabic and English on desktop and phone (errors, layout, right-to-left, fonts, form controls), saved places, the host form, booking with an account, log in and log out, the admin panel and the database security rules. Booking tests use the admin account as a guest for a moment and switch it back to host afterwards. It uses the Microsoft Edge already installed on Windows.
 
 ```powershell
 $env:SAKANI_ADMIN_EMAIL = "admin email"; $env:SAKANI_ADMIN_PASSWORD = "admin password"
@@ -102,15 +103,17 @@ Do steps 2 and 3 together: once Supabase requires CAPTCHA, every sign-in needs t
 
 For local testing, run the app on a computer and open its LAN address (for example, `http://192.168.x.x:3000`) on a phone connected to the same Wi-Fi network. The computer firewall must allow inbound connections on port 3000. A LAN URL is temporary and is not a public deployment; deploy to a host with HTTPS and configure its URL in Supabase before sharing the site publicly.
 
-## Requests and payments (Sakani as middleman)
+## Accounts, bookings and payments (Sakani as middleman)
 
-Students never see owners' numbers. They contact the Sakani team, using the team WhatsApp button or **Request a visit** on a listing, and the team arranges the visit. Browsing, asking and visiting are free. When a home is rented through Sakani, a one-time fee is due from **both sides**: the owner's success fee and the student's service fee (each a percentage of one month's rent, with a minimum). Every payment happens on the site.
+People sign up as a **guest** (looking for a place) or a **host** (has a place), and can switch on their profile page (`/account`). Guests see their bookings, fees and saved places there; hosts see their places and fees.
+
+Guests never see hosts' numbers. They contact the Sakani team with the WhatsApp button, or press **Book now** (a guest account is required) and choose a move-in date and stay. The team checks with the host and arranges the visit. When a booking is confirmed, a one-time fee is due from **both sides**: the host's success fee and the guest's service fee (each a percentage of one month's rent, with a minimum). Every payment happens on the site.
 
 1. In the admin panel, open **Payments** and fill in:
    - your InstaPay address, Vodafone Cash number and account name;
    - the team WhatsApp number;
    - the owner fee % and minimum, and the student fee % and minimum.
-2. Under **Requests**, contact the student and the owner, book the visit, then choose **Rented: create fees**. That creates both fees.
+2. Under **Bookings**, contact the guest and the host, book the visit, then choose **Confirm booking: create fees**. That creates both fees, and the guest also sees theirs, with a **Pay** button, on their profile.
 3. Under **Payments**, choose **Send pay link** on each fee. WhatsApp opens to the student or owner with a private payment link. On that page they see the amount and your payment details, pay by InstaPay or Vodafone Cash, and enter the transaction number and the phone number they paid from. Owners can also pay from their dashboard.
 4. Under **Payments → To check**, compare it with your InstaPay / Vodafone Cash history and choose **Payment received**, **Not received** (they can resend) or **Waive**. The same link then shows "Paid" as their receipt.
 5. If you learn of a rental that wasn't recorded, use **Rented via Sakani: add fee** on the listing card.

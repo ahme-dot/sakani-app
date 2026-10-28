@@ -2,7 +2,7 @@ import PayFee from "@/components/pay-fee";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
-/** Private payment page for one fee (owner or student), opened from the link the Sakani team sends. */
+/** Private payment page for one fee (host or guest), opened from the link the Sakani team sends. */
 export default function PayRoute({ locale, token }: { locale: SiteLocale; token: string }) {
   const t = SITE_COPY[locale];
   const otherLocale: SiteLocale = locale === "ar" ? "en" : "ar";
