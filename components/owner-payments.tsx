@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Check, Copy, Wallet } from "lucide-react";
-import { FEE_GRACE_DAYS, type PaymentMethod, type PaymentSettings, type RentalFee } from "@/lib/payments";
+import { FEE_GRACE_DAYS, type PaymentSettings, type RentalFee } from "@/lib/payments";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 type Props = {
@@ -47,7 +47,7 @@ export default function OwnerPayments({ locale, supabase, fees, settings, loaded
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const payReady = Boolean(settings && (settings.instapay_address || settings.vodafone_cash_number));
+  const payReady = Boolean(settings?.instapay_address);
 
   async function submit(fee: RentalFee, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,22 +100,9 @@ export default function OwnerPayments({ locale, supabase, fees, settings, loaded
                   <p>{t.feeHowTo}</p>
                   <div className="pay-accounts">
                     {settings.instapay_address && <CopyValue label={t.payInstapay} value={settings.instapay_address} copyLabel={t.copy} copiedLabel={t.copied} />}
-                    {settings.vodafone_cash_number && <CopyValue label={t.payVodafone} value={settings.vodafone_cash_number} copyLabel={t.copy} copiedLabel={t.copied} />}
                     {settings.payee_name && <p className="pay-payee">{t.payeeName}: <strong>{settings.payee_name}</strong></p>}
                   </div>
-                  <div className="owner-field" role="radiogroup" aria-label={t.payMethodLabel}>
-                    <span>{t.payMethodLabel}</span>
-                    <div className="choice-row">
-                      {(["instapay", "vodafone_cash"] as PaymentMethod[])
-                        .filter((method) => (method === "instapay" ? settings.instapay_address : settings.vodafone_cash_number))
-                        .map((method, index) => (
-                          <label className="choice" key={method}>
-                            <input type="radio" name="method" value={method} defaultChecked={index === 0} required />
-                            <span>{method === "instapay" ? t.payInstapay : t.payVodafone}</span>
-                          </label>
-                        ))}
-                    </div>
-                  </div>
+                  <input type="hidden" name="method" value="instapay" />
                   <div className="owner-form-grid">
                     <label className="owner-field">
                       <span>{t.payReference}</span>

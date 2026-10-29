@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, BedDouble, Building, DoorOpen, Heart, LayoutGrid, Mars, SlidersHorizontal, Venus } from "lucide-react";
+import { Armchair, BadgeCheck, BedDouble, Building, DoorOpen, Heart, LayoutGrid, Mars, SlidersHorizontal, Venus } from "lucide-react";
 import type { ListingFilters } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -33,6 +33,7 @@ export default function CategoryBar({ locale, filters, onChange, onOpenFilters, 
       patch: { propertyType: "", gender: "", verified: false },
     },
     { key: "room", label: t.categoryRooms, icon: DoorOpen, active: filters.propertyType === "room", patch: toggle("propertyType", "room", "") },
+    { key: "studio", label: t.categoryStudios, icon: Armchair, active: filters.propertyType === "studio", patch: toggle("propertyType", "studio", "") },
     { key: "apartment", label: t.categoryApartments, icon: Building, active: filters.propertyType === "apartment", patch: toggle("propertyType", "apartment", "") },
     { key: "bed", label: t.categoryBeds, icon: BedDouble, active: filters.propertyType === "bed", patch: toggle("propertyType", "bed", "") },
     { key: "male", label: t.categoryMen, icon: Mars, active: filters.gender === "male", patch: toggle("gender", "male", "") },

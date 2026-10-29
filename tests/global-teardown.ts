@@ -16,6 +16,7 @@ export default async function globalTeardown() {
   });
   // Requests and fees outlive their listing (their link is set to null), so remove them explicitly.
   await api("/rest/v1/rental_fees?listing_title=like.*E2E%20TEST*", { token, method: "DELETE" });
+  await api("/rest/v1/support_messages?body=like.*E2E*", { token, method: "DELETE" });
   await api("/rest/v1/listing_requests?listing_title=like.*E2E%20TEST*", { token, method: "DELETE" });
   await api("/rest/v1/properties?title_en=like.*E2E%20TEST*", { token, method: "DELETE" });
 }

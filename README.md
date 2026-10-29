@@ -43,6 +43,7 @@ The site uses Supabase for email-free owner submissions, image uploads, private 
    14. [`supabase/migrations/20261030010000_sakani_private_numbers.sql`](./supabase/migrations/20261030010000_sakani_private_numbers.sql) — hides owners' numbers from visitors (owners and admins read them through `listing_private_contacts`).
    15. [`supabase/migrations/20261031000000_sakani_pay_links.sql`](./supabase/migrations/20261031000000_sakani_pay_links.sql) — a private payment link for every fee.
    16. [`supabase/migrations/20261101000000_sakani_hosts_guests.sql`](./supabase/migrations/20261101000000_sakani_hosts_guests.sql) — host and guest accounts (profiles), saved places in the account, bookings from signed-in guests, men or women only (mixed listings go back to their hosts), and universities no longer required.
+   17. [`supabase/migrations/20261102000000_sakani_upfront_chat.sql`](./supabase/migrations/20261102000000_sakani_upfront_chat.sql) — upfront booking payment by InstaPay (guest 8%, host 10%), refunds within 24 hours and host payouts, chat with the Sakani team, richer profiles and photos, studios, and demo listings.
 4. Create an administrator in Supabase Authentication with an email and password. This email is only for the administrator; listing submitters do not need one.
 5. In the Supabase SQL Editor, add that Auth user's ID to the admin allowlist by running this query after replacing the placeholder with the exact administrator email:
 
@@ -107,15 +108,17 @@ For local testing, run the app on a computer and open its LAN address (for examp
 
 People sign up as a **guest** (looking for a place) or a **host** (has a place), and can switch on their profile page (`/account`). Guests see their bookings, fees and saved places there; hosts see their places and fees.
 
-Guests never see hosts' numbers. They contact the Sakani team with the WhatsApp button, or press **Book now** (a guest account is required) and choose a move-in date and stay. The team checks with the host and arranges the visit. When a booking is confirmed, a one-time fee is due from **both sides**: the host's success fee and the guest's service fee (each a percentage of one month's rent, with a minimum). Every payment happens on the site.
+Guests and hosts never talk to each other directly: each one chats with the **Sakani team** (`/messages`), and the team talks to the other side. Payments are **InstaPay only**.
 
-1. In the admin panel, open **Payments** and fill in:
-   - your InstaPay address, Vodafone Cash number and account name;
-   - the team WhatsApp number;
-   - the owner fee % and minimum, and the student fee % and minimum.
-2. Under **Bookings**, contact the guest and the host, book the visit, then choose **Confirm booking: create fees**. That creates both fees, and the guest also sees theirs, with a **Pay** button, on their profile.
-3. Under **Payments**, choose **Send pay link** on each fee. WhatsApp opens to the student or owner with a private payment link. On that page they see the amount and your payment details, pay by InstaPay or Vodafone Cash, and enter the transaction number and the phone number they paid from. Owners can also pay from their dashboard.
-4. Under **Payments → To check**, compare it with your InstaPay / Vodafone Cash history and choose **Payment received**, **Not received** (they can resend) or **Waive**. The same link then shows "Paid" as their receipt.
-5. If you learn of a rental that wasn't recorded, use **Rented via Sakani: add fee** on the listing card.
+**How a booking works**
+1. A guest (with an account and a phone number) presses **Book now**, chooses a move-in date and stay, and pays straight away: the **first month's rent + 8%** Sakani fee, through the booking's private pay link.
+2. The host sees the request in their account and taps **Available — accept** or **Not available**; the team can also record the host's answer in **Admin → Bookings**.
+3. In **Admin → Bookings → Transfer to check**, compare the transfer with your InstaPay history and choose **Payment received**. Once the host has accepted, the booking is **Confirmed** and the listing is hidden. Send the guest the details in the chat.
+4. On move-in day the guest taps **I've moved in**. The booking moves to **Pay the host**: send the host the rent minus 10% to the InstaPay address in their profile, enter the transaction number and choose **Paid the host**.
+5. **Refunds within 24 hours:** if the host declines or doesn't answer within 24 hours of the payment, or the guest reports a problem (before moving in, or within 48 hours of the move-in date), the booking moves to **Refund due** with a countdown. Send the full amount back by InstaPay, enter the transaction number and choose **Refunded**.
 
-Owners with a fee more than 14 days overdue cannot add new listings until it is paid. Money goes straight to your account; the site never handles card details.
+Unpaid bookings are cancelled after 24 hours. In **Admin → Payments** set your InstaPay address, account name, the team WhatsApp number and the two fee percentages (guest 8%, host 10% of one month's rent).
+
+**Demo listings:** **Admin → Demo** adds 2,000 demo listings (labelled "Demo", not bookable) to preview the site, and removes them all with one button. Remove them before launch.
+
+Holding guests' money until move-in makes Sakani responsible for it: have the Terms reviewed by a lawyer and register the business before launch.

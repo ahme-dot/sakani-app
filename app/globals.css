@@ -11443,3 +11443,781 @@ body:has(.auth-page) { background: #f8f6ee; }
 .user-menu-logout:hover {
   background: var(--panel);
 }
+
+/* ==== Upfront payment, team chat, richer profiles, studios, demo listings ==== */
+
+/* Totals with the amount due now. */
+.book-total .is-total {
+  padding-top: 6px;
+  border-top: 1px dashed #d9d1c4;
+}
+
+.book-total .is-total dt,
+.book-total .is-total dd {
+  color: var(--ink);
+  font-size: 15.5px;
+  font-weight: 800;
+}
+
+.book-guarantee,
+.pay-guarantee {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #e6efe9;
+  color: #2d5a45;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.book-guarantee svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.book-paynow {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 12px;
+  padding: 16px;
+  border: 2px solid #cb7756;
+  border-radius: 14px;
+  background: #fffaf6;
+  scroll-margin-top: 100px;
+}
+
+.book-paynow-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 17px;
+}
+
+.book-paynow p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.site-shell .book-paynow .book-submit {
+  border-color: #cb7756;
+  background: #cb7756;
+  color: #fff;
+}
+
+.book-home-demo {
+  margin: 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: #fdf3dc;
+  color: #7a5810;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.pay-breakdown {
+  margin: 14px 0 0;
+}
+
+.pay-guarantee {
+  margin-top: 12px;
+}
+
+/* Demo listings. */
+.demo-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #7a5810;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.property-demo {
+  position: absolute;
+  z-index: 2;
+  bottom: 12px;
+  inset-inline-end: 12px;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 18%);
+}
+
+.demo-pill-line {
+  margin: 10px 0 0;
+}
+
+/* Hosted by. */
+.host-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #e7e1d7;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.host-card:hover {
+  border-color: #c9bfb1;
+}
+
+.host-card-avatar,
+.profile-avatar {
+  display: grid;
+  flex: none;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 50%;
+  background: #26372e;
+  color: #fff;
+  font-weight: 800;
+}
+
+.host-card-avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+}
+
+.host-card-avatar img,
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.host-card-text {
+  display: grid;
+  gap: 2px;
+}
+
+.host-card-text strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+}
+
+.host-card-text strong svg {
+  color: #2d5a45;
+}
+
+.host-card-text small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.listing-host .field-hint {
+  margin: 8px 0 0;
+}
+
+/* Profile: photo, checks, facts, rows. */
+.profile-avatar-edit {
+  position: relative;
+  cursor: pointer;
+}
+
+.profile-avatar-edit input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.profile-avatar-edit.is-busy {
+  opacity: 0.6;
+}
+
+.profile-avatar-camera {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #cb7756;
+  color: #fff;
+}
+
+.profile-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.profile-who h1 {
+  width: 100%;
+}
+
+.profile-since {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.role-chip.is-verified {
+  gap: 4px;
+  background: #e6efe9;
+  color: #2d5a45;
+}
+
+.profile-checks,
+.profile-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-checks li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #f2eee8;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.profile-checks li.is-done {
+  background: #e6efe9;
+  color: #2d5a45;
+}
+
+.profile-facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.profile-facts li:not(:last-child)::after {
+  margin-inline-start: 4px;
+  color: #c9bfb1;
+  content: "·";
+}
+
+.profile-bio {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.profile-edit-wide {
+  grid-column: 1 / -1;
+}
+
+.profile-languages {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.profile-languages legend {
+  margin-bottom: 8px;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.profile-row-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-row-actions .button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 14px;
+  font-size: 13.5px;
+}
+
+.profile-list .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-decision {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.profile-refund {
+  color: #9a3b22 !important;
+  font-weight: 700;
+}
+
+.profile-bookings li {
+  flex-wrap: wrap;
+}
+
+.profile-problem {
+  display: grid;
+  flex-basis: 100%;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fbe9e4;
+}
+
+.profile-problem .field-hint {
+  margin: 0;
+}
+
+.status-chip.is-pending_payment,
+.status-chip.is-payment_review { background: #fdf3dc; color: #7a5810; }
+.status-chip.is-confirmed,
+.status-chip.is-moved_in,
+.status-chip.is-completed,
+.status-chip.is-refunded { background: #e6efe9; color: #2d5a45; }
+.status-chip.is-refund_pending { background: #fbe9e4; color: #9a3b22; }
+.status-chip.is-cancelled { background: #eee9e1; color: var(--muted); }
+
+/* Chat with the Sakani team. */
+.messages-page {
+  display: grid;
+  max-width: 820px;
+  gap: 18px;
+  padding-block: 28px 48px;
+}
+
+.messages-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.messages-head h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(22px, 3vw, 28px);
+}
+
+.messages-head p {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.messages-avatar {
+  display: grid;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 50%;
+  background: #26372e;
+  color: #fff;
+}
+
+.chat {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #e7e1d7;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: min(60vh, 560px);
+  margin: 0;
+  padding: 16px;
+  overflow-y: auto;
+  background: #fbf9f4;
+  list-style: none;
+}
+
+.chat-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: auto;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.chat-message {
+  display: grid;
+  gap: 4px;
+  max-width: min(80%, 520px);
+  padding: 10px 14px;
+  border-radius: 16px;
+  border-end-start-radius: 4px;
+  align-self: flex-start;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+}
+
+.chat-message.is-mine {
+  border-end-start-radius: 16px;
+  border-end-end-radius: 4px;
+  align-self: flex-end;
+  background: #26372e;
+  color: #fff;
+}
+
+.chat-message p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-message time {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.chat-message.is-mine time {
+  color: rgb(255 255 255 / 70%);
+}
+
+.chat-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #a95839;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.chat-about {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  justify-self: start;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgb(203 119 86 / 14%);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chat-message.is-mine .chat-about {
+  background: rgb(255 255 255 / 16%);
+}
+
+.chat-form {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #efe9df;
+}
+
+.chat-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f6ebe4;
+  color: #8f4e35;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chat-context button {
+  display: grid;
+  margin-inline-start: auto;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.chat-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.chat-input textarea {
+  flex: 1;
+  min-height: 46px;
+  max-height: 160px;
+  padding: 11px 14px;
+  border: 1px solid #ddd5c9;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 15px;
+  resize: vertical;
+}
+
+.chat-input textarea:focus {
+  border-color: #26372e;
+  outline: none;
+}
+
+.chat-send {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.site-shell .chat-send,
+.admin-chat .chat-send {
+  border-color: #26372e;
+  background: #26372e;
+  color: #fff;
+}
+
+[dir="rtl"] .chat-send svg {
+  transform: scaleX(-1);
+}
+
+/* Admin: conversations. */
+.admin-chat {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-chat-threads {
+  display: grid;
+  gap: 4px;
+  max-height: 70vh;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  list-style: none;
+}
+
+.admin-chat-thread {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.admin-chat-thread:hover,
+.admin-chat-thread.is-active {
+  background: #f2eee8;
+}
+
+.admin-chat-thread strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-chat-thread small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-chat-thread.is-unread strong::before {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-inline-end: 6px;
+  border-radius: 50%;
+  background: #cb7756;
+  content: "";
+}
+
+.admin-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.admin-chat-back {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .admin-chat {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-chat.has-selection .admin-chat-threads {
+    display: none;
+  }
+
+  .admin-chat:not(.has-selection) .admin-chat-pane {
+    display: none;
+  }
+
+  .admin-chat-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+/* Admin: bookings. */
+.admin-refund-timer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fdf3dc;
+  color: #7a5810;
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.admin-refund-timer.is-urgent,
+.admin-request.is-urgent {
+  border-color: #e3a48f;
+}
+
+.admin-refund-timer.is-urgent {
+  background: #fbe9e4;
+  color: #9a3b22;
+}
+
+.admin-reference {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-reference input {
+  width: 180px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+/* Admin: demo listings. */
+.admin-demo {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-demo-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.admin-demo-card > svg {
+  flex: none;
+  color: #7a5810;
+}
+
+.admin-demo-card strong {
+  font-size: 17px;
+}
+
+.admin-demo-card p {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Unread counts and the five phone tabs. */
+.unread-badge {
+  display: inline-grid;
+  min-width: 18px;
+  height: 18px;
+  margin-inline-start: 6px;
+  padding: 0 5px;
+  place-items: center;
+  border-radius: 999px;
+  background: #cb7756;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.user-menu-button {
+  position: relative;
+}
+
+.user-menu-unread {
+  position: absolute;
+  top: -4px;
+  inset-inline-end: -4px;
+  margin: 0;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.bottom-tab-icon {
+  position: relative;
+  display: inline-grid;
+}
+
+.bottom-tab-icon .unread-badge {
+  position: absolute;
+  top: -6px;
+  inset-inline-end: -10px;
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .bottom-tabs {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .bottom-tabs a span:last-child {
+    font-size: 11px;
+  }
+}

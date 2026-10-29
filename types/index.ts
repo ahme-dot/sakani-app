@@ -8,7 +8,7 @@ export interface Property {
     area: string;
     university: string;
     gender: "male" | "female" | "mixed";
-    property_type: "room" | "apartment" | "bed";
+    property_type: "room" | "apartment" | "bed" | "studio";
     monthly_price: number;
     deposit: number;
     furnished: boolean;
@@ -32,4 +32,8 @@ export interface Property {
     rules: string[];
     created_at: string;
     updated_at: string;
+    /** Demo listings (for previewing the site) can't be booked. */
+    is_demo?: boolean;
+    /** The host's account, for "Hosted by" on the listing page. */
+    host_id?: string;
   }

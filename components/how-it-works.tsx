@@ -44,12 +44,7 @@ export default function HowItWorks({ locale, fees }: { locale: SiteLocale; fees:
         <div>
           <strong>{t.howFeesTitle}</strong>
           <p>
-            {t.howFeesText(
-              numberFormat.format(fees.student_fee_percent),
-              numberFormat.format(fees.student_fee_minimum),
-              numberFormat.format(fees.fee_percent),
-              numberFormat.format(fees.fee_minimum),
-            )}
+            {t.howFeesText(numberFormat.format(fees.student_fee_percent), numberFormat.format(fees.fee_percent))}
           </p>
         </div>
       </div>

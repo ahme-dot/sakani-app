@@ -79,3 +79,35 @@ export async function signOutAccount(client: SupabaseClient) {
 export function safeNext(next: string | null | undefined, locale: string) {
   return next && next.startsWith(`/${locale}/`) && !next.startsWith("//") ? next : null;
 }
+
+/** How many team messages the signed-in user hasn't read yet (checked on load and every minute). */
+export function useTeamUnread(client: SupabaseClient | null, userId: string | null) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!client || !userId) return;
+    let active = true;
+    async function load() {
+      const { data: thread } = await client!.from("support_threads").select("id,user_last_read").eq("user_id", userId!).maybeSingle();
+      if (!thread) {
+        if (active) setCount(0);
+        return;
+      }
+      const { count: unread } = await client!
+        .from("support_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("thread_id", thread.id)
+        .eq("from_team", true)
+        .gt("created_at", thread.user_last_read);
+      if (active) setCount(unread ?? 0);
+    }
+    void load();
+    const timer = window.setInterval(() => void load(), 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [client, userId]);
+
+  return userId ? count : 0;
+}

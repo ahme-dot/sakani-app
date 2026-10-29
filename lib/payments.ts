@@ -13,8 +13,11 @@ export type PaymentSettings = {
   student_fee_minimum: number;
 };
 
-export type FeeStatus = "due" | "submitted" | "paid" | "waived";
+export type FeeStatus = "due" | "submitted" | "paid" | "waived" | "refunded";
+/** New payments are by InstaPay only; "vodafone_cash" remains on older fees. */
 export type PaymentMethod = "instapay" | "vodafone_cash";
+/** "fee": a service fee; "upfront": a guest's first month + service fee, held by Sakani. */
+export type FeeKind = "fee" | "upfront";
 
 export type FeePayer = "owner" | "student";
 
@@ -23,6 +26,9 @@ export type RentalFee = {
   /** Private link token for the payment page (/pay/<token>). */
   pay_token: string;
   payer: FeePayer;
+  kind: FeeKind;
+  rent_amount: number | null;
+  fee_amount: number | null;
   request_id: string | null;
   payer_name: string | null;
   payer_contact: string | null;
@@ -46,15 +52,15 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
   payee_name: "",
   instapay_address: "",
   vodafone_cash_number: "",
-  fee_percent: 20,
-  fee_minimum: 150,
+  fee_percent: 10,
+  fee_minimum: 0,
   team_whatsapp: "",
-  student_fee_percent: 10,
-  student_fee_minimum: 200,
+  student_fee_percent: 8,
+  student_fee_minimum: 0,
 };
 
 export const RENTAL_FEE_COLUMNS =
-  "id,pay_token,payer,request_id,payer_name,payer_contact,listing_id,owner_id,listing_title,monthly_price,amount,status,method,reference,payer_phone,admin_note,created_by_admin,created_at,submitted_at,decided_at";
+  "id,pay_token,payer,kind,rent_amount,fee_amount,request_id,payer_name,payer_contact,listing_id,owner_id,listing_title,monthly_price,amount,status,method,reference,payer_phone,admin_note,created_by_admin,created_at,submitted_at,decided_at";
 
 /** A fee is overdue after this many days; owners then can't add new listings (enforced in the database). */
 export const FEE_GRACE_DAYS = 14;

@@ -12,6 +12,9 @@ type Fee = {
   amount: number;
   status: FeeStatus;
   payer: "owner" | "student";
+  kind: "fee" | "upfront";
+  rent_amount: number | null;
+  fee_amount: number | null;
   listing_id: string | null;
   listing_title: string;
   monthly_price: number;
@@ -81,41 +84,39 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
   if (fee === null) return <div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.loading}</div>;
   if (fee === "invalid") return <p className="owner-feedback owner-feedback-error" role="alert">{t.payInvalid}</p>;
 
-  const methods = (["instapay", "vodafone_cash"] as PaymentMethod[]).filter((method) => (method === "instapay" ? settings?.instapay_address : settings?.vodafone_cash_number));
+  const upfront = fee.kind === "upfront";
 
   return (
     <article className={`fee-card pay-page-card is-${fee.status}`}>
       <div className="fee-card-head">
         <div>
-          <span>{fee.payer === "student" ? t.payStudentFee : t.payOwnerFee}</span>
+          <span>{upfront ? t.payUpfrontTitle : fee.payer === "student" ? t.payStudentFee : t.payOwnerFee}</span>
           <strong>{numberFormat.format(fee.amount)} {locale === "ar" ? "جنيه" : "EGP"}</strong>
           <span>{t.feeFor(fee.listing_title)}{fee.listing_id ? ` · ${listingRef(fee.listing_id)}` : ""}</span>
         </div>
         <span className={`fee-status is-${fee.status}`}>{t.feeStatus[fee.status]}</span>
       </div>
 
+      {upfront && fee.rent_amount !== null && fee.fee_amount !== null && (
+        <dl className="book-total pay-breakdown">
+          <div><dt>{t.bookRent}</dt><dd>{numberFormat.format(fee.rent_amount)} {t.currency}</dd></div>
+          <div><dt>{t.bookGuestFee}</dt><dd>{numberFormat.format(fee.fee_amount)} {t.currency}</dd></div>
+          <div className="is-total"><dt>{t.bookTotal}</dt><dd>{numberFormat.format(fee.amount)} {t.currency}</dd></div>
+        </dl>
+      )}
+      {upfront && <p className="pay-guarantee">{t.refundPromise}</p>}
+
       {fee.admin_note && <p className="fee-note"><strong>{t.feeNote}:</strong> {fee.admin_note}</p>}
 
       {fee.status === "due" && (
-        methods.length && settings ? (
+        settings?.instapay_address ? (
           <form className="fee-pay" onSubmit={(event) => void submit(event)}>
             <p>{t.feeHowTo}</p>
             <div className="pay-accounts">
               {settings.instapay_address && <CopyValue label={t.payInstapay} value={settings.instapay_address} copyLabel={t.copy} copiedLabel={t.copied} />}
-              {settings.vodafone_cash_number && <CopyValue label={t.payVodafone} value={settings.vodafone_cash_number} copyLabel={t.copy} copiedLabel={t.copied} />}
               {settings.payee_name && <p className="pay-payee">{t.payeeName}: <strong>{settings.payee_name}</strong></p>}
             </div>
-            <div className="owner-field" role="radiogroup" aria-label={t.payMethodLabel}>
-              <span>{t.payMethodLabel}</span>
-              <div className="choice-row">
-                {methods.map((method, index) => (
-                  <label className="choice" key={method}>
-                    <input type="radio" name="method" value={method} defaultChecked={index === 0} required />
-                    <span>{method === "instapay" ? t.payInstapay : t.payVodafone}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            <input type="hidden" name="method" value="instapay" />
             <div className="owner-form-grid">
               <label className="owner-field">
                 <span>{t.payReference}</span>
@@ -143,6 +144,9 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
       )}
       {fee.status === "waived" && (
         <p className="pay-state"><Wallet size={18} /> {t.feeStatus.waived}</p>
+      )}
+      {fee.status === "refunded" && (
+        <p className="pay-state is-paid"><Wallet size={18} /> {t.feeStatus.refunded}</p>
       )}
     </article>
   );

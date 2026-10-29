@@ -58,9 +58,9 @@ export default async function HostPage({ locale }: { locale: SiteLocale }) {
         <section className="host-pricing section-wrap" aria-labelledby="pricing-title">
           <h2 id="pricing-title">{t.pricingTitle}</h2>
           <ul>
-            <li><Check size={18} /> {t.pricingStudents(numberFormat.format(settings.student_fee_percent), numberFormat.format(settings.student_fee_minimum))}</li>
+            <li><Check size={18} /> {t.pricingStudents(numberFormat.format(settings.student_fee_percent))}</li>
             <li><Check size={18} /> {t.pricingListing}</li>
-            <li><Check size={18} /> {t.pricingSuccess(numberFormat.format(settings.fee_percent), numberFormat.format(settings.fee_minimum))}</li>
+            <li><Check size={18} /> {t.pricingSuccess(numberFormat.format(settings.fee_percent))}</li>
           </ul>
           <p>{t.pricingPay}</p>
         </section>

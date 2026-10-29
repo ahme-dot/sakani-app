@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut, Menu, UserRound } from "lucide-react";
-import { signOutAccount, useAccount } from "@/lib/account";
+import { signOutAccount, useAccount, useTeamUnread } from "@/lib/account";
 import { connectSavedToAccount } from "@/lib/saved";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
@@ -40,6 +40,8 @@ export default function UserMenu({ locale, switchHref }: { locale: SiteLocale; s
     if (supabase && signedInId) void connectSavedToAccount(supabase, signedInId);
   }, [supabase, signedInId]);
 
+  const unread = useTeamUnread(supabase, signedInId);
+
   const close = () => setOpen(false);
   const signedIn = account.status === "signedIn" ? account : null;
   const name = signedIn ? signedIn.profile?.full_name || signedIn.user.email || t.navAccount : "";
@@ -60,6 +62,7 @@ export default function UserMenu({ locale, switchHref }: { locale: SiteLocale; s
         <span className={`user-menu-avatar${signedIn ? " is-signed-in" : ""}`}>
           {signedIn ? name.trim().charAt(0).toUpperCase() : <UserRound size={17} />}
         </span>
+        {unread > 0 && <span className="unread-badge user-menu-unread">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
         <div className="user-menu-panel" role="menu">
@@ -70,6 +73,7 @@ export default function UserMenu({ locale, switchHref }: { locale: SiteLocale; s
               {isGuest
                 ? <Link role="menuitem" href={`/${locale}/account#bookings`} onClick={close}>{t.profileBookings}</Link>
                 : <Link role="menuitem" href={`/${locale}/host`} onClick={close}>{t.menuMyListings}</Link>}
+              <Link role="menuitem" href={`/${locale}/messages`} onClick={close}>{t.chatTeamName}{unread > 0 && <span className="unread-badge">{unread}</span>}</Link>
               <Link role="menuitem" href={`/${locale}?saved=1#homes`} onClick={close}>{t.menuSaved}</Link>
             </>
           ) : (

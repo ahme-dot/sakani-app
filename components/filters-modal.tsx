@@ -91,7 +91,7 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
             <h3>{t.propertyType}</h3>
             <div className="choice-row">
               {choice("type", "", draft.propertyType, t.allTypes, () => set({ propertyType: "" }))}
-              {(["room", "apartment", "bed"] as const).map((type) => choice("type", type, draft.propertyType, t[type], () => set({ propertyType: type })))}
+              {(["room", "studio", "apartment", "bed"] as const).map((type) => choice("type", type, draft.propertyType, t[type], () => set({ propertyType: type })))}
             </div>
           </section>
 

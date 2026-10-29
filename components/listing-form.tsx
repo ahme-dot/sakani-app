@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowLeft, ArrowRight, BedSingle, Building2, DoorOpen, ImagePlus, Mars, Pencil, ShieldCheck, Snowflake, Venus, Wifi } from "lucide-react";
+import { Armchair, ArrowLeft, ArrowRight, BedSingle, Building2, DoorOpen, ImagePlus, Mars, Pencil, ShieldCheck, Snowflake, Venus, Wifi } from "lucide-react";
 import VisitChecklist, { readVisit } from "@/components/visit-checklist";
 import { GOVERNORATES, areaLabel, areaSuggestions, normalizeArea, placeLabel } from "@/lib/egypt";
 import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
@@ -28,7 +28,7 @@ const AMENITIES = [
   ["air_conditioning", Snowflake],
   ["security", ShieldCheck],
 ] as const;
-const TYPE_ICONS = { room: DoorOpen, apartment: Building2, bed: BedSingle } as const;
+const TYPE_ICONS = { room: DoorOpen, studio: Armchair, apartment: Building2, bed: BedSingle } as const;
 const GENDER_ICONS = { male: Mars, female: Venus } as const;
 
 export type EditableListing = Omit<MarketplaceListing, "owner_id">;
@@ -364,7 +364,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
       {screen("type", t.stepTypeTitle, t.stepTypeText, (
         <>
           <div className="tile-grid" role="radiogroup" aria-label={t.propertyType}>
-            {(["room", "apartment", "bed"] as const).map((type) => {
+            {(["room", "studio", "apartment", "bed"] as const).map((type) => {
               const Icon = TYPE_ICONS[type];
               return (
                 <label className="tile" key={type}>

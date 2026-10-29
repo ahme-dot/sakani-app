@@ -8,7 +8,6 @@ import {
   Map as MapIcon,
   MapPin,
   Mars,
-  MessageCircle,
   ShieldAlert,
   ShieldCheck,
   Venus,
@@ -16,10 +15,13 @@ import {
   Wifi,
   Wind,
 } from "lucide-react";
+import AskTeam from "@/components/ask-team";
 import BookHome from "@/components/book-home";
+import Image from "next/image";
+import Link from "next/link";
 import ListingGallery from "@/components/listing-gallery";
 import { ReportListing, ShareListingButton } from "@/components/listing-actions";
-import { TrackListingView, WhatsAppLink } from "@/components/listing-tracking";
+import { TrackListingView } from "@/components/listing-tracking";
 import PropertyCard from "@/components/property-card";
 import SaveButton from "@/components/save-button";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -27,6 +29,7 @@ import { areaLabel as areaName, governorateLabel, placeLabel } from "@/lib/egypt
 import { bilingualMetadata } from "@/lib/metadata";
 import { SITE_URL, listingPath, whatsappLink } from "@/lib/site";
 import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings } from "@/lib/payments";
+import { fetchPublicProfile } from "@/lib/profiles";
 import { fetchSimilarListings, listingRef } from "@/lib/supabase/listings";
 import { getApprovedListing, getSupabaseServerClient } from "@/lib/supabase/server";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
@@ -69,9 +72,13 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const ref = listingRef(listing.id);
   const pageUrl = `${SITE_URL}${listingPath(locale, listing.id)}`;
   const serverClient = getSupabaseServerClient();
-  const [similar, settings] = serverClient
-    ? await Promise.all([fetchSimilarListings(serverClient, listing), fetchPaymentSettings(serverClient)])
-    : [[], null];
+  const [similar, settings, host] = serverClient
+    ? await Promise.all([
+        fetchSimilarListings(serverClient, listing),
+        fetchPaymentSettings(serverClient),
+        listing.host_id && !listing.is_demo ? fetchPublicProfile(serverClient, listing.host_id) : Promise.resolve(null),
+      ])
+    : [[], null, null];
   const fees = settings ?? DEFAULT_PAYMENT_SETTINGS;
   // Guests reach the Sakani team, never the host directly; the team checks with the host first.
   const teamHref = fees.team_whatsapp ? whatsappLink(fees.team_whatsapp, t.askSakaniMessage(ref, title, pageUrl)) : null;
@@ -146,6 +153,22 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
               <p className="listing-description">{description}</p>
             </section>
 
+            {host && (
+              <section className="listing3-section listing-host" aria-labelledby="listing-host-title">
+                <h2 id="listing-host-title">{t.hostedBy(host.first_name || t.roleHost)}</h2>
+                <Link className="host-card" href={`/${locale}/users/${host.id}`}>
+                  <span className="host-card-avatar">
+                    {host.avatar_url ? <Image src={host.avatar_url} alt="" width={56} height={56} /> : (host.first_name || "?").charAt(0).toUpperCase()}
+                  </span>
+                  <span className="host-card-text">
+                    <strong>{host.first_name || t.roleHost}{host.id_verified && <BadgeCheck size={16} aria-label={t.idVerified} />}</strong>
+                    <small>{t.memberSince(monthYear.format(new Date(host.member_since)))} · {t.placesCount(host.places)}</small>
+                  </span>
+                </Link>
+                <p className="field-hint">{t.hostContactNote}</p>
+              </section>
+            )}
+
             <section className="listing3-section" aria-labelledby="listing-amenities-title">
               <h2 id="listing-amenities-title">{t.offersTitle}</h2>
               <ul className="listing3-offers">
@@ -187,12 +210,9 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                 <div><dt>{t.beds}</dt><dd>{t.bedsSummary(listing.available_beds, listing.total_beds)}</dd></div>
               </dl>
               <p className="listing3-ref">{t.listingRefLabel}: <strong dir="ltr">{ref}</strong></p>
-              <BookHome locale={locale} listingId={listing.id} listingTitle={title} monthlyPrice={listing.monthly_price} fees={fees} />
-              {teamHref && (
-                <WhatsAppLink listingId={listing.id} className="button button-outline listing2-whatsapp" href={teamHref}>
-                  <MessageCircle size={18} /> {t.askSakani}
-                </WhatsAppLink>
-              )}
+              {listing.is_demo && <p className="demo-pill-line"><span className="demo-pill">{t.demoBadge}</span></p>}
+              <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} fees={fees} isDemo={listing.is_demo} />
+              <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-whatsapp" />
               <p className="listing3-middleman"><ShieldCheck size={16} /> {t.middlemanNote}</p>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>
                 {verified ? <BadgeCheck size={16} /> : <Info size={16} />}
@@ -231,11 +251,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
       <div className="listing2-bar">
         <p className="listing3-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</p>
         <div className="listing2-bar-actions">
-          {teamHref && (
-            <WhatsAppLink listingId={listing.id} className="button button-outline listing2-bar-ask" href={teamHref} ariaLabel={t.askSakani}>
-              <MessageCircle size={18} />
-            </WhatsAppLink>
-          )}
+          <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-bar-ask" compact />
           <a className="button button-primary" href="#book"><CalendarCheck size={17} /> {t.bookNow}</a>
         </div>
       </div>

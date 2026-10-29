@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { LOCALES, designProblems, scrollThrough, watchErrors } from "./helpers";
 
 // Every public page, in Arabic and English, on desktop and phone: loads, no errors, no design problems.
-const PAGES = ["", "/host", "/help", "/sign-in", "/account", "/privacy", "/terms", "/update-password", "/flyer"];
+const PAGES = ["", "/host", "/help", "/sign-in", "/account", "/privacy", "/terms", "/update-password", "/flyer", "/messages"];
 const VIEWPORTS = {
   desktop: { width: 1366, height: 900 },
   phone: { width: 390, height: 844 },

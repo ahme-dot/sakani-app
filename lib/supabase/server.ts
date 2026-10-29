@@ -23,7 +23,7 @@ export const getApprovedListing = cache(async (id: string): Promise<Property | n
 
   const { data, error } = await client
     .from("properties")
-    .select(PUBLIC_LISTING_COLUMNS)
+    .select(`${PUBLIC_LISTING_COLUMNS},owner_id`)
     .eq("id", id)
     .eq("status", "approved")
     .maybeSingle();

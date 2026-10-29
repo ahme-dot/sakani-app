@@ -73,12 +73,11 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
     const { error: saveError } = await supabase.from("app_settings").update({
       payee_name: String(form.get("payee_name") ?? "").trim(),
       instapay_address: String(form.get("instapay_address") ?? "").trim(),
-      vodafone_cash_number: String(form.get("vodafone_cash_number") ?? "").trim(),
       fee_percent: Number(form.get("fee_percent")),
-      fee_minimum: Number(form.get("fee_minimum")),
+      fee_minimum: 0,
       team_whatsapp: String(form.get("team_whatsapp") ?? "").trim(),
       student_fee_percent: Number(form.get("student_fee_percent")),
-      student_fee_minimum: Number(form.get("student_fee_minimum")),
+      student_fee_minimum: 0,
     }).eq("id", 1);
     setBusy(false);
     if (saveError) {
@@ -140,14 +139,14 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
             return (
               <article className="admin-fee" key={fee.id}>
                 <div className="admin-fee-main">
-                  <strong>{numberFormat.format(fee.amount)} EGP <span className={`payer-chip is-${fee.payer}`}>{fee.payer === "student" ? t.payerStudent : t.payerOwner}</span></strong>
+                  <strong>{numberFormat.format(fee.amount)} EGP <span className={`payer-chip is-${fee.payer}`}>{fee.kind === "upfront" ? t.payUpfrontTitle : fee.payer === "student" ? t.payerStudent : t.payerOwner}</span></strong>
                   <span>{fee.listing_title}</span>
                   {fee.payer === "student" && fee.payer_name && <span>{fee.payer_name} · <span dir="ltr">{fee.payer_contact}</span></span>}
                   <small>{dateFormat.format(new Date(fee.submitted_at ?? fee.created_at))}{fee.created_by_admin ? " · admin" : ""}</small>
                 </div>
                 {fee.reference && (
                   <dl className="admin-fee-ref">
-                    <div><dt>{fee.method === "vodafone_cash" ? t.payVodafone : t.payInstapay}</dt><dd dir="ltr">{fee.reference}</dd></div>
+                    <div><dt>{fee.method === "vodafone_cash" ? t.payVodafoneOld : t.payInstapay}</dt><dd dir="ltr">{fee.reference}</dd></div>
                     {fee.payer_phone && <div><dt>{t.feePaidFrom}</dt><dd dir="ltr">{fee.payer_phone}</dd></div>}
                   </dl>
                 )}
@@ -196,13 +195,10 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
         <h2>{t.settingsTitle}</h2>
         <div className="owner-form-grid">
           <label className="owner-field"><span>{t.settingsInstapay}</span><input name="instapay_address" defaultValue={settings.instapay_address} maxLength={80} dir="ltr" placeholder="name@instapay" /></label>
-          <label className="owner-field"><span>{t.settingsVodafone}</span><input name="vodafone_cash_number" defaultValue={settings.vodafone_cash_number} maxLength={20} pattern="[0-9+ \(\)\-]{8,20}" inputMode="tel" dir="ltr" placeholder="010xxxxxxxx" /></label>
           <label className="owner-field"><span>{t.settingsPayee}</span><input name="payee_name" defaultValue={settings.payee_name} maxLength={80} /></label>
           <label className="owner-field"><span>{t.settingsPercent}</span><input name="fee_percent" type="number" min="0" max="100" step="0.5" required defaultValue={settings.fee_percent} dir="ltr" /></label>
-          <label className="owner-field"><span>{t.settingsMinimum}</span><input name="fee_minimum" type="number" min="0" max="100000" step="10" required defaultValue={settings.fee_minimum} dir="ltr" /></label>
           <label className="owner-field"><span>{t.settingsTeamWhatsapp}</span><input name="team_whatsapp" defaultValue={settings.team_whatsapp} maxLength={20} pattern="[0-9+ \(\)\-]{8,20}" inputMode="tel" dir="ltr" placeholder="010xxxxxxxx" /></label>
           <label className="owner-field"><span>{t.settingsStudentPercent}</span><input name="student_fee_percent" type="number" min="0" max="100" step="0.5" required defaultValue={settings.student_fee_percent} dir="ltr" /></label>
-          <label className="owner-field"><span>{t.settingsStudentMinimum}</span><input name="student_fee_minimum" type="number" min="0" max="100000" step="10" required defaultValue={settings.student_fee_minimum} dir="ltr" /></label>
         </div>
         <button className="admin-btn admin-btn-primary" type="submit" disabled={busy}>{t.settingsSave}</button>
       </form>

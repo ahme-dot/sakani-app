@@ -28,6 +28,7 @@ export type MarketplaceListing = {
   image_urls: string[];
   verified: boolean;
   verified_at: string | null;
+  is_demo?: boolean;
   rejection_reason: string | null;
   status: "pending" | "approved" | "rejected" | "paused";
   created_at: string;
@@ -36,7 +37,7 @@ export type MarketplaceListing = {
 
 /** Columns that are safe to show to anyone. Excludes owner_id and review notes. */
 export const PUBLIC_LISTING_COLUMNS =
-  "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,image_url,image_urls,verified,verified_at,status,created_at,updated_at";
+  "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,image_url,image_urls,verified,verified_at,is_demo,status,created_at,updated_at";
 
 /** Short reference guests quote to the Sakani team, e.g. "SK-3F9A2C". */
 export function listingRef(id: string) {
@@ -104,7 +105,7 @@ export function filtersFromParams(params: Record<string, string | string[] | und
     governorate: one("gov").slice(0, 40),
     area: one("area").slice(0, 80),
     gender: ["female", "male"].includes(one("gender")) ? one("gender") : "",
-    propertyType: ["room", "apartment", "bed"].includes(one("type")) ? one("type") : "",
+    propertyType: ["room", "apartment", "bed", "studio"].includes(one("type")) ? one("type") : "",
     minPrice: PRICE_PATTERN.test(one("min")) ? one("min") : "",
     maxPrice: PRICE_PATTERN.test(one("max")) ? one("max") : "",
     amenities,
@@ -261,5 +262,7 @@ export function toProperty(listing: MarketplaceListing): Property {
     rules: [],
     created_at: listing.created_at || now,
     updated_at: listing.updated_at || listing.created_at || now,
+    is_demo: Boolean(listing.is_demo),
+    host_id: (listing as { owner_id?: string }).owner_id,
   };
 }

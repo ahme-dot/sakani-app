@@ -86,7 +86,7 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
         <label className="owner-field"><span>{t.housing}</span><select name="gender" required defaultValue={listing.gender === "male" || listing.gender === "female" ? listing.gender : ""}><option value="" disabled>{t.chooseGender}</option><option value="male">{t.male}</option><option value="female">{t.female}</option></select></label>
       </div>
       <div className="owner-form-grid owner-form-grid-three">
-        <label className="owner-field"><span>{t.propertyType}</span><select name="property_type" required defaultValue={listing.property_type}><option value="room">{t.room}</option><option value="apartment">{t.apartment}</option><option value="bed">{t.bed}</option></select></label>
+        <label className="owner-field"><span>{t.propertyType}</span><select name="property_type" required defaultValue={listing.property_type}><option value="room">{t.room}</option><option value="studio">{t.studio}</option><option value="apartment">{t.apartment}</option><option value="bed">{t.bed}</option></select></label>
         <label className="owner-field"><span>{t.price}</span><input name="monthly_price" type="number" min="1" max="1000000" required defaultValue={listing.monthly_price} /></label>
         <label className="owner-field"><span>{t.deposit}</span><input name="deposit" type="number" min="0" max="1000000" required defaultValue={listing.deposit} /></label>
       </div>

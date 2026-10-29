@@ -28,7 +28,7 @@ export default function SearchPill({ locale, value = EMPTY_SEARCH, onSearch }: P
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const whereLabel = (name: string) => (name ? governorateLabel(locale, name) : t.searchAnywhere);
-  const typeLabel = (type: string) => (type === "room" || type === "apartment" || type === "bed" ? t[type] : t.allTypes);
+  const typeLabel = (type: string) => (type === "room" || type === "studio" || type === "apartment" || type === "bed" ? t[type] : t.allTypes);
   const genderLabel = (gender: string) => (gender === "female" || gender === "male" ? t[gender] : t.searchAnyone);
 
   function run(values: SearchValues) {
@@ -79,6 +79,7 @@ export default function SearchPill({ locale, value = EMPTY_SEARCH, onSearch }: P
         <select value={draft.propertyType} onChange={(event) => setDraft({ ...draft, propertyType: event.target.value })}>
           <option value="">{t.allTypes}</option>
           <option value="room">{t.room}</option>
+          <option value="studio">{t.studio}</option>
           <option value="apartment">{t.apartment}</option>
           <option value="bed">{t.bed}</option>
         </select>

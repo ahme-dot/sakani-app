@@ -4,7 +4,7 @@ import type { SiteLocale } from "@/messages/site";
  * DRAFT legal pages. Written to describe what the site actually does; not legal advice.
  * The site operator should have them reviewed (Egypt Personal Data Protection Law No. 151 of 2020) before relying on them.
  */
-export const LEGAL_UPDATED = "2026-10-28";
+export const LEGAL_UPDATED = "2026-10-29";
 
 type LegalSection = { heading: string; body: string[] };
 type LegalPage = { title: string; intro: string; sections: LegalSection[] };
@@ -26,7 +26,9 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
             "الحجوزات: عند الحجز نحفظ اسمك ورقمك وتاريخ الدخول والمدة وعدد الأفراد وملاحظتك، ليتواصل معك فريق سكني ومع صاحب المكان. لا يظهر رقمك للعامة ولا رقم صاحب المكان لك.",
             "الأماكن المحفوظة: تُحفظ في متصفحك، وفي حسابك إن كنت مسجّل الدخول لتظهر على أجهزتك الأخرى.",
             "الزوار: ما تكتبه بنفسك في نموذج التواصل أو البلاغات، مثل رسالتك ووسيلة التواصل إن أضفتها.",
-            "المدفوعات: عند سداد الرسوم نحفظ المبلغ ووسيلة الدفع (إنستاباي أو فودافون كاش) ورقم العملية ورقم الهاتف المستخدم في التحويل، لنتأكد من وصول المبلغ. لا نطلب ولا نحفظ أي بيانات بطاقات بنكية.",
+            "المدفوعات: عند الدفع نحفظ المبلغ ورقم عملية إنستاباي ورقم الهاتف المستخدم في التحويل، لنتأكد من وصول المبلغ. لأصحاب الأماكن نحفظ عنوان إنستاباي الذي يضيفونه لنحوّل لهم مستحقاتهم. لا نطلب ولا نحفظ أي بيانات بطاقات بنكية.",
+            "المحادثات: نحفظ رسائلك مع فريق سكني لنرد عليك ونتابع حجزك أو أي مشكلة.",
+            "البروفايل: الصورة والنبذة والمحافظة والعمل أو الدراسة واللغات تظهر في صفحتك العامة إذا أضفتها. رقمك وبريدك وعنوان إنستاباي لا تظهر لأحد.",
             "سجلات تقنية أساسية يحتفظ بها مزودو الاستضافة لأغراض الأمان والتشغيل. لا نستخدم إعلانات أو أدوات تتبع إعلانية.",
           ],
         },
@@ -83,7 +85,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           heading: "ما هو سكني",
           body: [
             "سكني منصة تربط المستأجرين بأصحاب الأماكن المعروضة للإيجار في مصر، ويعمل فريق سكني وسيطاً بينهما: يتحقق من صاحب المكان، ويرتّب المعاينة، ويؤكد الحجز. لا تظهر أرقام أصحاب الأماكن للزوار.",
-            "لسنا طرفاً في عقد الإيجار، ولا نستلم إيجاراً أو تأميناً: يُدفعان لصاحب المكان مباشرة بعد المعاينة.",
+            "عند الحجز يدفع المستأجر لسكني مقدماً إيجار الشهر الأول ورسوم الخدمة. يحتفظ سكني بالمبلغ حتى يؤكد المستأجر استلام المكان، ثم يحوّل لصاحب المكان الإيجار بعد خصم رسومه. لسنا طرفاً في عقد الإيجار نفسه، والتأمين وباقي الشهور يُتفق عليها بين الطرفين بمساعدة فريق سكني.",
           ],
         },
         {
@@ -96,8 +98,9 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "الحجوزات",
           body: [
-            "طلب الحجز ليس حجزاً نهائياً حتى يؤكده فريق سكني بعد التواصل مع صاحب المكان. يمكنك إلغاء طلبك من حسابك قبل تأكيده.",
-            "عند تأكيد الحجز يُخفى الإعلان، وتُستحق الرسوم على الطرفين كما هو موضح أدناه.",
+            "بعد طلب الحجز يجب الدفع بإنستاباي خلال 24 ساعة، وإلا يُلغى الطلب تلقائياً. يمكنك إلغاء طلبك قبل الدفع من حسابك.",
+            "يُعتبر الحجز مؤكداً عندما يؤكد فريق سكني وصول المبلغ ويوافق صاحب المكان. عندها يُخفى الإعلان.",
+            "يتم التواصل بين المستأجر وصاحب المكان عن طريق فريق سكني فقط.",
           ],
         },
         {
@@ -109,16 +112,17 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           ],
         },
         {
-          heading: "نصائح للمستأجرين",
+          heading: "استرداد المبلغ",
           body: [
-            "عاين المكان بنفسك وقابل صاحبه قبل دفع أي مبلغ، واطلب عقداً أو إيصالاً مكتوباً. علامة «متأكد منه» تعني أن فريقنا عاين المكان، لكنها ليست ضماناً للاتفاق بينك وبين صاحب المكان.",
+            "يُرد المبلغ المدفوع كاملاً (الإيجار ورسوم الخدمة) بإنستاباي خلال 24 ساعة في الحالات الآتية: رفض صاحب المكان الحجز، أو عدم رده خلال 24 ساعة من الدفع، أو إبلاغ المستأجر عن مشكلة قبل الاستلام أو خلال 48 ساعة من ميعاد الدخول ولم يكن قد أكد الاستلام.",
+            "بعد أن يؤكد المستأجر استلام المكان، يتم التحويل لصاحب المكان ولا يُسترد المبلغ عن طريق سكني. لا تدفع لأي شخص خارج سكني؛ أي مبلغ يُدفع خارج الموقع ليس مسؤولية سكني.",
           ],
         },
         {
           heading: "رسوم الخدمة",
           body: [
-            "عند تأكيد حجز عن طريق سكني، يدفع صاحب المكان رسوم نجاح لمرة واحدة، ويدفع المستأجر رسوم خدمة لمرة واحدة. كل منهما نسبة من إيجار شهر واحد بحد أدنى، وتظهر قيمتها على الموقع قبل الحجز.",
-            "تُدفع الرسوم بتحويل عبر إنستاباي أو فودافون كاش إلى الحساب الموضح في صفحة الدفع، وتُعتبر مدفوعة بعد تأكيد فريق سكني لوصول التحويل.",
+            "يدفع المستأجر رسوم خدمة 8% من إيجار شهر واحد مع الدفعة المقدمة، ويدفع صاحب المكان 10% من إيجار شهر واحد تُخصم من أول تحويل له. تظهر القيم على الموقع قبل الحجز.",
+            "تتم كل المدفوعات بتحويل إنستاباي إلى الحساب الموضح في صفحة الدفع، وتُعتبر مدفوعة بعد تأكيد فريق سكني لوصول التحويل. يتم تحويل مستحقات صاحب المكان إلى عنوان إنستاباي المسجل في حسابه.",
             "يحق لنا إيقاف نشر إعلانات جديدة لصاحب المكان إذا تأخر سداد رسوم مستحقة أكثر من 14 يوماً.",
           ],
         },
@@ -151,7 +155,9 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
             "Bookings: when you book we keep your name, phone number, move-in date, length of stay, number of people and note, so the Sakani team can contact you and the host. Your number is never public, and the host’s number is not shown to you.",
             "Saved places: kept in your browser, and in your account when you’re logged in so they appear on your other devices.",
             "Visitors: whatever you type into the contact form or a listing report, such as your message and any contact details you add.",
-            "Payments: when you pay a fee we keep the amount, the method (InstaPay or Vodafone Cash), the transaction reference and the phone number used for the transfer, so we can confirm it arrived. We never ask for or store bank card details.",
+            "Payments: when you pay we keep the amount, the InstaPay transaction reference and the phone number used for the transfer, so we can confirm it arrived. For hosts we keep the InstaPay address they add, to send their payouts. We never ask for or store bank card details.",
+            "Chats: we keep your messages with the Sakani team so we can reply and follow up on your booking or any problem.",
+            "Profile: your photo, bio, governorate, work or study and languages appear on your public page if you add them. Your number, email and InstaPay are never shown.",
             "Basic technical logs kept by our hosting providers for security and operations. We don’t use advertising or ad-tracking tools.",
           ],
         },
@@ -208,7 +214,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           heading: "What Sakani is",
           body: [
             "Sakani connects guests with hosts who have places to rent across Egypt. The Sakani team works as the middleman: it checks the host, arranges the visit and confirms the booking. Hosts’ numbers are not shown to visitors.",
-            "We are not a party to the rental contract and never receive rent or deposits: those are paid to the host directly, after the visit.",
+            "When booking, the guest pays Sakani the first month’s rent and the service fee upfront. Sakani holds the money until the guest confirms they have moved in, then pays the host the rent minus the host fee. We are not a party to the rental contract itself; the deposit and later months are agreed between both sides with the Sakani team’s help.",
           ],
         },
         {
@@ -221,8 +227,9 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "Bookings",
           body: [
-            "A booking request is not final until the Sakani team confirms it with the host. You can cancel your request from your account before it is confirmed.",
-            "When a booking is confirmed the listing is hidden, and fees are due from both sides as described below.",
+            "After a booking request, payment by InstaPay is due within 24 hours or the request is cancelled automatically. You can cancel your request from your account before paying.",
+            "A booking is confirmed when the Sakani team confirms the payment arrived and the host accepts. The listing is then hidden.",
+            "Guests and hosts communicate only through the Sakani team.",
           ],
         },
         {
@@ -234,16 +241,17 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           ],
         },
         {
-          heading: "Advice for guests",
+          heading: "Refunds",
           body: [
-            "Visit the place and meet the host before paying anything, and ask for a written contract or receipt. “Verified” means our team visited the place; it is not a guarantee of your agreement with the host.",
+            "The full amount paid (rent and service fee) is refunded by InstaPay within 24 hours if: the host declines the booking, the host doesn’t answer within 24 hours of payment, or the guest reports a problem before moving in or within 48 hours of the move-in date and hasn’t confirmed moving in.",
+            "Once the guest confirms moving in, the host is paid and the amount can no longer be refunded through Sakani. Never pay anyone outside Sakani; money paid outside the site is not Sakani’s responsibility.",
           ],
         },
         {
           heading: "Service fees",
           body: [
-            "When a booking through Sakani is confirmed, the host pays a one-time success fee and the guest pays a one-time service fee. Each is a percentage of one month’s rent with a minimum, shown on the site before you book.",
-            "Fees are paid by InstaPay or Vodafone Cash transfer to the account shown on the payment page, and count as paid once the Sakani team confirms the transfer arrived.",
+            "Guests pay a service fee of 8% of one month’s rent with the upfront payment; hosts pay 10% of one month’s rent, taken from their first payout. The amounts are shown on the site before booking.",
+            "All payments are made by InstaPay transfer to the account shown on the payment page, and count as paid once the Sakani team confirms the transfer arrived. Host payouts are sent to the InstaPay address in their account.",
             "We may stop a host from publishing new listings while a fee is more than 14 days overdue.",
           ],
         },

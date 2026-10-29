@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { LoaderCircle, Mail, Search, ShieldCheck, UserRound, UsersRound } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { BadgeCheck, LoaderCircle, Mail, Search, ShieldCheck, UserRound, UsersRound } from "lucide-react";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 export type DirectoryUser = {
@@ -24,8 +25,10 @@ export default function AdminUsers({
   loading,
   error,
   onViewListings,
+  supabase,
 }: {
   locale: SiteLocale;
+  supabase: SupabaseClient | null;
   users: DirectoryUser[];
   loading: boolean;
   error: string;
@@ -36,6 +39,34 @@ export default function AdminUsers({
   const [type, setType] = useState<"all" | "account" | "guest">("all");
   const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
+  const [profiles, setProfiles] = useState<Record<string, { role: "host" | "guest"; id_verified: boolean }>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const accountIds = users.filter((user) => !user.is_guest).map((user) => user.user_id).join(",");
+
+  // Host or guest, and whether the team checked their identity.
+  useEffect(() => {
+    if (!supabase || !accountIds) return;
+    let active = true;
+    void supabase.from("profiles").select("id,role,id_verified").in("id", accountIds.split(",")).then(({ data }) => {
+      if (active) setProfiles(Object.fromEntries(((data ?? []) as Array<{ id: string; role: "host" | "guest"; id_verified: boolean }>).map((row) => [row.id, row])));
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase, accountIds]);
+
+  async function toggleVerified(userId: string) {
+    if (!supabase) return;
+    const next = !profiles[userId]?.id_verified;
+    setBusyId(userId);
+    const { error: verifyError } = await supabase.from("profiles").update({ id_verified: next }).eq("id", userId);
+    setBusyId(null);
+    if (verifyError) {
+      console.error("Could not update identity check:", verifyError);
+      return;
+    }
+    setProfiles((current) => ({ ...current, [userId]: { ...current[userId], id_verified: next } }));
+  }
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -107,6 +138,9 @@ export default function AdminUsers({
                       {user.is_admin && <ShieldCheck size={12} />}
                       {user.is_admin ? t.userTypeAdmin : user.is_guest ? t.userTypeGuest : t.userTypeAccount}
                     </span>
+                    {profiles[user.user_id] && (
+                      <span className={`role-chip is-${profiles[user.user_id].role}`}>{profiles[user.user_id].role === "host" ? t.roleHost : t.roleGuest}</span>
+                    )}
                   </td>
                   <td>{dateFormat.format(new Date(user.joined_at))}</td>
                   <td>{user.last_sign_in_at ? dateFormat.format(new Date(user.last_sign_in_at)) : "–"}</td>
@@ -122,9 +156,22 @@ export default function AdminUsers({
                     </div>
                   </td>
                   <td>
-                    {user.listings_total > 0 && (
-                      <button className="admin-btn admin-btn-ghost" type="button" onClick={() => onViewListings(user)}>{t.usersViewListings}</button>
-                    )}
+                    <div className="admin-card-actions">
+                      {profiles[user.user_id] && (
+                        <button
+                          className={`admin-btn ${profiles[user.user_id].id_verified ? "admin-btn-primary" : "admin-btn-ghost"}`}
+                          type="button"
+                          disabled={busyId === user.user_id}
+                          aria-pressed={profiles[user.user_id].id_verified}
+                          onClick={() => void toggleVerified(user.user_id)}
+                        >
+                          <BadgeCheck size={14} /> {profiles[user.user_id].id_verified ? t.idVerified : t.verifyIdButton}
+                        </button>
+                      )}
+                      {user.listings_total > 0 && (
+                        <button className="admin-btn admin-btn-ghost" type="button" onClick={() => onViewListings(user)}>{t.usersViewListings}</button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

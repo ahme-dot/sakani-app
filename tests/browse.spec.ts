@@ -79,7 +79,7 @@ test.describe("phone", () => {
     await search.click();
     await expect(sheet).toHaveCount(0);
 
-    await tabs.locator("a").nth(2).click();
+    await tabs.locator("a").nth(3).click();
     await expect(page).toHaveURL(/\/ar\/host$/);
   });
 
@@ -106,6 +106,13 @@ test("search is by place, type and men or women only", async ({ page }) => {
   await expect(page).toHaveURL(/gov=Alexandria/);
   await expect(page).toHaveURL(/type=apartment/);
   await expect(page.locator(".search-pill .search-seg-value").first()).toHaveText("Alexandria");
+});
+
+test("the Studios category filters studios", async ({ page }) => {
+  await page.goto("/en");
+  await page.locator(".category-tab", { hasText: "Studios" }).click();
+  await expect(page).toHaveURL(/type=studio/);
+  await expect(page.locator(".search-pill .search-seg-value").nth(1)).toHaveText("Studio");
 });
 
 test("cards show the place, a clear price and both actions", async ({ page }) => {

@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
   CalendarCheck,
+  FlaskConical,
+  MessagesSquare,
   BadgeCheck,
   BedDouble,
   Building2,
@@ -37,6 +39,8 @@ import {
 } from "lucide-react";
 import AdminGrow from "@/components/admin-grow";
 import AdminPayments from "@/components/admin-payments";
+import AdminChat from "@/components/admin-chat";
+import AdminDemo from "@/components/admin-demo";
 import AdminRequests from "@/components/admin-requests";
 import AdminInbox from "@/components/admin-inbox";
 import ListingForm from "@/components/listing-form";
@@ -62,7 +66,7 @@ const STALE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
-type AdminView = "listings" | "add" | "requests" | "reports" | "inbox" | "payments" | "users" | "grow" | "team";
+type AdminView = "listings" | "add" | "requests" | "chat" | "reports" | "inbox" | "payments" | "users" | "demo" | "grow" | "team";
 type ListingStats = { views: number; whatsapp_clicks: number };
 type AdminListing = MarketplaceListing;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
@@ -104,6 +108,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [openMessages, setOpenMessages] = useState(0);
   const [feesToCheck, setFeesToCheck] = useState(0);
   const [newRequests, setNewRequests] = useState(0);
+  const [unreadChats, setUnreadChats] = useState(0);
+  const [chatTarget, setChatTarget] = useState<{ userId: string; bookingId: string } | null>(null);
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(true);
   const [directoryError, setDirectoryError] = useState("");
@@ -282,13 +288,22 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       .then(({ count: messageCount }) => {
         if (mounted) setOpenMessages(messageCount ?? 0);
       });
-    // New bookings from guests (0 until the middleman migration is installed).
+    // Bookings that need the team: a transfer to check or money to return.
     void supabase
       .from("listing_requests")
       .select("id", { count: "exact", head: true })
-      .eq("status", "new")
+      .in("status", ["payment_review", "refund_pending", "moved_in"])
       .then(({ count: requestCount, error: requestError }) => {
         if (mounted) setNewRequests(requestError ? 0 : requestCount ?? 0);
+      });
+    // Conversations with a message the team hasn't read.
+    void supabase
+      .from("support_threads")
+      .select("last_message_at,team_last_read")
+      .limit(500)
+      .then(({ data, error: chatError }) => {
+        const rows = (data ?? []) as Array<{ last_message_at: string; team_last_read: string }>;
+        if (mounted) setUnreadChats(chatError ? 0 : rows.filter((row) => new Date(row.last_message_at) > new Date(row.team_last_read)).length);
       });
     // Fees with a transfer to check (0 until the payments migration is installed).
     void supabase
@@ -447,6 +462,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   }
 
   function selectView(next: AdminView) {
+    if (next === "chat") setChatTarget(null);
     setView(next);
     setMessage("");
     setError("");
@@ -520,10 +536,12 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     { value: "listings", label: t.adminViewListings, icon: LayoutList, badge: counts?.pending },
     { value: "add", label: t.adminViewAddListing, icon: PlusCircle },
     { value: "requests", label: t.adminViewRequests, icon: CalendarCheck, badge: newRequests },
+    { value: "chat", label: t.adminViewChat, icon: MessagesSquare, badge: unreadChats },
     { value: "reports", label: t.adminViewReports, icon: Flag, badge: openReports },
     { value: "inbox", label: t.adminViewInbox, icon: Inbox, badge: openMessages },
     { value: "payments", label: t.adminViewPayments, icon: Wallet, badge: feesToCheck },
     { value: "users", label: t.adminViewUsers, icon: UsersRound },
+    { value: "demo", label: t.adminViewDemo, icon: FlaskConical },
     { value: "grow", label: t.adminViewGrow, icon: Megaphone },
     { value: "team", label: t.adminViewTeam, icon: Users },
   ];
@@ -534,6 +552,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     inbox: { title: t.inboxTitle, description: t.inboxDescription },
     payments: { title: t.adminViewPayments, description: t.paymentsAdminDescription },
     requests: { title: t.adminViewRequests, description: t.requestsDescription },
+    chat: { title: t.adminViewChat, description: t.adminChatDescription },
+    demo: { title: t.adminViewDemo, description: t.demoDescription },
     users: { title: t.usersTitle, description: t.usersDescription },
     grow: { title: t.growTitle, description: t.growDescription },
     team: { title: t.teamTitle, description: t.teamDescription },
@@ -595,7 +615,19 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
             </div>
           </section>
         ) : view === "requests" ? (
-          <AdminRequests locale={locale} supabase={supabase!} onChanged={refreshCounts} />
+          <AdminRequests
+            locale={locale}
+            supabase={supabase!}
+            onChanged={refreshCounts}
+            onOpenChat={(userId, bookingId) => {
+              setChatTarget({ userId, bookingId });
+              setView("chat");
+            }}
+          />
+        ) : view === "chat" ? (
+          <AdminChat key={`${chatTarget?.userId ?? ""}-${chatTarget?.bookingId ?? ""}`} locale={locale} supabase={supabase!} openUserId={chatTarget?.userId} openBookingId={chatTarget?.bookingId} onChanged={refreshCounts} />
+        ) : view === "demo" ? (
+          <AdminDemo locale={locale} supabase={supabase!} onChanged={refreshCounts} />
         ) : view === "payments" ? (
           <AdminPayments locale={locale} supabase={supabase!} onChanged={refreshCounts} />
         ) : view === "grow" ? (
@@ -603,7 +635,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
         ) : view === "inbox" && supabase && user ? (
           <AdminInbox locale={locale} supabase={supabase} currentUserId={user.id} onChanged={refreshCounts} />
         ) : view === "users" ? (
-          <AdminUsers locale={locale} users={directory} loading={directoryLoading} error={directoryError} onViewListings={showOwnerListings} />
+          <AdminUsers locale={locale} supabase={supabase} users={directory} loading={directoryLoading} error={directoryError} onViewListings={showOwnerListings} />
         ) : (
           <>
             <div className="admin-stats" role="tablist" aria-label={t.adminDashboardTitle}>

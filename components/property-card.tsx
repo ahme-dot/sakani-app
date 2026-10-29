@@ -28,6 +28,7 @@ export default function PropertyCard({ property, locale, linkToDetails = true }:
           sizes="(max-width: 640px) 100vw, (max-width: 1100px) 50vw, (max-width: 1400px) 33vw, 25vw"
         />
         {verified && <span className="property-pill"><BadgeCheck size={14} /> {t.verified}</span>}
+        {property.is_demo && <span className="demo-pill property-demo">{t.demoBadge}</span>}
         {(property.gender === "male" || property.gender === "female") && (
           <span className={`property-gender is-${property.gender}`}><GenderIcon size={13} /> {t[property.gender]}</span>
         )}
