@@ -24,7 +24,7 @@ test("Filters window counts matches and applies a price limit", async ({ page })
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("Maximum").fill("100000");
-  await expect(dialog.locator(".filters-foot .button")).toHaveText(/Show \d+ places/);
+  await expect(dialog.locator(".filters-foot .button")).toHaveText(/Show [\d,]+ places/);
   await dialog.locator(".filters-foot .button").click();
   await expect(dialog).toHaveCount(0);
   await expect(page).toHaveURL(/max=100000/);
