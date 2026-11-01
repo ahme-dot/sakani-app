@@ -37,7 +37,10 @@ async function fetchOwnerListings(client: SupabaseClient, ownerId: string) {
     .from("properties")
     .select(OWNER_LISTING_COLUMNS)
     .eq("owner_id", ownerId)
-    .order("created_at", { ascending: false });
+    // Demo listings belong to the admin who made them; they aren't anyone's real places.
+    .eq("is_demo", false)
+    .order("created_at", { ascending: false })
+    .limit(100);
   if (result.error || !result.data?.length) return result;
   // The WhatsApp number is private: only the owner (and admins) can read it, through this function.
   const rows = result.data as unknown as Array<{ id: string }>;
@@ -380,12 +383,16 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                 <button type="button" className="signout-button" onClick={() => void signOutOwner()}>{t.signOut}</button>
               </div>
 
-              {user.is_anonymous && (
+              {/* Said once, plainly: listing works without an account; answering bookings and getting paid need one.
+                  While the form is open it shrinks to one line so each step stays in view. */}
+              {user.is_anonymous && (formOpen || editing || (!loadingListings && ownerListings.length === 0) ? (
+                <p className="owner-guest-line">{t.ownerGuestShort} <Link href={`/${locale}/account?mode=signup`}>{t.ownerGuestCta}</Link></p>
+              ) : (
                 <div className="owner-guest-notice">
                   <p>{t.ownerGuestNotice}</p>
                   <Link className="button button-primary" href={`/${locale}/account?mode=signup`}>{t.ownerGuestCta}</Link>
                 </div>
-              )}
+              ))}
 
               {bookings.length > 0 && (
                 <section className="owner-bookings" aria-labelledby="owner-bookings-title">
@@ -394,7 +401,7 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                     {bookings.map((booking) => (
                       <li key={booking.id}>
                         <strong>{titleOf(booking.listing_id, booking.listing_title)}</strong>
-                        <span>{booking.guest_first_name ? `${booking.guest_first_name} · ` : ""}{t.bookingFrom(dateFormat.format(new Date(booking.move_in)))} · {t.monthsCount(booking.months)}</span>
+                        <span>{booking.guest_first_name && booking.guest_first_name !== "Guest" ? `${booking.guest_first_name} · ` : ""}{t.bookingFrom(dateFormat.format(new Date(booking.move_in)))} · {t.monthsCount(booking.months)}</span>
                         <span className="status-chip">{t.hostDecision[(booking.host_decision ?? "pending") as "pending" | "accepted" | "declined"]}</span>
                       </li>
                     ))}
@@ -453,10 +460,15 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                   return (
                     <div className="owner-listing-item" key={listing.id}>
                     <div className="owner-listing-row">
+                      {listingImages(listing)[0] && (
+                        // eslint-disable-next-line @next/next/no-img-element -- a small thumbnail of the host's own photo
+                        <img className="owner-listing-thumb" src={listingImages(listing)[0]} alt="" loading="lazy" />
+                      )}
                       <div className="owner-listing-main">
                         {listing.status === "approved"
                           ? <Link href={listingPath(locale, listing.id)}>{title}</Link>
                           : <span>{title}</span>}
+                        <small className="owner-listing-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</small>
                         {listing.status === "rejected" && listing.rejection_reason && (
                           <small className="owner-review-note"><strong>{t.reviewNote}:</strong> {listing.rejection_reason}</small>
                         )}

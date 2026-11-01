@@ -71,6 +71,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const dateFormat = new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium" });
   const monthYear = new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric" });
   const verified = listing.verification_status === "verified";
+  const wholePlace = listing.property_type === "apartment" || listing.property_type === "studio";
   const ref = listingRef(listing.id);
   const pageUrl = `${SITE_URL}${listingPath(locale, listing.id)}`;
   const serverClient = getSupabaseServerClient();
@@ -142,7 +143,8 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
               <h2>{t.homesIn(t[listing.property_type], areaLabel)} · {t[listing.gender]}</h2>
               <p>
                 {[
-                  t.bedsSummary(listing.available_beds, listing.total_beds),
+                  // A flat or studio is rented whole: its rooms describe it, not "1 free of 1".
+                  wholePlace ? null : t.bedsSummary(listing.available_beds, listing.total_beds),
                   listing.bedrooms ? t.bedroomsCount(listing.bedrooms) : null,
                   listing.bathrooms ? t.bathroomsCount(listing.bathrooms) : null,
                   listing.area_sqm ? t.areaSqm(numberFormat.format(listing.area_sqm)) : null,
@@ -242,7 +244,9 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
               <p className="listing3-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</p>
               <dl className="listing3-terms">
                 <div><dt>{t.deposit}</dt><dd>{listing.deposit > 0 ? numberFormat.format(listing.deposit) : t.noDeposit}</dd></div>
-                <div><dt>{t.beds}</dt><dd>{t.bedsSummary(listing.available_beds, listing.total_beds)}</dd></div>
+                {wholePlace
+                  ? listing.bedrooms ? <div><dt>{t.bedroomsLabel}</dt><dd>{numberFormat.format(listing.bedrooms)}</dd></div> : null
+                  : <div><dt>{t.beds}</dt><dd>{t.bedsSummary(listing.available_beds, listing.total_beds)}</dd></div>}
               </dl>
               <p className="listing3-ref">{t.listingRefLabel}: <strong dir="ltr">{ref}</strong></p>
               {booked.length > 0 && (

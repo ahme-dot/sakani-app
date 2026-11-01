@@ -40,7 +40,12 @@ export default function PropertyCard({ property, locale, linkToDetails = true }:
         <h3 className="property-title">
           {detailsHref ? <Link href={detailsHref}>{title}</Link> : title}
         </h3>
-        <p className="property-meta">{t[property.property_type]} · {t.bedsSummary(property.available_beds, property.total_beds)}</p>
+        <p className="property-meta">
+          {t[property.property_type]}
+          {property.property_type === "apartment" || property.property_type === "studio"
+            ? property.bedrooms ? ` · ${t.bedroomsCount(property.bedrooms)}` : ""
+            : ` · ${t.bedsSummary(property.available_beds, property.total_beds)}`}
+        </p>
         <p className="property-price"><strong>{price}</strong> <span>{t.perMonth}</span></p>
         {detailsHref && (
           <div className="property-actions">

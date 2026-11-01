@@ -16,7 +16,16 @@ export default function NotificationsBell({ locale }: { locale: SiteLocale }) {
   const t = SITE_COPY[locale];
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const account = useAccount(supabase);
-  const userId = account.status === "signedIn" ? account.user.id : null;
+  // Hosts who listed without an account get booking news too, so the bell also follows that session.
+  const [anonymousId, setAnonymousId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!supabase) return;
+    const pick = (user: { id: string; is_anonymous?: boolean } | null | undefined) => setAnonymousId(user?.is_anonymous ? user.id : null);
+    void supabase.auth.getSession().then(({ data }) => pick(data.session?.user));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => pick(session?.user));
+    return () => listener.subscription.unsubscribe();
+  }, [supabase]);
+  const userId = account.status === "signedIn" ? account.user.id : anonymousId;
   const [notices, setNotices] = useState<Notice[]>([]);
   const [open, setOpen] = useState(false);
   const [version, setVersion] = useState(0);
@@ -57,6 +66,8 @@ export default function NotificationsBell({ locale }: { locale: SiteLocale }) {
   }
 
   const href = (notice: Notice) => {
+    // A host without an account follows bookings on the host page.
+    if (account.status !== "signedIn") return `/${locale}/host`;
     if (notice.kind === "team_reply") return `/${locale}/messages`;
     if (notice.kind === "new_review") return `/${locale}/account#requests`;
     if (notice.kind === "agreement_ready" || notice.kind === "agreement_signed" || notice.kind === "deposit_transferred") return notice.booking_id ? `/${locale}/documents/${notice.booking_id}` : `/${locale}/account`;

@@ -171,7 +171,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
     let active = true;
     if (role === "host") {
       void Promise.all([
-        supabase.from("properties").select("id,title_ar,title_en,status,monthly_price,image_url").eq("owner_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("properties").select("id,title_ar,title_en,status,monthly_price,image_url").eq("owner_id", user.id).eq("is_demo", false).order("created_at", { ascending: false }).limit(50),
         supabase.rpc("host_bookings"),
         supabase.from("rental_fees").select(RENTAL_FEE_COLUMNS).eq("owner_id", user.id).eq("payer", "owner").order("created_at", { ascending: false }),
       ]).then(([homes, requests, ownerFees]) => {
@@ -464,7 +464,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                     <li key={booking.id}>
                       <div>
                         <strong>{titleOf(booking.listing_id, booking.listing_title)}</strong>
-                        <span>{booking.guest_first_name} · {stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
+                        <span>{booking.guest_first_name && booking.guest_first_name !== "Guest" ? booking.guest_first_name : t.noName} · {stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
                         <small>{t.hostPayoutLine(egp(booking.rent_amount), egp(booking.host_fee), egp(booking.payout_amount))}</small>
                         {booking.deposit_amount > 0 && (
                           <small>{t.depositLineHost(egp(booking.deposit_amount), booking.deposit_status ? t.depositStatus[booking.deposit_status] : t.depositNotSent)}</small>
@@ -556,7 +556,8 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                 <p className="profile-empty">{t.profileNoPlaces}</p>
               ) : (
                 <ul className="profile-list">
-                  {listings.map((listing) => (
+                  {/* The first six here; the host page has them all. */}
+                  {listings.slice(0, 6).map((listing) => (
                     <li key={listing.id}>
                       {listing.image_url && <Image className="profile-thumb" src={listing.image_url} alt="" width={72} height={54} />}
                       <div>
@@ -568,6 +569,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                   ))}
                 </ul>
               )}
+              {listings && listings.length > 6 && <Link className="text-button profile-see-all" href={`/${locale}/host`}>{t.profileSeeAllPlaces(listings.length)}</Link>}
             </section>
 
             {fees && fees.length > 0 && (

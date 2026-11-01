@@ -12992,3 +12992,20 @@ body {
 .auth-field .field-error { display: block; margin-top: 6px; color: #b42318; font-size: 13px; font-weight: 600; }
 .auth-input:has(input[aria-invalid="true"]) { border-color: #b42318; box-shadow: 0 0 0 3px rgb(180 35 24 / 12%); }
 .site-shell .profile-next-step { flex-basis: 100%; color: #64748b; font-size: 13px; }
+
+/* Host page: one quiet line while filling the form; listings as cards with a photo and price. */
+.site-shell .owner-guest-line { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #fff7e8; color: #6b4a0b; font-size: 13.5px; line-height: 1.6; }
+.site-shell .owner-guest-line a { color: #14213d; font-weight: 700; text-decoration: underline; }
+.site-shell .owner-listing-item { margin-bottom: 10px; border: 1px solid #e3e7ec; border-radius: 14px; background: #fff; overflow: hidden; }
+.site-shell .owner-listing-row { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px; border: 0; }
+.site-shell .owner-listing-thumb { width: 88px; height: 72px; border-radius: 10px; object-fit: cover; }
+.site-shell .owner-listing-main { display: grid; gap: 3px; min-width: 0; }
+.site-shell .owner-listing-main > a, .site-shell .owner-listing-main > span { color: #14213d; font-weight: 700; line-height: 1.4; }
+.site-shell .owner-listing-price { color: #1f7a5a; }
+.site-shell .owner-listing-price strong { font-size: 15px; }
+.site-shell .owner-listing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; grid-column: 1 / -1; padding-top: 8px; border-top: 1px solid #eef1f5; }
+.site-shell .owner-listing-actions .owner-text-button { min-height: 34px; padding: 0 12px; border: 1px solid #d5dae1; border-radius: 999px; background: #fff; color: #14213d; font-size: 13px; font-weight: 600; text-decoration: none; }
+.site-shell .owner-listing-actions .owner-text-button.is-danger { border-color: #f1c4bd; color: #b42318; }
+.site-shell .owner-listing-actions .listing-status { margin-inline-end: auto; }
+.site-shell .owner-listing-row:not(:has(.owner-listing-thumb)) { grid-template-columns: minmax(0, 1fr); }
+.site-shell .profile-see-all { display: inline-block; margin-top: 10px; }

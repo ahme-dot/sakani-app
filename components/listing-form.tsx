@@ -98,6 +98,9 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
   const [busyText, setBusyText] = useState("");
   const [error, setError] = useState("");
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  // A whole flat or studio is described by its rooms; rooms and beds by their free beds.
+  const [placeType, setPlaceType] = useState<string>(() => editing?.property_type ?? text("property_type") ?? "room");
+  const wholePlace = placeType === "apartment" || placeType === "studio";
   const [visited, setVisited] = useState(false);
   const [summary, setSummary] = useState<Record<string, string | string[]>>({});
   const [price, setPrice] = useState(String(editing?.monthly_price ?? text("monthly_price") ?? ""));
@@ -386,7 +389,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
               const Icon = TYPE_ICONS[type];
               return (
                 <label className="tile" key={type}>
-                  <input type="radio" name="property_type" value={type} required defaultChecked={(editing?.property_type ?? text("property_type") ?? "room") === type} />
+                  <input type="radio" name="property_type" value={type} required defaultChecked={(editing?.property_type ?? text("property_type") ?? "room") === type} onChange={() => setPlaceType(type)} />
                   <span><Icon size={26} strokeWidth={1.6} /><strong>{t[type]}</strong></span>
                 </label>
               );
@@ -429,11 +432,12 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
         </div>
       ))}
 
-      {screen("beds", t.stepBedsTitle, t.stepBedsText, (
+      {screen("beds", wholePlace ? t.stepPlaceTitle : t.stepBedsTitle, wholePlace ? t.stepPlaceText : t.stepBedsText, (
         <div className="owner-form-grid">
-          <label className="owner-field"><span>{t.availableBeds}</span><input name="available_beds" type="number" inputMode="numeric" min="1" max="100" defaultValue={editing?.available_beds ?? text("available_beds") ?? 1} required /></label>
-          <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" type="number" inputMode="numeric" min="1" max="100" defaultValue={editing?.total_beds ?? text("total_beds") ?? 1} required /></label>
-          <label className="owner-field"><span>{t.bedroomsLabel}</span><input name="bedrooms" type="number" inputMode="numeric" min="0" max="20" defaultValue={editing?.bedrooms ?? text("bedrooms") ?? ""} /></label>
+          {/* A flat or studio is booked whole: one "bed" each, kept out of sight. */}
+          <label className="owner-field" hidden={wholePlace}><span>{t.availableBeds}</span><input name="available_beds" type="number" inputMode="numeric" min="1" max="100" defaultValue={editing?.available_beds ?? text("available_beds") ?? 1} required /></label>
+          <label className="owner-field" hidden={wholePlace}><span>{t.totalBeds}</span><input name="total_beds" type="number" inputMode="numeric" min="1" max="100" defaultValue={editing?.total_beds ?? text("total_beds") ?? 1} required /></label>
+          <label className="owner-field"><span>{t.bedroomsLabel}</span><input name="bedrooms" type="number" inputMode="numeric" min="0" max="20" defaultValue={editing?.bedrooms ?? text("bedrooms") ?? ""} required={wholePlace} /></label>
           <label className="owner-field"><span>{t.bathroomsLabel}</span><input name="bathrooms" type="number" inputMode="numeric" min="0" max="20" defaultValue={editing?.bathrooms ?? text("bathrooms") ?? ""} /></label>
           <label className="owner-field"><span>{t.areaSqmLabel}</span><input name="area_sqm" type="number" inputMode="numeric" min="5" max="2000" defaultValue={editing?.area_sqm ?? text("area_sqm") ?? ""} /></label>
           <label className="owner-field"><span>{t.minMonthsLabel}</span><input name="min_months" type="number" inputMode="numeric" min="1" max="24" defaultValue={editing?.min_months ?? text("min_months") ?? 1} required /></label>
@@ -519,7 +523,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
             <dl>
               {reviewRow(t.listingTitle, value("title"), "text")}
               {reviewRow(t.formSectionLocation, placeLabel(locale, value("area"), value("governorate")), "location")}
-              {reviewRow(t.formSectionHome, `${value("property_type") ? t[value("property_type") as "room"] : ""} · ${value("gender") ? t[value("gender") as "female"] : ""} · ${t.availableBeds}: ${value("available_beds")}/${value("total_beds")}`, "type")}
+              {reviewRow(t.formSectionHome, `${value("property_type") ? t[value("property_type") as "room"] : ""} · ${value("gender") ? t[value("gender") as "female"] : ""} · ${value("property_type") === "apartment" || value("property_type") === "studio" ? (value("bedrooms") ? t.bedroomsCount(Number(value("bedrooms"))) : "") : `${t.availableBeds}: ${value("available_beds")}/${value("total_beds")}`}`, "type")}
               {reviewRow(t.amenitiesTitle, AMENITIES.filter(([name]) => chosen(name)).map(([name]) => (name === "wifi" ? t.wifi : name === "air_conditioning" ? t.airConditioning : t.secure)).join(" · ") || "—", "amenities")}
               {reviewRow(t.formSectionPhotos, numberFormat.format(photos.length), "photos")}
               {reviewRow(t.price, <><strong>{numberFormat.format(Number(value("monthly_price")))}</strong> {t.perMonth} · {t.deposit}: {numberFormat.format(Number(value("deposit")))}</>, "price")}
