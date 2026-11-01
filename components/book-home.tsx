@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 import { CalendarCheck, CreditCard, LoaderCircle, LogIn, ShieldCheck } from "lucide-react";
 import { useAccount } from "@/lib/account";
-import { studentFee, type PaymentSettings } from "@/lib/payments";
+import { bookingAmounts } from "@/lib/finance";
+import { ratesFrom, type PaymentSettings } from "@/lib/payments";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -12,12 +13,14 @@ type Props = {
   locale: SiteLocale;
   listingId: string;
   monthlyPrice: number;
+  /** The listing's security deposit, paid upfront with the first month (no commission on it). */
+  deposit: number;
   fees: PaymentSettings;
   /** Demo listings show the box but can't be booked. */
   isDemo?: boolean;
 };
 
-type Created = { booking_id: string; pay_token: string; total: number; rent: number; fee: number };
+type Created = { booking_id: string; pay_token: string; total: number; rent: number; fee: number; deposit: number };
 
 /** Today in Egypt as YYYY-MM-DD (the earliest move-in date). */
 function today() {
@@ -28,7 +31,7 @@ function today() {
  * A signed-in guest books and pays straight away (first month + Sakani fee, by InstaPay).
  * Sakani holds the money: it is refunded within 24 hours if anything goes wrong, and the host is paid after move-in.
  */
-export default function BookHome({ locale, listingId, monthlyPrice, fees, isDemo = false }: Props) {
+export default function BookHome({ locale, listingId, monthlyPrice, deposit, fees, isDemo = false }: Props) {
   const t = SITE_COPY[locale];
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const account = useAccount(supabase);
@@ -36,7 +39,7 @@ export default function BookHome({ locale, listingId, monthlyPrice, fees, isDemo
   const [created, setCreated] = useState<Created | null>(null);
   const [error, setError] = useState("");
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
-  const guestFee = studentFee(monthlyPrice, fees);
+  const amounts = bookingAmounts({ rent: monthlyPrice, deposit }, ratesFrom(fees));
   const next = encodeURIComponent(`/${locale}/listings/${listingId}#book`);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -84,6 +87,7 @@ export default function BookHome({ locale, listingId, monthlyPrice, fees, isDemo
         <dl className="book-total">
           <div><dt>{t.bookRent}</dt><dd>{numberFormat.format(created.rent)} {t.currency}</dd></div>
           <div><dt>{t.bookGuestFee}</dt><dd>{numberFormat.format(created.fee)} {t.currency}</dd></div>
+          {created.deposit > 0 && <div><dt>{t.bookDeposit}</dt><dd>{numberFormat.format(created.deposit)} {t.currency}</dd></div>}
           <div className="is-total"><dt>{t.bookTotal}</dt><dd>{numberFormat.format(created.total)} {t.currency}</dd></div>
         </dl>
         <Link className="button button-primary book-submit" href={`/${locale}/pay/${created.pay_token}`}>{t.payNowButton}</Link>
@@ -128,8 +132,9 @@ export default function BookHome({ locale, listingId, monthlyPrice, fees, isDemo
           <label className="owner-field"><span>{t.requestNote}</span><textarea name="note" rows={2} maxLength={1000} placeholder={t.bookNotePlaceholder} /></label>
           <dl className="book-total">
             <div><dt>{t.bookRent}</dt><dd>{numberFormat.format(monthlyPrice)} {t.currency}</dd></div>
-            <div><dt>{t.bookGuestFee}</dt><dd>{numberFormat.format(guestFee)} {t.currency}</dd></div>
-            <div className="is-total"><dt>{t.bookTotalNow}</dt><dd>{numberFormat.format(monthlyPrice + guestFee)} {t.currency}</dd></div>
+            <div><dt>{t.bookGuestFee}</dt><dd>{numberFormat.format(amounts.guestCommission)} {t.currency}</dd></div>
+            {amounts.deposit > 0 && <div><dt>{t.bookDeposit}</dt><dd>{numberFormat.format(amounts.deposit)} {t.currency}</dd></div>}
+            <div className="is-total"><dt>{t.bookTotalNow}</dt><dd>{numberFormat.format(amounts.guestTotal)} {t.currency}</dd></div>
           </dl>
           <p className="book-fee-note">{t.bookFeeNote}</p>
           {error && (

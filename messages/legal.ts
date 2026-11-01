@@ -114,14 +114,14 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "استرداد المبلغ",
           body: [
-            "يُرد المبلغ المدفوع كاملاً (الإيجار ورسوم الخدمة) بإنستاباي خلال 24 ساعة في الحالات الآتية: رفض صاحب المكان الحجز، أو عدم رده خلال 24 ساعة من الدفع، أو إبلاغ المستأجر عن مشكلة قبل الاستلام أو خلال 48 ساعة من ميعاد الدخول ولم يكن قد أكد الاستلام.",
+            "يمكن للمستأجر طلب رد المبلغ من حسابه. يراجع فريق سكني كل طلب حسب سياسة الإلغاء والرد، ويُسجَّل أي رد برقم عملية. سياسة الإلغاء والرد مسودة لم تُعتمد قانونياً بعد، ولا يتم تطبيق أي خصم أو احتجاز تلقائياً.",
             "بعد أن يؤكد المستأجر استلام المكان، يتم التحويل لصاحب المكان ولا يُسترد المبلغ عن طريق سكني. لا تدفع لأي شخص خارج سكني؛ أي مبلغ يُدفع خارج الموقع ليس مسؤولية سكني.",
           ],
         },
         {
           heading: "رسوم الخدمة",
           body: [
-            "يدفع المستأجر رسوم خدمة 8% من إيجار شهر واحد مع الدفعة المقدمة، ويدفع صاحب المكان 10% من إيجار شهر واحد تُخصم من أول تحويل له. تظهر القيم على الموقع قبل الحجز.",
+            "يدفع المستأجر مقدماً إيجار الشهر الأول، ورسوم خدمة 8% من إيجار شهر واحد، ومبلغ التأمين. يدفع صاحب المكان 10% من إيجار شهر واحد تُخصم من أول تحويل له. الرسوم تُحسب على إيجار الشهر الأول فقط، ولا تُحسب أي رسوم على التأمين. يُحوَّل التأمين لصاحب المكان بعد توقيع العقد وتأكيد الدفع، ويصبح صاحب المكان مسؤولاً عن رده حسب العقد.",
             "تتم كل المدفوعات بتحويل إنستاباي إلى الحساب الموضح في صفحة الدفع، وتُعتبر مدفوعة بعد تأكيد فريق سكني لوصول التحويل. يتم تحويل مستحقات صاحب المكان إلى عنوان إنستاباي المسجل في حسابه.",
             "يحق لنا إيقاف نشر إعلانات جديدة لصاحب المكان إذا تأخر سداد رسوم مستحقة أكثر من 14 يوماً.",
           ],
@@ -243,14 +243,14 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "Refunds",
           body: [
-            "The full amount paid (rent and service fee) is refunded by InstaPay within 24 hours if: the host declines the booking, the host doesn’t answer within 24 hours of payment, or the guest reports a problem before moving in or within 48 hours of the move-in date and hasn’t confirmed moving in.",
+            "Guests can request a refund from their account. The Sakani team reviews every request under the cancellation and refund policy, and every refund is recorded with a transaction number. The cancellation and refund policy is a draft pending legal approval; no deduction or retention is applied automatically.",
             "Once the guest confirms moving in, the host is paid and the amount can no longer be refunded through Sakani. Never pay anyone outside Sakani; money paid outside the site is not Sakani’s responsibility.",
           ],
         },
         {
           heading: "Service fees",
           body: [
-            "Guests pay a service fee of 8% of one month’s rent with the upfront payment; hosts pay 10% of one month’s rent, taken from their first payout. The amounts are shown on the site before booking.",
+            "Guests pay upfront the first month’s rent, a service fee of 8% of one month’s rent, and the security deposit. Hosts pay 10% of one month’s rent, taken from their first payout. Fees are calculated on the first month’s rent only; no fee is charged on the deposit. The deposit is transferred to the host after the contract is signed and the payment confirmed, and the host is then responsible for returning it under the contract.",
             "All payments are made by InstaPay transfer to the account shown on the payment page, and count as paid once the Sakani team confirms the transfer arrived. Host payouts are sent to the InstaPay address in their account.",
             "We may stop a host from publishing new listings while a fee is more than 14 days overdue.",
           ],

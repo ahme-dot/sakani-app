@@ -122,12 +122,12 @@ test.describe("bookings", () => {
 
       const created = await book(admin);
       expect(created.status).toBe(200);
-      expect(created.data).toMatchObject({ rent: 5000, fee: 400, total: 5400 });
+      expect(created.data).toMatchObject({ rent: 5000, fee: 400, deposit: 1000, total: 6400 });
       const bookingId = created.data.booking_id;
 
       // The payment link shows the breakdown; only InstaPay is accepted.
-      const shown = await api<Array<{ amount: number; kind: string; rent_amount: number; fee_amount: number }>>("/rest/v1/rpc/fee_by_token", { method: "POST", body: { token: created.data.pay_token } });
-      expect(shown.data[0]).toMatchObject({ amount: 5400, kind: "upfront", rent_amount: 5000, fee_amount: 400 });
+      const shown = await api<Array<{ amount: number; kind: string; rent_amount: number; fee_amount: number; deposit_amount: number }>>("/rest/v1/rpc/fee_by_token", { method: "POST", body: { token: created.data.pay_token } });
+      expect(shown.data[0]).toMatchObject({ amount: 6400, kind: "upfront", rent_amount: 5000, fee_amount: 400, deposit_amount: 1000 });
       expect((await api("/rest/v1/rpc/submit_payment_by_token", { method: "POST", body: { token: created.data.pay_token, pay_method: "vodafone_cash", pay_reference: "VF-1", pay_phone: "01112223334" } })).status).toBeGreaterThanOrEqual(400);
       expect((await api("/rest/v1/rpc/submit_payment_by_token", { method: "POST", body: { token: created.data.pay_token, pay_method: "instapay", pay_reference: "IP-778899", pay_phone: "01112223334" } })).status).toBeLessThan(300);
 
@@ -256,6 +256,6 @@ test("owner phone numbers are private", async () => {
 
 test("an invalid payment link shows a clear message", async ({ page }) => {
   await page.goto("/en/pay/not-a-real-link");
-  await expect(page.getByRole("alert")).toContainText("payment link");
+  await expect(page.locator("main").getByRole("alert")).toContainText("payment link");
 });
 

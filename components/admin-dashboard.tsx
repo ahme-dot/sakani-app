@@ -9,6 +9,7 @@ import {
   CalendarCheck,
   FlaskConical,
   MessagesSquare,
+  ScrollText,
   BadgeCheck,
   BedDouble,
   Building2,
@@ -39,6 +40,7 @@ import {
 } from "lucide-react";
 import AdminGrow from "@/components/admin-grow";
 import AdminPayments from "@/components/admin-payments";
+import AdminAudit from "@/components/admin-audit";
 import AdminChat from "@/components/admin-chat";
 import AdminDemo from "@/components/admin-demo";
 import AdminRequests from "@/components/admin-requests";
@@ -66,7 +68,7 @@ const STALE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 type ReviewFilter = MarketplaceListing["status"];
-type AdminView = "listings" | "add" | "requests" | "chat" | "reports" | "inbox" | "payments" | "users" | "demo" | "grow" | "team";
+type AdminView = "listings" | "add" | "requests" | "chat" | "reports" | "inbox" | "payments" | "audit" | "users" | "demo" | "grow" | "team";
 type ListingStats = { views: number; whatsapp_clicks: number };
 type AdminListing = MarketplaceListing;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
@@ -540,6 +542,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     { value: "reports", label: t.adminViewReports, icon: Flag, badge: openReports },
     { value: "inbox", label: t.adminViewInbox, icon: Inbox, badge: openMessages },
     { value: "payments", label: t.adminViewPayments, icon: Wallet, badge: feesToCheck },
+    { value: "audit", label: t.adminViewAudit, icon: ScrollText },
     { value: "users", label: t.adminViewUsers, icon: UsersRound },
     { value: "demo", label: t.adminViewDemo, icon: FlaskConical },
     { value: "grow", label: t.adminViewGrow, icon: Megaphone },
@@ -554,6 +557,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     requests: { title: t.adminViewRequests, description: t.requestsDescription },
     chat: { title: t.adminViewChat, description: t.adminChatDescription },
     demo: { title: t.adminViewDemo, description: t.demoDescription },
+    audit: { title: t.adminViewAudit, description: t.auditDescription },
     users: { title: t.usersTitle, description: t.usersDescription },
     grow: { title: t.growTitle, description: t.growDescription },
     team: { title: t.teamTitle, description: t.teamDescription },
@@ -626,6 +630,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           />
         ) : view === "chat" ? (
           <AdminChat key={`${chatTarget?.userId ?? ""}-${chatTarget?.bookingId ?? ""}`} locale={locale} supabase={supabase!} openUserId={chatTarget?.userId} openBookingId={chatTarget?.bookingId} onChanged={refreshCounts} />
+        ) : view === "audit" ? (
+          <AdminAudit locale={locale} supabase={supabase!} />
         ) : view === "demo" ? (
           <AdminDemo locale={locale} supabase={supabase!} onChanged={refreshCounts} />
         ) : view === "payments" ? (

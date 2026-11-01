@@ -89,6 +89,8 @@ type HostBooking = {
   host_fee: number | null;
   payout_amount: number | null;
   paid_out_at: string | null;
+  deposit_amount: number;
+  deposit_status: "transferred" | "acknowledged" | "refund_pending" | "refunded" | "disputed" | null;
   created_at: string;
 };
 
@@ -392,6 +394,9 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                         <strong>{booking.listing_title}</strong>
                         <span>{booking.guest_first_name} · {stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
                         <small>{t.hostPayoutLine(egp(booking.rent_amount), egp(booking.host_fee), egp(booking.payout_amount))}</small>
+                        {booking.deposit_amount > 0 && (
+                          <small>{t.depositLineHost(egp(booking.deposit_amount), booking.deposit_status ? t.depositStatus[booking.deposit_status] : t.depositNotSent)}</small>
+                        )}
                       </div>
                       <span className={`status-chip is-${booking.status}`}>{t.bookingStatus[booking.status]}</span>
                       {booking.host_decision === "pending" && (booking.status === "pending_payment" || booking.status === "payment_review") ? (
@@ -401,6 +406,9 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                         </span>
                       ) : (
                         <small className="profile-decision">{t.hostDecision[booking.host_decision]}</small>
+                      )}
+                      {booking.deposit_status === "transferred" && (
+                        <button className="button button-primary" type="button" disabled={busy} onClick={() => void bookingAction("host_acknowledge_deposit", { target_booking: booking.id })}>{t.depositAcknowledge}</button>
                       )}
                       <Link className="text-button" href={`/${locale}/messages?booking=${booking.id}`}><Headset size={14} /> {t.chatAboutBooking}</Link>
                     </li>

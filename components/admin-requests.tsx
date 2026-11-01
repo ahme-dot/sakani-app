@@ -35,15 +35,20 @@ type Booking = {
   refund_due_at: string | null;
   refund_reference: string | null;
   payout_reference: string | null;
+  deposit_amount: number;
+  guest_fee_percent: number | null;
+  host_fee_percent: number | null;
+  contract_signed_at: string | null;
   created_at: string;
 };
+type DepositInfo = { booking_id: string; status: string; amount: number; transfer_reference: string; acknowledged_at: string | null };
 type FeeInfo = { id: string; status: string; reference: string | null; payer_phone: string | null };
 type HostInfo = { id: string; full_name: string; instapay_address: string };
 
 // Most urgent first: money to check, money to return, hosts to pay.
 const TABS: BookingStatus[] = ["payment_review", "refund_pending", "moved_in", "confirmed", "pending_payment", "completed", "refunded", "cancelled"];
 const BOOKING_COLUMNS =
-  "id,listing_id,listing_title,name,contact,note,status,move_in,months,guests,guest_id,host_id,fee_id,host_decision,rent_amount,guest_fee,host_fee,total_amount,payout_amount,paid_at,problem_note,refund_due_at,refund_reference,payout_reference,created_at";
+  "id,listing_id,listing_title,name,contact,note,status,move_in,months,guests,guest_id,host_id,fee_id,host_decision,rent_amount,guest_fee,host_fee,total_amount,payout_amount,paid_at,problem_note,refund_due_at,refund_reference,payout_reference,deposit_amount,guest_fee_percent,host_fee_percent,contract_signed_at,created_at";
 
 type Props = {
   locale: SiteLocale;
@@ -65,6 +70,8 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
   const [fees, setFees] = useState<Record<string, FeeInfo>>({});
   const [hosts, setHosts] = useState<Record<string, HostInfo>>({});
   const [hostNumbers, setHostNumbers] = useState<Record<string, string>>({});
+  const [deposits, setDeposits] = useState<Record<string, DepositInfo>>({});
+  const [depositNotes, setDepositNotes] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<BookingStatus>("payment_review");
   const [version, setVersion] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -97,15 +104,18 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
       const feeIds = rows.map((row) => row.fee_id).filter((id): id is string => Boolean(id));
       const hostIds = [...new Set(rows.map((row) => row.host_id).filter((id): id is string => Boolean(id)))];
       const listingIds = [...new Set(rows.map((row) => row.listing_id).filter((id): id is string => Boolean(id)))];
-      const [feeRows, hostRows, numbers] = await Promise.all([
+      const bookingIds = rows.map((row) => row.id);
+      const [feeRows, hostRows, numbers, depositRows] = await Promise.all([
         feeIds.length ? supabase.from("rental_fees").select("id,status,reference,payer_phone").in("id", feeIds) : Promise.resolve({ data: [] }),
         hostIds.length ? supabase.from("profiles").select("id,full_name,instapay_address").in("id", hostIds) : Promise.resolve({ data: [] }),
         fetchPrivateContacts(supabase, listingIds),
+        bookingIds.length ? supabase.from("deposit_transfers").select("booking_id,status,amount,transfer_reference,acknowledged_at").in("booking_id", bookingIds) : Promise.resolve({ data: [] }),
       ]);
       if (!mounted) return;
       setFees(Object.fromEntries(((feeRows.data ?? []) as FeeInfo[]).map((fee) => [fee.id, fee])));
       setHosts(Object.fromEntries(((hostRows.data ?? []) as HostInfo[]).map((host) => [host.id, host])));
       setHostNumbers(numbers);
+      setDeposits(Object.fromEntries(((depositRows.data ?? []) as DepositInfo[]).map((row) => [row.booking_id, row])));
     })();
     return () => {
       mounted = false;
@@ -120,7 +130,12 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
     setBusyId(null);
     if (runError) {
       console.error(`Could not run ${fn}:`, runError);
-      setError(runError.message.includes("invalid_reference") ? t.referenceRequired : t.adminUpdateError);
+      setError(
+        runError.message.includes("invalid_reference") || runError.message.includes("invalid_note") ? t.referenceRequired
+          : runError.message.includes("contract_not_signed") ? t.depositNeedsContract
+            : runError.message.includes("already_transferred") ? t.depositAlreadySent
+              : t.adminUpdateError,
+      );
       return;
     }
     setMessage(done);
@@ -159,6 +174,9 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
             const hostNumber = booking.listing_id ? hostNumbers[booking.listing_id] : undefined;
             const reference = references[booking.id] ?? "";
             const left = booking.refund_due_at ? hoursLeft(booking.refund_due_at) : null;
+            const deposit = deposits[booking.id];
+            const depositNote = depositNotes[booking.id] ?? "";
+            const paidAndConfirmed = booking.status === "confirmed" || booking.status === "moved_in" || booking.status === "completed";
             return (
               <article className={`admin-fee admin-request${left !== null && left <= 6 ? " is-urgent" : ""}`} key={booking.id}>
                 <div className="admin-fee-main">
@@ -180,6 +198,16 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                   <div><dt>{t.requestStudent}</dt><dd>{booking.name} · <span dir="ltr">{booking.contact}</span></dd></div>
                   <div><dt>{t.bookTitle}</dt><dd>{booking.move_in ? t.bookingFrom(dayFormat.format(new Date(booking.move_in))) : "—"}{booking.months ? ` · ${t.monthsCount(booking.months)}` : ""} · {t.guestsCount(booking.guests)}</dd></div>
                   <div><dt>{t.adminAmounts}</dt><dd>{t.adminAmountsLine(egp(booking.rent_amount), egp(booking.guest_fee), egp(booking.host_fee), egp(booking.payout_amount))}</dd></div>
+                  {booking.guest_fee_percent !== null && <div><dt>{t.ratesKept}</dt><dd>{t.ratesLine(numberFormat.format(booking.guest_fee_percent), numberFormat.format(booking.host_fee_percent ?? 0))}</dd></div>}
+                  {booking.deposit_amount > 0 && (
+                    <div>
+                      <dt>{t.bookDeposit}</dt>
+                      <dd>
+                        {egp(booking.deposit_amount)} · {deposit ? t.depositStatus[deposit.status as keyof typeof t.depositStatus] : booking.contract_signed_at ? t.depositReady : t.depositNeedsContract}
+                        {deposit && <> · <span dir="ltr">{deposit.transfer_reference}</span></>}
+                      </dd>
+                    </div>
+                  )}
                   <div><dt>{t.requestOwner}</dt><dd>{host?.full_name || "—"} · <span dir="ltr">{hostNumber ?? "…"}</span> · {t.hostDecision[booking.host_decision]}</dd></div>
                   {fee?.reference && <div><dt>{t.payInstapay}</dt><dd dir="ltr">{fee.reference}{fee.payer_phone ? ` · ${fee.payer_phone}` : ""}</dd></div>}
                   {booking.note && <div><dt>{t.requestNote}</dt><dd>{booking.note}</dd></div>}
@@ -213,6 +241,29 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                         </>
                       )}
                     </>
+                  )}
+
+                  {booking.deposit_amount > 0 && paidAndConfirmed && (!deposit ? booking.contract_signed_at : deposit.status === "transferred" || deposit.status === "acknowledged" || deposit.status === "refund_pending" || deposit.status === "disputed") && (
+                    <span className="admin-reference">
+                      <input
+                        value={depositNote}
+                        onChange={(event) => setDepositNotes({ ...depositNotes, [booking.id]: event.target.value })}
+                        placeholder={deposit ? t.depositNotePlaceholder : t.payReference}
+                        aria-label={t.payReference}
+                        maxLength={deposit ? 1000 : 64}
+                        dir="auto"
+                      />
+                      {!deposit ? (
+                        <button className="admin-btn admin-btn-primary" type="button" disabled={busy} onClick={() => void run(booking, "admin_transfer_deposit", { target_booking: booking.id, transfer_reference: depositNote }, t.depositSentDone)}>
+                          <Wallet size={15} /> {t.depositSendButton}
+                        </button>
+                      ) : (
+                        <>
+                          <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void run(booking, "admin_update_deposit", { target_booking: booking.id, new_status: "refunded", note: depositNote }, t.adminStatusUpdated)}>{t.depositMarkReturned}</button>
+                          <button className="admin-btn admin-btn-danger-outline" type="button" disabled={busy} onClick={() => void run(booking, "admin_update_deposit", { target_booking: booking.id, new_status: "disputed", note: depositNote }, t.adminStatusUpdated)}>{t.depositMarkDisputed}</button>
+                        </>
+                      )}
+                    </span>
                   )}
 
                   {(booking.status === "refund_pending" || booking.status === "moved_in") && (

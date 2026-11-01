@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { commissionFor, type CommissionRates } from "@/lib/finance";
 
 /** Where owners send money, and how the success fee is calculated. Edited by admins. */
 export type PaymentSettings = {
@@ -29,6 +30,7 @@ export type RentalFee = {
   kind: FeeKind;
   rent_amount: number | null;
   fee_amount: number | null;
+  deposit_amount: number;
   request_id: string | null;
   payer_name: string | null;
   payer_contact: string | null;
@@ -60,7 +62,7 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
 };
 
 export const RENTAL_FEE_COLUMNS =
-  "id,pay_token,payer,kind,rent_amount,fee_amount,request_id,payer_name,payer_contact,listing_id,owner_id,listing_title,monthly_price,amount,status,method,reference,payer_phone,admin_note,created_by_admin,created_at,submitted_at,decided_at";
+  "id,pay_token,payer,kind,rent_amount,fee_amount,deposit_amount,request_id,payer_name,payer_contact,listing_id,owner_id,listing_title,monthly_price,amount,status,method,reference,payer_phone,admin_note,created_by_admin,created_at,submitted_at,decided_at";
 
 /** A fee is overdue after this many days; owners then can't add new listings (enforced in the database). */
 export const FEE_GRACE_DAYS = 14;
@@ -81,14 +83,19 @@ export async function fetchPaymentSettings(client: SupabaseClient): Promise<Paym
   } as PaymentSettings;
 }
 
-/** Same formula as the database function success_fee_for, for showing the amount before confirming. */
+/** The host commission on one month's rent (lib/finance.ts; the same formula as the database). */
 export function successFee(monthlyPrice: number, settings: PaymentSettings) {
-  return Math.max(settings.fee_minimum, Math.round((monthlyPrice * settings.fee_percent) / 100));
+  return Math.max(settings.fee_minimum, commissionFor(monthlyPrice, settings.fee_percent));
 }
 
-/** Same formula as the database function student_fee_for. */
+/** The guest commission on one month's rent (lib/finance.ts; the same formula as the database). */
 export function studentFee(monthlyPrice: number, settings: PaymentSettings) {
-  return Math.max(settings.student_fee_minimum, Math.round((monthlyPrice * settings.student_fee_percent) / 100));
+  return Math.max(settings.student_fee_minimum, commissionFor(monthlyPrice, settings.student_fee_percent));
+}
+
+/** The commission rates from the admin settings. */
+export function ratesFrom(settings: PaymentSettings): CommissionRates {
+  return { guestPercent: settings.student_fee_percent, hostPercent: settings.fee_percent };
 }
 
 /** True when the database has not been updated with the payments migration yet. */

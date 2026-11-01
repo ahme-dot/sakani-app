@@ -211,7 +211,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
               </dl>
               <p className="listing3-ref">{t.listingRefLabel}: <strong dir="ltr">{ref}</strong></p>
               {listing.is_demo && <p className="demo-pill-line"><span className="demo-pill">{t.demoBadge}</span></p>}
-              <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} fees={fees} isDemo={listing.is_demo} />
+              <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} />
               <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-whatsapp" />
               <p className="listing3-middleman"><ShieldCheck size={16} /> {t.middlemanNote}</p>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>

@@ -15,6 +15,7 @@ type Fee = {
   kind: "fee" | "upfront";
   rent_amount: number | null;
   fee_amount: number | null;
+  deposit_amount: number | null;
   listing_id: string | null;
   listing_title: string;
   monthly_price: number;
@@ -101,6 +102,7 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
         <dl className="book-total pay-breakdown">
           <div><dt>{t.bookRent}</dt><dd>{numberFormat.format(fee.rent_amount)} {t.currency}</dd></div>
           <div><dt>{t.bookGuestFee}</dt><dd>{numberFormat.format(fee.fee_amount)} {t.currency}</dd></div>
+          {Boolean(fee.deposit_amount) && <div><dt>{t.bookDeposit}</dt><dd>{numberFormat.format(fee.deposit_amount ?? 0)} {t.currency}</dd></div>}
           <div className="is-total"><dt>{t.bookTotal}</dt><dd>{numberFormat.format(fee.amount)} {t.currency}</dd></div>
         </dl>
       )}
