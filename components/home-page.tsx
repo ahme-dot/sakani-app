@@ -152,6 +152,12 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
     setSavedListings(null);
     setShowSaved(next);
     syncAddress(filters, next);
+    showResults();
+  }
+
+  // A category, search or filter change takes the guest to the results instead of leaving them on the intro.
+  function showResults() {
+    window.setTimeout(() => document.getElementById("homes")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }
 
   const closeFilters = useCallback(() => setFiltersOpen(false), []);
@@ -173,7 +179,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
             value={searchValue}
             onSearch={(values) => {
               updateFilters(values);
-              document.getElementById("homes")?.scrollIntoView({ behavior: "smooth" });
+              showResults();
             }}
           />
         )}
@@ -181,7 +187,10 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
         <CategoryBar
           locale={locale}
           filters={filters}
-          onChange={updateFilters}
+          onChange={(patch) => {
+            updateFilters(patch);
+            showResults();
+          }}
           onOpenFilters={() => setFiltersOpen(true)}
           extraCount={extraCount}
           savedCount={isDemoMode ? 0 : savedIds.length}
@@ -358,6 +367,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
           onApply={(next) => {
             setFiltersOpen(false);
             applyFilters(next);
+            showResults();
           }}
         />
       )}

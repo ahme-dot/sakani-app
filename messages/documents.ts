@@ -14,6 +14,8 @@ type DocumentsCopy = {
   documentsTitle: string;
   documentsIntro: string;
   notAvailableYet: string;
+  /** A party who hasn't added their name to their account yet. */
+  nameNotGiven: string;
   open: string;
   back: string;
   reference: string;
@@ -77,6 +79,7 @@ export const DOCUMENTS_COPY: Record<SiteLocale, DocumentsCopy> = {
     documentsTitle: "مستندات الحجز",
     documentsIntro: "كل مستند بيتفتح لما يجهز. افتحه واضغط «تحميل PDF» واختار «حفظ كـ PDF».",
     notAvailableYet: "لسه ما جهزش",
+    nameNotGiven: "لسه ما كتبش اسمه في حسابه",
     open: "افتح",
     back: "ارجع للمستندات",
     reference: "رقم المرجع",
@@ -166,6 +169,7 @@ export const DOCUMENTS_COPY: Record<SiteLocale, DocumentsCopy> = {
     documentsTitle: "Booking documents",
     documentsIntro: "Each document appears when it’s ready. Tap “Download PDF” and choose “Save as PDF”.",
     notAvailableYet: "Not ready yet",
+    nameNotGiven: "Hasn’t added a name to their account yet",
     open: "Open",
     back: "Back to documents",
     reference: "Reference",

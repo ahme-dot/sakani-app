@@ -623,9 +623,11 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                           {(booking.status === "confirmed" || booking.status === "moved_in") && !booking.contract_signed_at && (
                             <Link className="button button-primary" href={`/${locale}/documents/${booking.id}?doc=rental_agreement`}>{t.signContract}</Link>
                           )}
-                          {booking.status === "confirmed" && (
+                          {/* One step at a time: the contract first, then "I moved in". */}
+                          {booking.status === "confirmed" && booking.contract_signed_at && (
                             <button className="button button-primary" type="button" disabled={busy} onClick={() => void bookingAction("guest_confirm_move_in", { target_booking: booking.id })}>{t.movedInButton}</button>
                           )}
+                          {booking.status === "confirmed" && !booking.contract_signed_at && <small className="profile-next-step">{t.moveInAfterContract}</small>}
                           <Link className="text-button" href={`/${locale}/documents/${booking.id}`}>{t.documentsLink}</Link>
                           {canReport && problemFor !== booking.id && (
                             <button className="text-button" type="button" onClick={() => setProblemFor(booking.id)}>{t.reportProblem}</button>

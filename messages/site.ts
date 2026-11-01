@@ -902,6 +902,7 @@ export const SITE_COPY = {
     minMonthsLabel: "أقل مدة إيجار (شهور)",
     availableFromLabel: "متاح من",
     stayFilterLabel: "هتقعد قد إيه",
+    anyStay: "أي مدة",
     anyCount: "أي عدد",
     atLeast: (count: string) => `${count}+`,
     bedroomsCount: (count: number) => (count === 1 ? "أوضة نوم" : `${count} أوض نوم`),
@@ -1065,6 +1066,7 @@ export const SITE_COPY = {
     ticketsHideDone: "اخفي التذاكر اللي خلصت",
     ticketsEmpty: "مفيش تذاكر. لو عندك مشكلة محتاجة متابعة، افتح تذكرة جديدة.",
     profileComplete: "كمّل بياناتك: اسمك ومحافظتك ونبذة عنك بتطمّن الطرف التاني.",
+    moveInAfterContract: "بعد ما العقد يتمضي من الطرفين، هيظهرلك زرار «استلمت المكان».",
   },
   en: {
     languageName: "العربية",
@@ -1969,6 +1971,7 @@ export const SITE_COPY = {
     minMonthsLabel: "Minimum stay (months)",
     availableFromLabel: "Available from",
     stayFilterLabel: "How long you’ll stay",
+    anyStay: "Any length",
     anyCount: "Any",
     atLeast: (count: string) => `${count}+`,
     bedroomsCount: (count: number) => (count === 1 ? "1 bedroom" : `${count} bedrooms`),
@@ -2132,6 +2135,7 @@ export const SITE_COPY = {
     ticketsHideDone: "Hide finished tickets",
     ticketsEmpty: "No tickets. If something needs follow-up, open a new ticket.",
     profileComplete: "Complete your profile: your name, governorate and a few words about you reassure the other side.",
+    moveInAfterContract: "Once both sides sign the contract, the “I moved in” button appears here.",
   },
 } as const;
 

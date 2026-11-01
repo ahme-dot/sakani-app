@@ -163,8 +163,8 @@ export default function DocumentView({ locale, bookingId, doc }: Props) {
       <section className="document-section">
         <h2>{d.parties}</h2>
         <dl className="document-grid">
-          <div><dt>{d.guest}</dt><dd>{data.guest_name || "—"}</dd></div>
-          <div><dt>{d.host}</dt><dd>{data.host_name || "—"}</dd></div>
+          <div><dt>{d.guest}</dt><dd>{data.guest_name && data.guest_name !== "Guest" ? data.guest_name : d.nameNotGiven}</dd></div>
+          <div><dt>{d.host}</dt><dd>{data.host_name || d.nameNotGiven}</dd></div>
           <div><dt>{d.platform}</dt><dd>{t.brandLabel}</dd></div>
         </dl>
       </section>

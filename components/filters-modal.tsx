@@ -104,7 +104,7 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
               </label>
               <label className="owner-field"><span>{t.stayFilterLabel}</span>
                 <select value={draft.stay} onChange={(event) => set({ stay: event.target.value })}>
-                  <option value="">{t.anyCount}</option>
+                  <option value="">{t.anyStay}</option>
                   {["1", "3", "6", "12"].map((months) => <option key={months} value={months}>{t.monthsCount(Number(months))}</option>)}
                 </select>
               </label>

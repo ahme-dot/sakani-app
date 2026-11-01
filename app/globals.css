@@ -12972,3 +12972,23 @@ body {
 /* Timeline steps are not booking rows: keep them as small pills wherever they sit. */
 .site-shell .profile-list .booking-timeline li { display: inline-flex; flex-wrap: nowrap; padding: 4px 10px 4px 6px; border-bottom: 0; }
 .site-shell .user-menu-admin { display: flex; align-items: center; gap: 8px; color: #1f7a5a; }
+
+/* Results sit below the sticky header and category bar when the page scrolls to them. */
+.site-shell #homes { scroll-margin-top: 150px; }
+
+/* Phones: a shorter intro, so the first homes show on the first screen. */
+@media (max-width: 640px) {
+  .site-shell .home-hero { min-height: 0; padding-block: 28px; }
+  .site-shell .home-hero-inner { min-height: 0; padding: 0; gap: 14px; }
+  .site-shell .home-hero h1 { font-size: 34px; line-height: 1.2; }
+  .site-shell .home-hero-description { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; font-size: 14.5px; }
+  .site-shell .home-hero-trust, .site-shell .home-hero-notes { display: none; }
+  .site-shell .home-hero-badge { font-size: 12px; }
+}
+.site-shell .photo-mobile { position: relative; cursor: zoom-in; }
+.site-shell .photo-mobile-all { position: absolute; z-index: 3; bottom: 12px; inset-inline-start: 12px; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: rgb(255 255 255 / 94%); color: #14213d; font: inherit; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgb(0 0 0 / 15%); }
+@media (min-width: 901px) { .site-shell .photo-mobile-all { display: none; } }
+/* Sign-in and sign-up: each problem under its field, the field outlined. */
+.auth-field .field-error { display: block; margin-top: 6px; color: #b42318; font-size: 13px; font-weight: 600; }
+.auth-input:has(input[aria-invalid="true"]) { border-color: #b42318; box-shadow: 0 0 0 3px rgb(180 35 24 / 12%); }
+.site-shell .profile-next-step { flex-basis: 100%; color: #64748b; font-size: 13px; }

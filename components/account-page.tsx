@@ -13,6 +13,7 @@ import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup" | "reset";
+type FieldErrors = Partial<Record<"name" | "phone" | "email" | "password", string>>;
 const TRANSFER_KEY = "sakani-listing-transfer";
 
 function readTransferToken() {
@@ -73,6 +74,8 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const clearField = (field: keyof FieldErrors) => setFieldErrors((current) => (current[field] ? { ...current, [field]: undefined } : current));
   const [notice, setNotice] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaReset, setCaptchaReset] = useState(0);
@@ -105,6 +108,7 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
   function switchMode(next: Mode) {
     setMode(next);
     setError("");
+    setFieldErrors({});
     setNotice("");
   }
 
@@ -122,24 +126,20 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
       return;
     }
     const cleanEmail = email.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setError(t.adminInvalidEmail);
-      return;
-    }
     if (mode === "signup" && !role) {
       setError(t.accountRoleRequired);
       return;
     }
-    if (mode === "signup" && !fullName.trim()) {
-      setError(t.accountNameRequired);
-      return;
-    }
-    if (mode === "signup" && (role === "guest" || phone.trim()) && !PHONE_PATTERN.test(phone.trim())) {
-      setError(t.accountPhoneRequired);
-      return;
-    }
-    if (mode !== "reset" && password.length < (mode === "signup" ? 8 : 1)) {
-      setError(mode === "signup" ? t.accountWeakPassword : t.adminPasswordRequired);
+    // Every problem at once, each under its own field, and the cursor on the first one.
+    const problems: FieldErrors = {};
+    if (mode === "signup" && !fullName.trim()) problems.name = t.accountNameRequired;
+    if (mode === "signup" && (role === "guest" || phone.trim()) && !PHONE_PATTERN.test(phone.trim())) problems.phone = t.accountPhoneRequired;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) problems.email = t.adminInvalidEmail;
+    if (mode !== "reset" && password.length < (mode === "signup" ? 8 : 1)) problems.password = mode === "signup" ? t.accountWeakPassword : t.adminPasswordRequired;
+    setFieldErrors(problems);
+    const first = (["name", "phone", "email", "password"] as const).find((field) => problems[field]);
+    if (first) {
+      (event.currentTarget.elements.namedItem(first) as HTMLInputElement | null)?.focus();
       return;
     }
     if (CAPTCHA_SITE_KEY && !captchaToken) {
@@ -295,8 +295,9 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
             <span>{t.fullName}</span>
             <span className="auth-input">
               <UserRound size={17} aria-hidden="true" />
-              <input name="name" autoComplete="name" value={fullName} onChange={(event) => { setFullName(event.target.value); setError(""); }} required />
+              <input name="name" autoComplete="name" value={fullName} aria-invalid={Boolean(fieldErrors.name) || undefined} onChange={(event) => { setFullName(event.target.value); setError(""); clearField("name"); }} required />
             </span>
+            {fieldErrors.name && <small className="field-error" role="alert">{fieldErrors.name}</small>}
           </label>
         )}
         {isSignup && (
@@ -304,8 +305,9 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
             <span>{role === "host" ? t.phoneOptional : t.phoneLabel}</span>
             <span className="auth-input">
               <Phone size={17} aria-hidden="true" />
-              <input name="phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="01xxxxxxxxx" value={phone} onChange={(event) => { setPhone(event.target.value); setError(""); }} required={role !== "host"} />
+              <input name="phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="01xxxxxxxxx" value={phone} aria-invalid={Boolean(fieldErrors.phone) || undefined} onChange={(event) => { setPhone(event.target.value); setError(""); clearField("phone"); }} required={role !== "host"} />
             </span>
+            {fieldErrors.phone && <small className="field-error" role="alert">{fieldErrors.phone}</small>}
           </label>
         )}
 
@@ -313,8 +315,9 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
           <span>{t.email}</span>
           <span className="auth-input">
             <Mail size={17} aria-hidden="true" />
-            <input name="email" type="email" autoComplete="email" dir="ltr" placeholder="name@example.com" value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} required />
+            <input name="email" type="email" autoComplete="email" dir="ltr" placeholder="name@example.com" value={email} aria-invalid={Boolean(fieldErrors.email) || undefined} onChange={(event) => { setEmail(event.target.value); setError(""); clearField("email"); }} required />
           </span>
+          {fieldErrors.email && <small className="field-error" role="alert">{fieldErrors.email}</small>}
         </label>
 
         {mode !== "reset" && (
@@ -332,14 +335,15 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
                 dir="ltr"
                 minLength={isSignup ? 8 : undefined}
                 value={password}
-                onChange={(event) => { setPassword(event.target.value); setError(""); }}
+                aria-invalid={Boolean(fieldErrors.password) || undefined}
+                onChange={(event) => { setPassword(event.target.value); setError(""); clearField("password"); }}
                 required
               />
               <button className="auth-reveal" type="button" aria-label={showPassword ? t.hidePassword : t.showPassword} title={showPassword ? t.hidePassword : t.showPassword} onClick={() => setShowPassword((value) => !value)}>
                 {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </span>
-            {isSignup && <small className="auth-hint">{t.passwordHint}</small>}
+            {fieldErrors.password ? <small className="field-error" role="alert">{fieldErrors.password}</small> : isSignup && <small className="auth-hint">{t.passwordHint}</small>}
           </label>
         )}
 

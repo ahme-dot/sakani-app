@@ -43,8 +43,15 @@ export default function ListingGallery({ locale, images, altFor }: { locale: Sit
         )}
       </div>
 
-      <div className="photo-mobile">
+      {/* On a phone, tapping a photo opens all of them full size (the arrows still just move along). */}
+      <div
+        className="photo-mobile"
+        onClick={(event) => {
+          if (!(event.target as HTMLElement).closest("button")) setShowAll(true);
+        }}
+      >
         <PhotoCarousel locale={locale} images={images} alt={altFor[0] ?? ""} sizes="100vw" counter priority />
+        <button type="button" className="photo-mobile-all" onClick={() => setShowAll(true)}><Grid2x2 size={14} /> {t.showAllPhotos}</button>
       </div>
 
       {showAll && (
