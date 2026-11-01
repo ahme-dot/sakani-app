@@ -84,6 +84,9 @@ test.describe("bookings", () => {
     const form = page.locator(".book-form");
     await expect(form).toBeVisible();
     await expect(form.locator(".book-total .is-total")).toContainText("EGP");
+    // Sending without a date says so next to the date, in the page's language.
+    await form.locator(".book-submit").click();
+    await expect(form.locator(".field-error")).toHaveText("Choose your move-in date.");
     await form.locator('input[name="move_in"]').fill(tomorrow());
     await form.locator('select[name="months"]').selectOption("3");
     await form.locator('input[name="agree"]').check();
@@ -97,7 +100,11 @@ test.describe("bookings", () => {
     await expect(page).toHaveURL(/\/en\/pay\//);
     await expect(page.locator(".pay-breakdown")).toBeVisible();
     await expect(page.locator('input[type="radio"][value="vodafone_cash"]')).toHaveCount(0);
+    await expect(page.locator("h1")).toHaveText("Pay Sakani securely");
     await page.fill("#pay-reference", "IP-E2E-12345");
+    await page.fill("#pay-phone", "12");
+    await page.locator(".fee-pay button[type=submit]").click();
+    await expect(page.locator(".fee-pay [role=alert]")).toContainText("mobile number you paid from");
     await page.fill("#pay-phone", "01112223334");
     await page.locator(".fee-pay button[type=submit]").click();
     await expect(page.locator(".pay-state")).toBeVisible();

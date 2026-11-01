@@ -43,6 +43,7 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
   const [error, setError] = useState("");
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
   const amounts = bookingAmounts({ rent: monthlyPrice, deposit }, ratesFrom(fees));
+  const dateError = error === t.bookMoveInRequired || error === t.bookMoveInPast;
   const next = encodeURIComponent(`/${locale}/listings/${listingId}#book`);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -52,12 +53,20 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
     const moveIn = String(form.get("move_in") ?? "");
     const months = Number(form.get("months"));
     const guests = Number(form.get("guests"));
-    if (!moveIn || moveIn < today() || !(months >= 1 && months <= 24) || !(guests >= 1 && guests <= 10)) {
+    const field = (name: string) => event.currentTarget.elements.namedItem(name) as HTMLElement | null;
+    // Say exactly what's missing and take the guest to it (the error box alone can sit under the phone's bottom bar).
+    if (!moveIn || moveIn < today()) {
+      setError(moveIn ? t.bookMoveInPast : t.bookMoveInRequired);
+      field("move_in")?.focus();
+      return;
+    }
+    if (!(months >= 1 && months <= 24) || !(guests >= 1 && guests <= 10)) {
       setError(t.bookError);
       return;
     }
     if (!form.has("agree")) {
       setError(t.bookAgreeRequired);
+      field("agree")?.focus();
       return;
     }
     setState("sending");
@@ -125,7 +134,11 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
       ) : (
         <form className="book-form" onSubmit={(event) => void submit(event)} noValidate>
           <div className="book-form-grid">
-            <label className="owner-field"><span>{t.bookMoveIn}</span><input name="move_in" type="date" required min={today()} dir="ltr" /></label>
+            <label className="owner-field">
+              <span>{t.bookMoveIn}</span>
+              <input name="move_in" type="date" required min={today()} dir="ltr" aria-invalid={dateError || undefined} onChange={() => error && setError("")} />
+              {dateError && <small className="field-error" role="alert">{error}</small>}
+            </label>
             <label className="owner-field">
               <span>{t.bookMonths}</span>
               <select name="months" defaultValue={String(Math.max(6, minMonths))}>
@@ -151,7 +164,7 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
             <input type="checkbox" name="agree" required />
             <span>{t.bookAgreePrefix} <Link href={`/${locale}/agreements/guest`} target="_blank">{t.bookAgreeLink}</Link></span>
           </label>
-          {error && (
+          {error && !dateError && (
             <p className="owner-feedback owner-feedback-error" role="alert">
               {error}{error === t.bookPhoneRequired && <> <Link href={`/${locale}/account`}>{t.profileEdit}</Link></>}
             </p>

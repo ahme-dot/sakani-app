@@ -16,6 +16,8 @@ test("guest owner submits a listing for review", async ({ page }) => {
   await expect(form.locator('[data-step="type"] .listing-screen-title')).toHaveText("What kind of place is it?");
   await next();
   await expect(form.locator('[data-step="location"]')).toBeHidden();
+  // The message names the missing question, in the page's language (not the browser's).
+  await expect(page.locator(".owner-feedback-error")).toContainText("Men or women");
   await form.locator('input[name="gender"][value="female"]').check({ force: true });
   await next();
 

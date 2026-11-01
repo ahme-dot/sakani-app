@@ -4,6 +4,7 @@ import { Cairo, Inter } from "next/font/google";
 import "./globals.css";
 import type { ReactNode } from "react";
 import { Analytics } from "@vercel/analytics/next";
+import FormMessages from "@/components/form-messages";
 import { SITE_URL } from "@/lib/site";
 import { SITE_COPY } from "@/messages/site";
 
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f8f6ee",
+  themeColor: "#ffffff",
 };
 
 export default async function RootLayout({
@@ -48,6 +49,7 @@ export default async function RootLayout({
     <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} data-scroll-behavior="smooth" className={`${cairo.variable} ${inter.variable}`}>
       <body>
         {children}
+        <FormMessages />
         <Analytics />
       </body>
     </html>

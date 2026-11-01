@@ -128,7 +128,7 @@ export default function AdminUsers({
                         {user.is_guest ? <UserRound size={15} /> : (user.full_name || user.email)[0]?.toUpperCase()}
                       </span>
                       <span>
-                        <strong>{user.is_guest ? t.ownerGuest : user.full_name || t.noName}</strong>
+                        <strong>{user.is_guest ? t.usersAnonOwner : user.full_name || t.noName}</strong>
                         {user.email && <a href={`mailto:${user.email}`} dir="ltr"><Mail size={12} /> {user.email}</a>}
                       </span>
                     </div>

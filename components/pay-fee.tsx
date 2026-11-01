@@ -65,13 +65,26 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
     event.preventDefault();
     if (!supabase) return;
     const form = new FormData(event.currentTarget);
+    // Checked here (not by the browser) so the messages are in the page's language.
+    const reference = String(form.get("reference") ?? "").trim();
+    const phone = String(form.get("phone") ?? "").trim();
+    if (reference.length < 3) {
+      setError(t.payReferenceInvalid);
+      document.getElementById("pay-reference")?.focus();
+      return;
+    }
+    if (!/^[0-9+ ()-]{8,20}$/.test(phone)) {
+      setError(t.payPhoneInvalid);
+      document.getElementById("pay-phone")?.focus();
+      return;
+    }
     setBusy(true);
     setError("");
     const { error: submitError } = await supabase.rpc("submit_payment_by_token", {
       token,
       pay_method: String(form.get("method") ?? ""),
-      pay_reference: String(form.get("reference") ?? ""),
-      pay_phone: String(form.get("phone") ?? ""),
+      pay_reference: reference,
+      pay_phone: phone,
     });
     setBusy(false);
     if (submitError) {
@@ -80,6 +93,8 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
       return;
     }
     setVersion((value) => value + 1);
+    // The form was low on the page; bring the "we're checking your transfer" note into view.
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   if (!tokenValid) return <p className="owner-feedback owner-feedback-error" role="alert">{t.payInvalid}</p>;
@@ -109,7 +124,7 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
         <div>
           <span>{upfront ? t.payUpfrontTitle : fee.payer === "student" ? t.payStudentFee : t.payOwnerFee}</span>
           <strong>{numberFormat.format(fee.amount)} {locale === "ar" ? "جنيه" : "EGP"}</strong>
-          <span>{t.feeFor(fee.listing_title)}{fee.listing_id ? ` · ${listingRef(fee.listing_id)}` : ""}</span>
+          <span>{t.feeFor(fee.listing_title)}{fee.listing_id && <> · <bdi dir="ltr">{listingRef(fee.listing_id)}</bdi></>}</span>
         </div>
         <span className={`fee-status is-${fee.status}`}>{t.feeStatus[fee.status]}</span>
       </div>
@@ -139,7 +154,7 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
 
       {fee.status === "due" && provider.asksForReference && (
         settings?.instapay_address ? (
-          <form className="fee-pay" onSubmit={(event) => void submit(event)}>
+          <form className="fee-pay" onSubmit={(event) => void submit(event)} noValidate>
             <p>{t.feeHowTo}</p>
             <div className="pay-accounts">
               {settings.instapay_address && <CopyValue label={t.payInstapay} value={settings.instapay_address} copyLabel={t.copy} copiedLabel={t.copied} />}
@@ -154,7 +169,8 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
               </label>
               <label className="owner-field">
                 <span>{t.payPhone}</span>
-                <input name="phone" id="pay-phone" type="tel" inputMode="tel" required pattern="[0-9+ \(\)\-]{8,20}" dir="ltr" autoComplete="tel" />
+                <input name="phone" id="pay-phone" type="tel" inputMode="tel" required pattern="[0-9+ \(\)\-]{8,20}" dir="ltr" autoComplete="tel" placeholder="01xxxxxxxxx" />
+                <small className="field-hint">{t.payPhoneHint}</small>
               </label>
             </div>
             {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}

@@ -16,6 +16,7 @@ import {
   Wind,
 } from "lucide-react";
 import AskTeam from "@/components/ask-team";
+import ListingBar from "@/components/listing-bar";
 import BookHome from "@/components/book-home";
 import Image from "next/image";
 import Link from "next/link";
@@ -259,13 +260,13 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
       </main>
 
       {/* Phones: price, booking and the team's WhatsApp always within reach. */}
-      <div className="listing2-bar">
+      <ListingBar>
         <p className="listing3-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</p>
         <div className="listing2-bar-actions">
           <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-bar-ask" compact />
-          <a className="button button-primary" href="#book"><CalendarCheck size={17} /> {t.bookNow}</a>
+          {!listing.is_demo && <a className="button button-primary" href="#book"><CalendarCheck size={17} /> {t.bookNow}</a>}
         </div>
-      </div>
+      </ListingBar>
 
       <SiteFooter locale={locale} switchHref={listingPath(otherLocale, listing.id)} tab={false} />
     </div>

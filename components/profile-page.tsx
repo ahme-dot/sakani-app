@@ -341,6 +341,11 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
             <span className={`role-chip is-${role}`}>{role === "host" ? t.roleHost : t.roleGuest}</span>
             {profile.created_at && <small className="profile-since">{t.memberSince(monthYear.format(new Date(profile.created_at)))}</small>}
           </div>
+          {/* Bookings sit below the profile details; on a phone, this gets there in one tap. */}
+          <a className="button button-primary profile-jump" href={role === "host" ? "#requests" : "#bookings"}>
+            <CalendarCheck size={16} /> {role === "host" ? t.hostRequestsTitle : t.profileBookings}
+            {role === "host" ? hostBookings?.length ? ` (${hostBookings.length})` : "" : bookings?.length ? ` (${bookings.length})` : ""}
+          </a>
 
           <ul className="profile-checks" aria-label={t.checksTitle}>
             {checks.map(({ done, icon: Icon, label }) => (

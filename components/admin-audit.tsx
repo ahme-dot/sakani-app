@@ -27,6 +27,7 @@ export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; s
   const [entity, setEntity] = useState<(typeof ENTITIES)[number]>("");
   const [entries, setEntries] = useState<AuditEntry[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [names, setNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let active = true;
@@ -39,16 +40,30 @@ export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; s
         setFailed(true);
         return;
       }
-      setEntries((data ?? []) as AuditEntry[]);
+      const rows = (data ?? []) as AuditEntry[];
+      setEntries(rows);
+      // Who made each change, by name rather than an id.
+      const actors = [...new Set(rows.map((row) => row.actor).filter((actor): actor is string => Boolean(actor)))];
+      if (actors.length) {
+        void supabase.from("profiles").select("id,full_name").in("id", actors).then(({ data: people }) => {
+          if (active) setNames(Object.fromEntries((people ?? []).map((person: { id: string; full_name: string | null }) => [person.id, person.full_name ?? ""])));
+        });
+      }
     });
     return () => {
       active = false;
     };
   }, [supabase, entity]);
 
+  // Field names and statuses in words; amounts and references as they are.
+  const statusWord = (entity: string, value: unknown) => {
+    const map: Record<string, string> = entity === "rental_fees" ? t.feeStatus : entity === "listing_requests" ? t.adminBookingTabs : {};
+    return typeof value === "string" ? map[value] ?? value : String(value ?? "—");
+  };
+  const show = (entry: AuditEntry, key: string, value: unknown) => (value === null || value === undefined ? "—" : key === "status" ? statusWord(entry.entity, value) : key === "host_decision" ? t.hostDecisionAdmin[value as keyof typeof t.hostDecisionAdmin] ?? String(value) : String(value));
   const changes = (entry: AuditEntry) =>
     WATCHED.filter((key) => (entry.old_data?.[key] ?? null) !== (entry.new_data?.[key] ?? null) && (entry.new_data?.[key] !== undefined || entry.old_data?.[key] !== undefined))
-      .map((key) => `${key}: ${String(entry.old_data?.[key] ?? "—")} → ${String(entry.new_data?.[key] ?? "—")}`);
+      .map((key) => `${t.auditFields[key as keyof typeof t.auditFields] ?? key}: ${show(entry, key, entry.old_data?.[key])} ${locale === "ar" ? "←" : "→"} ${show(entry, key, entry.new_data?.[key])}`);
 
   if (failed) return <p className="owner-feedback owner-feedback-error">{t.auditLoadError}</p>;
 
@@ -81,8 +96,8 @@ export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; s
                 <tr key={entry.id}>
                   <td>{timeFormat.format(new Date(entry.at))}</td>
                   <td>{t.auditEntities[entry.entity as keyof typeof t.auditEntities] ?? entry.entity} · {t.auditActions[entry.action as keyof typeof t.auditActions] ?? entry.action}<br /><small dir="ltr">{entry.entity_id?.slice(0, 8)}</small></td>
-                  <td dir="ltr" className="admin-audit-change">{changes(entry).join("\n") || "—"}</td>
-                  <td dir="ltr"><small>{entry.actor ? entry.actor.slice(0, 8) : t.auditSystem}</small></td>
+                  <td className="admin-audit-change">{changes(entry).join("\n") || "—"}</td>
+                  <td><small>{entry.actor ? names[entry.actor] || t.auditSomeone : t.auditSystem}</small></td>
                 </tr>
               ))}
             </tbody>

@@ -141,7 +141,16 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
     const fields = Array.from(section?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea") ?? []);
     const invalid = fields.find((field) => !field.checkValidity());
     if (invalid) {
-      if (report) invalid.reportValidity();
+      if (report) {
+        // Our own message (the browser's would be in the browser's language), then take the owner to the field.
+        // A choice (radio or checkbox) is named by its group, not by the option.
+        const group = invalid.closest<HTMLElement>('[role="radiogroup"], fieldset');
+        const holder = group ?? invalid.closest<HTMLElement>("label");
+        const label = (group?.getAttribute("aria-label") ?? holder?.querySelector("legend, span")?.textContent ?? "").trim();
+        setError(t.formFieldCheck(label));
+        invalid.focus({ preventScroll: true });
+        holder?.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
       return false;
     }
     const data = new FormData(form);

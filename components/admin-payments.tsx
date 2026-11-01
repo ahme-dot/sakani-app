@@ -115,7 +115,7 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
     <div className="admin-payments">
       <div className="admin-stats admin-pay-stats">
         <div className="admin-stat admin-stat-approved"><span className="admin-stat-label"><Wallet size={14} /> {t.feeTabs.paid}</span><strong>{numberFormat.format(total("paid"))}</strong><small>{t.revenueTotal(numberFormat.format(total("paid")))}</small></div>
-        <div className="admin-stat admin-stat-pending"><span className="admin-stat-label">{t.feeTabs.submitted}</span><strong>{numberFormat.format(fees.filter((fee) => fee.status === "submitted").length)}</strong><small>{numberFormat.format(total("submitted"))} EGP</small></div>
+        <div className="admin-stat admin-stat-pending"><span className="admin-stat-label">{t.feeTabs.submitted}</span><strong>{numberFormat.format(fees.filter((fee) => fee.status === "submitted").length)}</strong><small>{numberFormat.format(total("submitted"))} {t.currency}</small></div>
         <div className="admin-stat admin-stat-rejected"><span className="admin-stat-label">{t.feeTabs.due}</span><strong>{numberFormat.format(fees.filter((fee) => fee.status === "due").length)}</strong><small>{t.revenueDue(numberFormat.format(total("due")))}</small></div>
       </div>
 
@@ -139,10 +139,10 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
             return (
               <article className="admin-fee" key={fee.id}>
                 <div className="admin-fee-main">
-                  <strong>{numberFormat.format(fee.amount)} EGP <span className={`payer-chip is-${fee.payer}`}>{fee.kind === "upfront" ? t.payUpfrontTitle : fee.payer === "student" ? t.payerStudent : t.payerOwner}</span></strong>
+                  <strong>{numberFormat.format(fee.amount)} {t.currency} <span className={`payer-chip is-${fee.payer}`}>{fee.kind === "upfront" ? t.payUpfrontTitle : fee.payer === "student" ? t.payerStudent : t.payerOwner}</span></strong>
                   <span>{fee.listing_title}</span>
                   {fee.payer === "student" && fee.payer_name && <span>{fee.payer_name} · <span dir="ltr">{fee.payer_contact}</span></span>}
-                  <small>{dateFormat.format(new Date(fee.submitted_at ?? fee.created_at))}{fee.created_by_admin ? " · admin" : ""}</small>
+                  <small>{dateFormat.format(new Date(fee.submitted_at ?? fee.created_at))}{fee.created_by_admin ? ` · ${t.createdByAdmin}` : ""}</small>
                 </div>
                 {fee.reference && (
                   <dl className="admin-fee-ref">
@@ -157,7 +157,8 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
                   {fee.status === "submitted" && (
                     <button className="admin-btn admin-btn-danger-outline" type="button" disabled={busy} onClick={() => void decide(fee, "due")}><RotateCcw size={15} /> {t.markDue}</button>
                   )}
-                  {(fee.status === "due" || fee.status === "submitted") && (
+                  {/* A booking payment is never waived: it holds the rent and deposit. */}
+                  {fee.kind !== "upfront" && (fee.status === "due" || fee.status === "submitted") && (
                     <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void decide(fee, "waived")}><X size={15} /> {t.markWaived}</button>
                   )}
                   {(() => {

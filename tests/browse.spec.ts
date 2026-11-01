@@ -108,6 +108,14 @@ test("search is by place, type and men or women only", async ({ page }) => {
   await expect(page.locator(".search-pill .search-seg-value").first()).toHaveText("Alexandria");
 });
 
+test("demo cards don't offer booking", async ({ page }) => {
+  await page.goto("/en");
+  const demo = page.locator(".property-card:has(.property-demo)").first();
+  test.skip(await demo.count() === 0, "no demo listings");
+  await expect(demo.locator(".property-details")).toBeVisible();
+  await expect(demo.locator(".property-book")).toHaveCount(0);
+});
+
 test("the Studios category filters studios", async ({ page }) => {
   await page.goto("/en");
   await page.locator(".category-tab", { hasText: "Studios" }).click();

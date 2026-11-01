@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { BadgeCheck, ImagePlus, Plus, Sparkles } from "lucide-react";
+import { BadgeCheck, CalendarCheck, ImagePlus, Plus, Sparkles } from "lucide-react";
 import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
 import ListingForm, { removeListingImages } from "@/components/listing-form";
 import OwnerPayments from "@/components/owner-payments";
@@ -71,18 +71,27 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
   const [paySettings, setPaySettings] = useState<PaymentSettings | null>(null);
   const [feesVersion, setFeesVersion] = useState(0);
   const [reportingId, setReportingId] = useState<string | null>(null);
+  // Bookings on this owner's places (a host without an account can see them, but needs one to answer).
+  const [bookings, setBookings] = useState<Array<{ id: string; listing_title: string; guest_first_name: string; move_in: string; months: number; status: string; host_decision: string | null }>>([]);
   // Returning owners see their listings first; the form opens with "Add another home".
   const [formOpen, setFormOpen] = useState(false);
+
+  useEffect(() => {
+    if (!supabase || !user) return;
+    let mounted = true;
+    void supabase.rpc("host_bookings").then(({ data, error: bookingsError }) => {
+      if (mounted && !bookingsError) setBookings((data ?? []) as typeof bookings);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [supabase, user]);
 
   // Views and WhatsApp clicks for the owner's published listings.
   const publishedIds = ownerListings.filter((listing) => listing.status === "approved").map((listing) => listing.id).join(",");
   useEffect(() => {
     if (!supabase || !publishedIds) return;
     let mounted = true;
-    // Probe for the availability functions: a missing function (PGRST202) means the migration is not installed yet.
-    void supabase.rpc("confirm_listing", { target_listing: "00000000-0000-0000-0000-000000000000" }).then(({ error: probeError }) => {
-      if (mounted && probeError?.code === "PGRST202") setAvailabilityReady(false);
-    });
     void supabase.rpc("listing_stats", { listing_ids: publishedIds.split(",") }).then(({ data, error: statsError }) => {
       if (!mounted || statsError) return;
       const rows = (data ?? []) as Array<{ listing_id: string; views: number; whatsapp_clicks: number }>;
@@ -368,6 +377,29 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                   <p>{t.ownerGuestNotice}</p>
                   <Link className="button button-primary" href={`/${locale}/account?mode=signup`}>{t.ownerGuestCta}</Link>
                 </div>
+              )}
+
+              {bookings.length > 0 && (
+                <section className="owner-bookings" aria-labelledby="owner-bookings-title">
+                  <h4 id="owner-bookings-title"><CalendarCheck size={18} /> {t.hostRequestsTitle} ({numberFormat.format(bookings.length)})</h4>
+                  <ul>
+                    {bookings.map((booking) => (
+                      <li key={booking.id}>
+                        <strong>{booking.listing_title}</strong>
+                        <span>{booking.guest_first_name ? `${booking.guest_first_name} · ` : ""}{t.bookingFrom(dateFormat.format(new Date(booking.move_in)))} · {t.monthsCount(booking.months)}</span>
+                        <span className="status-chip">{t.hostDecision[(booking.host_decision ?? "pending") as "pending" | "accepted" | "declined"]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {user.is_anonymous ? (
+                    <>
+                      <p>{t.ownerBookingsGuestNote}</p>
+                      <Link className="button button-primary" href={`/${locale}/account?mode=signup&next=${encodeURIComponent(`/${locale}/account#requests`)}`}>{t.ownerGuestCta}</Link>
+                    </>
+                  ) : (
+                    <Link className="button button-primary" href={`/${locale}/account#requests`}>{t.ownerBookingsOpen}</Link>
+                  )}
+                </section>
               )}
 
               {paymentsReady && supabase && (

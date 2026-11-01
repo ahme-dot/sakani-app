@@ -45,7 +45,8 @@ export default function PropertyCard({ property, locale, linkToDetails = true }:
         {detailsHref && (
           <div className="property-actions">
             <Link className="button button-outline property-details" href={detailsHref}>{t.viewDetails}</Link>
-            <Link className="button button-primary property-book" href={`${detailsHref}#book`}><CalendarCheck size={15} /> {t.bookNow}</Link>
+            {/* Demo listings can't be booked, so they don't offer it. */}
+            {!property.is_demo && <Link className="button button-primary property-book" href={`${detailsHref}#book`}><CalendarCheck size={15} /> {t.bookNow}</Link>}
           </div>
         )}
       </div>

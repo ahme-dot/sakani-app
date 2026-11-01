@@ -196,7 +196,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                   <strong>{egp(booking.total_amount)} <span className={`payer-chip is-student`}>{t.adminBookingTabs[booking.status]}</span></strong>
                   <span>
                     {booking.listing_title}
-                    {booking.listing_id && <> · <span dir="ltr">{listingRef(booking.listing_id)}</span> · <Link href={listingPath(locale, booking.listing_id)} target="_blank"><ExternalLink size={12} /> {t.adminViewPublic}</Link></>}
+                    {booking.listing_id && <> · <bdi dir="ltr">{listingRef(booking.listing_id)}</bdi> · <Link href={listingPath(locale, booking.listing_id)} target="_blank"><ExternalLink size={12} /> {t.adminViewPublic}</Link></>}
                   </span>
                   <small>{dateFormat.format(new Date(booking.created_at))}</small>
                 </div>
@@ -222,7 +222,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                       </dd>
                     </div>
                   )}
-                  <div><dt>{t.requestOwner}</dt><dd>{host?.full_name || "—"} · <span dir="ltr">{hostNumber ?? "…"}</span> · {t.hostDecision[booking.host_decision]}</dd></div>
+                  <div><dt>{t.requestOwner}</dt><dd>{host?.full_name || t.ownerGuest} · <span dir="ltr">{hostNumber ?? "…"}</span> · {t.hostDecisionAdmin[booking.host_decision]}</dd></div>
                   {fee?.reference && <div><dt>{t.payInstapay}</dt><dd dir="ltr">{fee.reference}{fee.payer_phone ? ` · ${fee.payer_phone}` : ""}</dd></div>}
                   {booking.note && <div><dt>{t.requestNote}</dt><dd>{booking.note}</dd></div>}
                   {booking.problem_note && <div><dt>{t.problemLabel}</dt><dd>{booking.problem_note}</dd></div>}

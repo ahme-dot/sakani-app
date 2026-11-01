@@ -12774,3 +12774,25 @@ body {
 .site-shell .listing3-location svg {
   color: #1f7a5a;
 }
+
+/* Guest booking fixes: field errors, the phone bar stepping aside, the bookings shortcut, chat typing on iPhone. */
+.site-shell .field-error { display: block; margin-top: 6px; color: #b42318; font-size: 13px; font-weight: 600; }
+.site-shell .owner-field input[aria-invalid="true"] { border-color: #b42318; box-shadow: 0 0 0 3px rgb(180 35 24 / 12%); }
+.site-shell .listing2-bar { transition: transform .2s ease, opacity .2s ease; }
+.site-shell .listing2-bar.is-hidden { transform: translateY(110%); opacity: 0; pointer-events: none; }
+.site-shell .profile-jump { display: none; }
+@media (max-width: 900px) {
+  .site-shell .profile-jump { display: inline-flex; align-self: stretch; justify-content: center; gap: 8px; margin-top: 4px; }
+}
+.site-shell .property-actions:has(> :only-child) { grid-template-columns: 1fr; }
+@media (max-width: 640px) {
+  .site-shell .chat-input textarea, .site-shell textarea, .site-shell input, .site-shell select { font-size: 16px; }
+}
+.site-shell .owner-bookings { display: grid; gap: 12px; margin-block: 16px; padding: 16px; border: 1px solid #b9dccb; border-radius: 12px; background: #eef8f3; }
+.site-shell .owner-bookings h4 { display: flex; align-items: center; gap: 8px; margin: 0; color: #14213d; font-size: 16px; }
+.site-shell .owner-bookings ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.site-shell .owner-bookings li { display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px; background: #fff; }
+.site-shell .owner-bookings li span { color: #4b5565; font-size: 14px; }
+.site-shell .owner-bookings li .status-chip { justify-self: start; }
+.site-shell .owner-bookings p { margin: 0; color: #24324a; font-size: 14px; line-height: 1.7; }
+.site-shell .owner-bookings .button { justify-self: start; }

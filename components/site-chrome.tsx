@@ -66,7 +66,6 @@ export function SiteFooter({ locale, switchHref, tab }: { locale: SiteLocale; sw
             <h3>{t.footerForOwners}</h3>
             <Link href={`/${locale}/host`}>{t.navOwner}</Link>
             <Link href={`/${locale}/account`}>{t.footerOwnerAccount}</Link>
-            <Link href={`/${locale}/sign-in`} rel="nofollow">{t.adminNav}</Link>
           </nav>
           <nav aria-label={t.footerPolicies}>
             <h3>{t.footerPolicies}</h3>
