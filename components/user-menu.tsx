@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, Menu, UserRound } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, UserRound } from "lucide-react";
 import { signOutAccount, useAccount, useTeamUnread } from "@/lib/account";
 import { connectSavedToAccount } from "@/lib/saved";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -42,6 +42,19 @@ export default function UserMenu({ locale, switchHref }: { locale: SiteLocale; s
 
   const unread = useTeamUnread(supabase, signedInId);
 
+  // Admins get a way into the admin panel from the menu (it isn't linked anywhere public).
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    if (!supabase || !signedInId) return;
+    let active = true;
+    void supabase.rpc("is_admin").then(({ data }) => {
+      if (active) setIsAdmin(data === true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase, signedInId]);
+
   const close = () => setOpen(false);
   const signedIn = account.status === "signedIn" ? account : null;
   const name = signedIn ? signedIn.profile?.full_name || signedIn.user.email || t.navAccount : "";
@@ -69,6 +82,7 @@ export default function UserMenu({ locale, switchHref }: { locale: SiteLocale; s
           {signedIn ? (
             <>
               <p className="user-menu-name">{name}<small>{isGuest ? t.roleGuest : t.roleHost}</small></p>
+              {isAdmin && signedInId && <Link role="menuitem" className="is-strong user-menu-admin" href={`/${locale}/admin`} onClick={close}><LayoutDashboard size={15} /> {t.adminPanel}</Link>}
               <Link role="menuitem" className="is-strong" href={`/${locale}/account`} onClick={close}>{t.menuProfile}</Link>
               {isGuest
                 ? <Link role="menuitem" href={`/${locale}/account#bookings`} onClick={close}>{t.profileBookings}</Link>
