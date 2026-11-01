@@ -21,6 +21,8 @@ type Props = {
   isDemo?: boolean;
   /** Shortest stay the host accepts, in months. */
   minMonths?: number;
+  /** The first day the place is free (YYYY-MM-DD), if the host set one. */
+  availableFrom?: string | null;
 };
 
 type Created = { booking_id: string; pay_token: string; total: number; rent: number; fee: number; deposit: number };
@@ -34,7 +36,7 @@ function today() {
  * A signed-in guest books and pays straight away (first month + Sakani fee, by InstaPay).
  * Sakani holds the money: it is refunded within 24 hours if anything goes wrong, and the host is paid after move-in.
  */
-export default function BookHome({ locale, listingId, monthlyPrice, deposit, fees, isDemo = false, minMonths = 1 }: Props) {
+export default function BookHome({ locale, listingId, monthlyPrice, deposit, fees, isDemo = false, minMonths = 1, availableFrom = null }: Props) {
   const t = SITE_COPY[locale];
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const account = useAccount(supabase);
@@ -43,7 +45,10 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
   const [error, setError] = useState("");
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
   const amounts = bookingAmounts({ rent: monthlyPrice, deposit }, ratesFrom(fees));
-  const dateError = error === t.bookMoveInRequired || error === t.bookMoveInPast;
+  // The earliest move-in: today, or the day the place is free.
+  const earliest = availableFrom && availableFrom > today() ? availableFrom : today();
+  const earliestLabel = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" }).format(new Date(earliest));
+  const dateError = error === t.bookMoveInRequired || error === t.bookMoveInPast || error === t.notAvailableYet(earliestLabel);
   const next = encodeURIComponent(`/${locale}/listings/${listingId}#book`);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -55,8 +60,8 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
     const guests = Number(form.get("guests"));
     const field = (name: string) => event.currentTarget.elements.namedItem(name) as HTMLElement | null;
     // Say exactly what's missing and take the guest to it (the error box alone can sit under the phone's bottom bar).
-    if (!moveIn || moveIn < today()) {
-      setError(moveIn ? t.bookMoveInPast : t.bookMoveInRequired);
+    if (!moveIn || moveIn < earliest) {
+      setError(!moveIn ? t.bookMoveInRequired : moveIn < today() ? t.bookMoveInPast : t.notAvailableYet(earliestLabel));
       field("move_in")?.focus();
       return;
     }
@@ -85,6 +90,8 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
       setError(
         message.includes("phone_required") ? t.bookPhoneRequired
           : message.includes("stay_too_short") ? t.minStay(t.monthsCount(minMonths))
+          : message.includes("dates_taken") ? t.bookDatesTaken
+          : message.includes("not_available_yet") ? t.notAvailableYet(earliestLabel)
           : message.includes("request_limit") ? t.bookBusy
             : message.includes("own_listing") ? t.bookOwnListing
               : message.includes("listing_not_available") ? t.bookUnavailable
@@ -136,7 +143,7 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
           <div className="book-form-grid">
             <label className="owner-field">
               <span>{t.bookMoveIn}</span>
-              <input name="move_in" type="date" required min={today()} dir="ltr" aria-invalid={dateError || undefined} onChange={() => error && setError("")} />
+              <input name="move_in" type="date" required min={earliest} dir="ltr" aria-invalid={dateError || undefined} onChange={() => error && setError("")} />
               {dateError && <small className="field-error" role="alert">{error}</small>}
             </label>
             <label className="owner-field">

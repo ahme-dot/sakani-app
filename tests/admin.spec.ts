@@ -19,8 +19,16 @@ for (const locale of ["ar", "en"] as const) {
   });
 }
 
+test("the panel opens on today's work, grouped menus", async ({ page }) => {
+  await signInAsAdmin(page);
+  await expect(page.locator(".admin-main-header h1")).toHaveText("Today");
+  await expect(page.locator(".admin-nav-heading")).toHaveText(["Daily work", "Money", "People", "Site"]);
+  await expect(page.locator(".admin-today-list, .admin-empty-state").first()).toBeVisible();
+});
+
 test("listing tabs show counts and the stale filter", async ({ page }) => {
   await signInAsAdmin(page);
+  await page.locator(".admin-nav button", { hasText: "Listings" }).click();
   await expect(page.locator(".admin-stat")).toHaveCount(5);
   await page.locator(".admin-stat-approved").click();
   await expect(page.locator(".admin-stale-toggle")).toBeVisible();

@@ -20,10 +20,14 @@ import {
   Pencil,
   Phone,
   Repeat,
+  Star,
   Wallet,
   X,
 } from "lucide-react";
+import BookingTimeline from "@/components/booking-timeline";
+import HostEarnings from "@/components/host-earnings";
 import PropertyCard from "@/components/property-card";
+import ReviewForm from "@/components/review-form";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { PHONE_PATTERN, type AccountRole, type Profile } from "@/lib/account";
 import { GOVERNORATES, governorateLabel } from "@/lib/egypt";
@@ -74,6 +78,7 @@ type GuestBooking = {
   refund_due_at: string | null;
   refund_reference: string | null;
   contract_signed_at: string | null;
+  host_decision: "pending" | "accepted" | "declined" | null;
   created_at: string;
 };
 
@@ -100,7 +105,7 @@ type HostListing = { id: string; title_ar: string; title_en: string; status: str
 
 const AVATAR_BUCKET = "sakani-avatars";
 const PROFILE_COLUMNS = "id,role,full_name,phone,avatar_url,bio,governorate,gender,occupation,languages,instapay_address,id_verified,created_at";
-const BOOKING_COLUMNS = "id,listing_id,listing_title,move_in,months,guests,status,total_amount,fee_id,refund_due_at,refund_reference,contract_signed_at,created_at";
+const BOOKING_COLUMNS = "id,listing_id,listing_title,move_in,months,guests,status,total_amount,fee_id,refund_due_at,refund_reference,contract_signed_at,host_decision,created_at";
 
 /** The signed-in account: about me, then bookings and saved places (guests) or booking requests, payouts and places (hosts). */
 export default function ProfilePage({ locale, supabase, user, profile: initialProfile, notice, onSignOut }: Props) {
@@ -127,6 +132,9 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
   const [fees, setFees] = useState<RentalFee[] | null>(null);
   const [saved, setSaved] = useState<Property[] | null>(null);
   const [problemFor, setProblemFor] = useState<string | null>(null);
+  // Bookings the guest has already reviewed, and the one being reviewed now.
+  const [reviewed, setReviewed] = useState<Set<string>>(new Set());
+  const [reviewFor, setReviewFor] = useState<string | null>(null);
   const [identity, setIdentity] = useState<"pending" | "approved" | "rejected" | null>(null);
   const [version, setVersion] = useState(0);
   const savedIds = useSavedListings();
@@ -175,8 +183,10 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
       void Promise.all([
         supabase.from("listing_requests").select(BOOKING_COLUMNS).eq("guest_id", user.id).order("created_at", { ascending: false }),
         supabase.from("rental_fees").select("id,pay_token").eq("guest_id", user.id).eq("payer", "student"),
-      ]).then(([guestBookings, guestFees]) => {
+        supabase.from("reviews").select("booking_id").eq("guest_id", user.id),
+      ]).then(([guestBookings, guestFees, guestReviews]) => {
         if (!active) return;
+        setReviewed(new Set(((guestReviews.data ?? []) as Array<{ booking_id: string }>).map((review) => review.booking_id)));
         if (guestBookings.error) console.error("Could not load bookings:", guestBookings.error);
         setBookings((guestBookings.data ?? []) as GuestBooking[]);
         setPayTokens(Object.fromEntries(((guestFees.data ?? []) as Array<{ id: string; pay_token: string }>).map((fee) => [fee.id, fee.pay_token])));
@@ -509,6 +519,8 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
               )}
             </section>
 
+            {hostBookings && <HostEarnings locale={locale} bookings={hostBookings} />}
+
             {hostBookings && hostBookings.some((booking) => booking.status === "moved_in" || booking.status === "completed") && (
               <section className="profile-section" aria-labelledby="payouts-title">
                 <h2 id="payouts-title"><Wallet size={20} /> {t.payoutsTitle}</h2>
@@ -590,7 +602,11 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                           {booking.status === "refunded" && booking.refund_reference && <small>{t.refundDone(booking.refund_reference)}</small>}
                         </div>
                         <span className={`status-chip is-${booking.status}`}>{t.bookingStatus[booking.status]}</span>
+                        <BookingTimeline locale={locale} status={booking.status} hostDecision={booking.host_decision} contractSigned={Boolean(booking.contract_signed_at)} />
                         <span className="profile-row-actions">
+                          {(booking.status === "moved_in" || booking.status === "completed") && !reviewed.has(booking.id) && reviewFor !== booking.id && (
+                            <button className="button button-primary" type="button" onClick={() => setReviewFor(booking.id)}><Star size={15} /> {t.reviewButton}</button>
+                          )}
                           {booking.status === "pending_payment" && token && (
                             <Link className="button button-primary profile-pay" href={`/${locale}/pay/${token}`}><CreditCard size={15} /> {t.profilePay}</Link>
                           )}
@@ -609,6 +625,18 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                           )}
                           <Link className="text-button" href={`/${locale}/messages?booking=${booking.id}`}><Headset size={14} /> {t.chatAboutBooking}</Link>
                         </span>
+                        {reviewFor === booking.id && (
+                          <ReviewForm
+                            locale={locale}
+                            supabase={supabase}
+                            bookingId={booking.id}
+                            onDone={() => {
+                              setReviewed((done) => new Set(done).add(booking.id));
+                              setReviewFor(null);
+                              setMessage(t.reviewThanks);
+                            }}
+                          />
+                        )}
                         {problemFor === booking.id && (
                           <form
                             className="profile-problem"

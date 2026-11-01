@@ -80,7 +80,13 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
     if (!supabase || !user) return;
     let mounted = true;
     void supabase.rpc("host_bookings").then(({ data, error: bookingsError }) => {
-      if (mounted && !bookingsError) setBookings((data ?? []) as typeof bookings);
+      if (!mounted || bookingsError) return;
+      const rows = (data ?? []) as typeof bookings;
+      setBookings(rows);
+      // A request waiting for the host comes first: bring it into view instead of the page intro.
+      if (rows.some((row) => (row.host_decision ?? "pending") === "pending")) {
+        window.setTimeout(() => document.getElementById("owner-bookings-title")?.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+      }
     });
     return () => {
       mounted = false;

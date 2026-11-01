@@ -11,6 +11,8 @@ type TeamMember = {
   added_at: string;
   last_sign_in_at: string | null;
   email_confirmed: boolean;
+  /** "full" or "reviewer" (missing before the roles migration). */
+  role?: "full" | "reviewer";
 };
 
 /**
@@ -101,6 +103,21 @@ export default function AdminTeam({ locale, supabase, currentUserId }: { locale:
     setBusy(false);
   }
 
+  async function setRole(member: TeamMember, role: "full" | "reviewer") {
+    setBusy(true);
+    setMessage("");
+    setError("");
+    const { error: roleError } = await supabase.rpc("admin_team_set_role", { target_user_id: member.user_id, new_role: role });
+    if (roleError) {
+      console.error("Could not change the admin role:", roleError);
+      setError(t.teamError);
+    } else {
+      setMessage(t.teamRoleChanged(member.email));
+      reload();
+    }
+    setBusy(false);
+  }
+
   async function removeAdmin(member: TeamMember) {
     setBusy(true);
     setMessage("");
@@ -147,6 +164,17 @@ export default function AdminTeam({ locale, supabase, currentUserId }: { locale:
                   <strong dir="ltr">{member.email}</strong>
                   {isSelf && <span className="listing-status listing-status-approved">{t.teamYou}</span>}
                   {!member.email_confirmed && <span className="listing-status"><MailCheck size={12} /> {t.teamUnconfirmed}</span>}
+                  {member.role && (isSelf ? (
+                    <span className="listing-status">{t.teamRoles[member.role]}</span>
+                  ) : (
+                    <label className="admin-team-role">
+                      <span>{t.teamRoleLabel}</span>
+                      <select value={member.role} disabled={busy} onChange={(event) => void setRole(member, event.target.value as "full" | "reviewer")}>
+                        <option value="full">{t.teamRoles.full}</option>
+                        <option value="reviewer">{t.teamRoles.reviewer}</option>
+                      </select>
+                    </label>
+                  ))}
                   <small>
                     {t.teamAddedOn}: {dateFormat.format(new Date(member.added_at))} · {t.teamLastSignIn}: {member.last_sign_in_at ? dateFormat.format(new Date(member.last_sign_in_at)) : t.teamNeverSignedIn}
                   </small>

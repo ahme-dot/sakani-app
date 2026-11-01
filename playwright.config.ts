@@ -18,7 +18,8 @@ export default defineConfig({
   globalSetup: "./tests/global-setup.ts",
   globalTeardown: "./tests/global-teardown.ts",
   use: {
-    channel: "msedge", // the Edge already installed on Windows; no browser download needed
+    // Locally: the Edge already installed on Windows. On GitHub: the Chromium the workflow installs.
+    channel: process.env.CI ? undefined : "msedge",
     navigationTimeout: 120_000,
     trace: "retain-on-failure",
   },

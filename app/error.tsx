@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { RefreshCw, TriangleAlert } from "lucide-react";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SITE_COPY } from "@/messages/site";
 
 export default function Error({ error, retry }: { error: unknown; retry: () => void }) {
@@ -12,6 +13,15 @@ export default function Error({ error, retry }: { error: unknown; retry: () => v
 
   useEffect(() => {
     console.error(error);
+    // A page that crashed is reported to the team (Admin → Errors).
+    if (process.env.NODE_ENV !== "production") return;
+    const failure = error instanceof globalThis.Error ? error : new globalThis.Error(String(error));
+    void getSupabaseBrowserClient()?.rpc("report_client_error", {
+      error_page: window.location.pathname,
+      error_message: failure.message.slice(0, 500),
+      error_detail: (failure.stack ?? "").slice(0, 2000),
+      agent: navigator.userAgent.slice(0, 300),
+    });
   }, [error]);
 
   return (

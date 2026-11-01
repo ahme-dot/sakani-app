@@ -7,6 +7,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
   Ban,
+  Bug,
+  ListChecks,
+  Star,
   CalendarCheck,
   FlaskConical,
   MessagesSquare,
@@ -44,6 +47,9 @@ import {
   X,
 } from "lucide-react";
 import AdminGrow from "@/components/admin-grow";
+import AdminErrors from "@/components/admin-errors";
+import AdminReviews from "@/components/admin-reviews";
+import AdminToday from "@/components/admin-today";
 import AdminPayments from "@/components/admin-payments";
 import AdminAudit from "@/components/admin-audit";
 import AdminFinance from "@/components/admin-finance";
@@ -78,7 +84,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
 /** The admin tabs; "paused" also shows reserved, rented and suspended listings (everything hidden from search). */
 type ReviewFilter = "pending" | "approved" | "rejected" | "paused";
-type AdminView = "listings" | "add" | "requests" | "chat" | "reports" | "inbox" | "payments" | "finance" | "policies" | "legal" | "audit" | "users" | "identity" | "demo" | "grow" | "team";
+type AdminView = "today" | "reviews" | "errors" | "listings" | "add" | "requests" | "chat" | "reports" | "inbox" | "payments" | "finance" | "policies" | "legal" | "audit" | "users" | "identity" | "demo" | "grow" | "team";
 type ListingStats = { views: number; whatsapp_clicks: number };
 type AdminListing = MarketplaceListing;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
@@ -95,7 +101,9 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [user, setUser] = useState<User | null>(null);
   const [state, setState] = useState<DashboardState>(supabase ? "loading" : "unconfigured");
-  const [view, setView] = useState<AdminView>("listings");
+  const [view, setView] = useState<AdminView>("today");
+  // Reviewer admins see listings, chat and reports, but not money, policies or the team.
+  const [fullAdmin, setFullAdmin] = useState(true);
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [filter, setFilter] = useState<ReviewFilter>("pending");
   const [counts, setCounts] = useState<Counts | null>(null);
@@ -176,6 +184,10 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           setState(data ? "ready" : "denied");
         }
       });
+    // The role column arrives with the reviews migration; until then everyone is a full admin.
+    void supabase.rpc("is_full_admin").then(({ data, error: roleError }) => {
+      if (mounted && !roleError) setFullAdmin(Boolean(data));
+    });
 
     return () => {
       mounted = false;
@@ -570,25 +582,56 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   ];
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
   const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
-  const navItems: Array<{ value: AdminView; label: string; icon: typeof Users; badge?: number }> = [
-    { value: "listings", label: t.adminViewListings, icon: LayoutList, badge: counts?.pending },
-    { value: "add", label: t.adminViewAddListing, icon: PlusCircle },
-    { value: "requests", label: t.adminViewRequests, icon: CalendarCheck, badge: newRequests },
-    { value: "chat", label: t.adminViewChat, icon: MessagesSquare, badge: unreadChats },
-    { value: "reports", label: t.adminViewReports, icon: Flag, badge: openReports },
-    { value: "inbox", label: t.adminViewInbox, icon: Inbox, badge: openMessages },
-    { value: "payments", label: t.adminViewPayments, icon: Wallet, badge: feesToCheck },
-    { value: "finance", label: t.adminViewFinance, icon: ChartColumn },
-    { value: "policies", label: t.adminViewPolicies, icon: Scale },
-    { value: "legal", label: t.adminViewLegal, icon: Gavel },
-    { value: "audit", label: t.adminViewAudit, icon: ScrollText },
-    { value: "users", label: t.adminViewUsers, icon: UsersRound },
-    { value: "identity", label: t.adminViewIdentity, icon: IdCard },
-    { value: "demo", label: t.adminViewDemo, icon: FlaskConical },
-    { value: "grow", label: t.adminViewGrow, icon: Megaphone },
-    { value: "team", label: t.adminViewTeam, icon: Users },
+  type NavItem = { value: AdminView; label: string; icon: typeof Users; badge?: number; money?: boolean };
+  // Grouped so the menu reads as four short lists instead of one long one.
+  const allGroups: Array<{ label: string; items: NavItem[] }> = [
+    {
+      label: t.adminGroupWork,
+      items: [
+        { value: "today", label: t.adminViewToday, icon: ListChecks },
+        { value: "requests", label: t.adminViewRequests, icon: CalendarCheck, badge: newRequests },
+        { value: "chat", label: t.adminViewChat, icon: MessagesSquare, badge: unreadChats },
+        { value: "listings", label: t.adminViewListings, icon: LayoutList, badge: counts?.pending },
+        { value: "add", label: t.adminViewAddListing, icon: PlusCircle },
+        { value: "reports", label: t.adminViewReports, icon: Flag, badge: openReports },
+        { value: "inbox", label: t.adminViewInbox, icon: Inbox, badge: openMessages },
+      ],
+    },
+    {
+      label: t.adminGroupMoney,
+      items: [
+        { value: "payments", label: t.adminViewPayments, icon: Wallet, badge: feesToCheck, money: true },
+        { value: "finance", label: t.adminViewFinance, icon: ChartColumn, money: true },
+        { value: "audit", label: t.adminViewAudit, icon: ScrollText, money: true },
+        { value: "policies", label: t.adminViewPolicies, icon: Scale, money: true },
+      ],
+    },
+    {
+      label: t.adminGroupPeople,
+      items: [
+        { value: "users", label: t.adminViewUsers, icon: UsersRound },
+        { value: "identity", label: t.adminViewIdentity, icon: IdCard },
+        { value: "reviews", label: t.adminViewReviews, icon: Star },
+        { value: "team", label: t.adminViewTeam, icon: Users, money: true },
+      ],
+    },
+    {
+      label: t.adminGroupSite,
+      items: [
+        { value: "legal", label: t.adminViewLegal, icon: Gavel, money: true },
+        { value: "errors", label: t.adminViewErrors, icon: Bug },
+        { value: "demo", label: t.adminViewDemo, icon: FlaskConical, money: true },
+        { value: "grow", label: t.adminViewGrow, icon: Megaphone },
+      ],
+    },
   ];
+  const navGroups = allGroups
+    .map((group) => ({ ...group, items: group.items.filter((item) => fullAdmin || !item.money) }))
+    .filter((group) => group.items.length > 0);
   const viewHeadings: Record<AdminView, { title: string; description: string }> = {
+    today: { title: t.adminViewToday, description: t.todayDescription },
+    reviews: { title: t.adminViewReviews, description: t.reviewsAdminDescription },
+    errors: { title: t.adminViewErrors, description: t.errorsDescription },
     listings: { title: t.adminDashboardTitle, description: t.adminDashboardDescription },
     add: { title: t.addListingTitle, description: t.addListingDescription },
     reports: { title: t.reportsTitle, description: t.reportsDescription },
@@ -615,12 +658,17 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           <span><strong>{t.brandLabel}</strong><small>{t.adminPanel}</small></span>
         </div>
         <nav className="admin-nav" aria-label={t.adminPanel}>
-          {navItems.map(({ value, label, icon: Icon, badge }) => (
-            <button key={value} type="button" className={view === value ? "is-active" : ""} aria-current={view === value ? "page" : undefined} onClick={() => selectView(value)}>
-              <Icon size={18} />
-              <span>{label}</span>
-              {Boolean(badge) && <span className="admin-nav-badge">{numberFormat.format(badge!)}</span>}
-            </button>
+          {navGroups.map((group) => (
+            <div className="admin-nav-group" key={group.label} role="group" aria-label={group.label}>
+              <span className="admin-nav-heading">{group.label}</span>
+              {group.items.map(({ value, label, icon: Icon, badge }) => (
+                <button key={value} type="button" className={view === value ? "is-active" : ""} aria-current={view === value ? "page" : undefined} onClick={() => selectView(value)}>
+                  <Icon size={18} />
+                  <span>{label}</span>
+                  {Boolean(badge) && <span className="admin-nav-badge">{numberFormat.format(badge!)}</span>}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="admin-sidebar-footer">
@@ -639,7 +687,25 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           <p>{viewHeadings[view].description}</p>
         </header>
 
-        {view === "team" && supabase && user ? (
+        {view === "today" && supabase ? (
+          <AdminToday
+            locale={locale}
+            supabase={supabase}
+            pendingListings={counts?.pending ?? 0}
+            unreadChats={unreadChats}
+            openReports={openReports}
+            openMessages={openMessages}
+            canHandleMoney={fullAdmin}
+            onOpen={(target) => {
+              if (target === "listings") selectFilter("pending");
+              selectView(target);
+            }}
+          />
+        ) : view === "reviews" && supabase ? (
+          <AdminReviews locale={locale} supabase={supabase} />
+        ) : view === "errors" && supabase ? (
+          <AdminErrors locale={locale} supabase={supabase} />
+        ) : view === "team" && supabase && user ? (
           <AdminTeam locale={locale} supabase={supabase} currentUserId={user.id} />
         ) : view === "reports" && supabase && user ? (
           <AdminReports locale={locale} supabase={supabase} currentUserId={user.id} onChanged={refreshCounts} onReviewListing={reviewReportedListing} />

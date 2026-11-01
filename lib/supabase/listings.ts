@@ -298,3 +298,25 @@ export function toProperty(listing: MarketplaceListing): Property {
     host_id: (listing as { owner_id?: string }).owner_id,
   };
 }
+
+export type ListingReview = { rating: number; body: string; guest_first_name: string | null; created_at: string };
+
+/** Public reviews of a place (empty until the reviews migration is installed). */
+export async function fetchListingReviews(client: SupabaseClient, listingId: string): Promise<ListingReview[]> {
+  const { data, error } = await client.rpc("listing_reviews", { target_listing: listingId });
+  if (error) {
+    if (error.code !== "PGRST202") console.error("Could not load reviews:", error);
+    return [];
+  }
+  return (data ?? []) as ListingReview[];
+}
+
+/** The months already booked on a place, for its availability (dates only). */
+export async function fetchBookedRanges(client: SupabaseClient, listingId: string): Promise<Array<{ starts: string; ends: string }>> {
+  const { data, error } = await client.rpc("listing_booked_ranges", { target_listing: listingId });
+  if (error) {
+    if (error.code !== "PGRST202") console.error("Could not load booked dates:", error);
+    return [];
+  }
+  return (data ?? []) as Array<{ starts: string; ends: string }>;
+}

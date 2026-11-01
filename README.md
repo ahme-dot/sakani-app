@@ -48,6 +48,7 @@ The site uses Supabase for email-free owner submissions, image uploads, private 
    19. [`supabase/migrations/20261103010000_sakani_booking_deposit_fix.sql`](./supabase/migrations/20261103010000_sakani_booking_deposit_fix.sql) — fix for the booking function in 18.
    20. [`supabase/migrations/20261104000000_sakani_contracts.sql`](./supabase/migrations/20261104000000_sakani_contracts.sql) — document acceptances (version and time), the rental agreement accepted by both sides (which allows the deposit transfer), and the data behind the printable booking documents.
    21. [`supabase/migrations/20261105000000_sakani_platform.sql`](./supabase/migrations/20261105000000_sakani_platform.sql) — cancellation policy (7 scenarios, off until legally approved) and cancellation requests, more listing details and statuses, notifications, support tickets, the admin finance summary, private identity documents, editable policy pages, and the payment mode (InstaPay or sandbox).
+   22. [`supabase/migrations/20261106000000_sakani_reviews_availability_roles.sql`](./supabase/migrations/20261106000000_sakani_reviews_availability_roles.sql) — guest reviews after moving in, no double bookings (and booked dates on the listing), admin roles ("full" or "reviewer", who can't touch money or policies), and error reports from visitors' browsers.
 
 See also [docs/deployment.md](./docs/deployment.md), [docs/payments.md](./docs/payments.md) and [docs/legal-and-operations.md](./docs/legal-and-operations.md).
 4. Create an administrator in Supabase Authentication with an email and password. This email is only for the administrator; listing submitters do not need one.
@@ -88,6 +89,8 @@ npm run test:live   # tests the live site
 ```
 
 Without the two admin variables, tests that need listings or the admin panel are skipped. The suite creates its own `[E2E TEST]` listings and deletes them (with their photos) when it finishes. To test a dev server that is already running, set `$env:SAKANI_TEST_URL = "http://localhost:3000"`.
+
+On GitHub, `.github/workflows/ci.yml` checks every push (lint, types, a production build). Add the repository secrets `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SAKANI_ADMIN_EMAIL` and `SAKANI_ADMIN_PASSWORD` (Settings → Secrets and variables → Actions) and it runs this test suite too.
 
 ## Publish to the internet (Vercel)
 

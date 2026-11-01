@@ -10,6 +10,7 @@ import {
   Mars,
   ShieldAlert,
   ShieldCheck,
+  Star,
   Venus,
   Wallet,
   Wifi,
@@ -31,7 +32,7 @@ import { bilingualMetadata } from "@/lib/metadata";
 import { SITE_URL, listingPath, whatsappLink } from "@/lib/site";
 import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings } from "@/lib/payments";
 import { fetchPublicProfile } from "@/lib/profiles";
-import { fetchSimilarListings, listingRef } from "@/lib/supabase/listings";
+import { fetchBookedRanges, fetchListingReviews, fetchSimilarListings, listingRef } from "@/lib/supabase/listings";
 import { getApprovedListing, getSupabaseServerClient } from "@/lib/supabase/server";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -73,13 +74,16 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const ref = listingRef(listing.id);
   const pageUrl = `${SITE_URL}${listingPath(locale, listing.id)}`;
   const serverClient = getSupabaseServerClient();
-  const [similar, settings, host] = serverClient
+  const [similar, settings, host, reviews, booked] = serverClient
     ? await Promise.all([
         fetchSimilarListings(serverClient, listing),
         fetchPaymentSettings(serverClient),
         listing.host_id && !listing.is_demo ? fetchPublicProfile(serverClient, listing.host_id) : Promise.resolve(null),
+        fetchListingReviews(serverClient, listing.id),
+        fetchBookedRanges(serverClient, listing.id),
       ])
-    : [[], null, null];
+    : [[], null, null, [], []];
+  const average = reviews.length ? Math.round((reviews.reduce((total, review) => total + review.rating, 0) / reviews.length) * 10) / 10 : 0;
   const fees = settings ?? DEFAULT_PAYMENT_SETTINGS;
   // Guests reach the Sakani team, never the host directly; the team checks with the host first.
   const teamHref = fees.team_whatsapp ? whatsappLink(fees.team_whatsapp, t.askSakaniMessage(ref, title, pageUrl)) : null;
@@ -181,6 +185,25 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
               </section>
             )}
 
+            <section className="listing3-section listing-reviews" id="reviews" aria-labelledby="listing-reviews-title">
+              <h2 id="listing-reviews-title">
+                {reviews.length ? <><Star size={20} className="listing-reviews-star" /> {t.reviewsHeading(numberFormat.format(average), reviews.length)}</> : t.reviewsTitle}
+              </h2>
+              {reviews.length === 0 ? (
+                <p className="field-hint">{t.reviewsEmpty}</p>
+              ) : (
+                <ul className="listing-reviews-list">
+                  {reviews.slice(0, 12).map((review, index) => (
+                    <li key={`${review.created_at}-${index}`}>
+                      <span className="listing-review-stars" aria-label={t.reviewStarsValue(review.rating)}>{"★".repeat(review.rating)}<span aria-hidden="true">{"★".repeat(5 - review.rating)}</span></span>
+                      {review.body && <p>{review.body}</p>}
+                      <small>{review.guest_first_name || t.roleGuest} · {monthYear.format(new Date(review.created_at))}</small>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
             <section className="listing3-section" aria-labelledby="listing-amenities-title">
               <h2 id="listing-amenities-title">{t.offersTitle}</h2>
               <ul className="listing3-offers">
@@ -222,8 +245,16 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                 <div><dt>{t.beds}</dt><dd>{t.bedsSummary(listing.available_beds, listing.total_beds)}</dd></div>
               </dl>
               <p className="listing3-ref">{t.listingRefLabel}: <strong dir="ltr">{ref}</strong></p>
+              {booked.length > 0 && (
+                <div className="listing-booked">
+                  <strong>{t.bookedTitle}</strong>
+                  <ul>
+                    {booked.map((range) => <li key={range.starts}>{t.bookedRange(dateFormat.format(new Date(range.starts)), dateFormat.format(new Date(range.ends)))}</li>)}
+                  </ul>
+                </div>
+              )}
               {listing.is_demo && <p className="demo-pill-line"><span className="demo-pill">{t.demoBadge}</span></p>}
-              <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} minMonths={listing.min_months ?? 1} />
+              <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} minMonths={listing.min_months ?? 1} availableFrom={listing.available_from ?? null} />
               <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-whatsapp" />
               <p className="listing3-middleman"><ShieldCheck size={16} /> {t.middlemanNote}</p>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>

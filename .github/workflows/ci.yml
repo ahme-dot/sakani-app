@@ -1,0 +1,63 @@
+# Checks every push and pull request: lint, types and a production build.
+# The browser tests run too once the repository has these secrets (Settings → Secrets → Actions):
+#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SAKANI_ADMIN_EMAIL, SAKANI_ADMIN_PASSWORD
+# They use the real Supabase project and remove everything they create.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'public-anon-key' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+  e2e:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SAKANI_ADMIN_EMAIL: ${{ secrets.SAKANI_ADMIN_EMAIL }}
+      SAKANI_ADMIN_PASSWORD: ${{ secrets.SAKANI_ADMIN_PASSWORD }}
+      HAS_SECRETS: ${{ secrets.SAKANI_ADMIN_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.HAS_SECRETS == 'true'
+      - uses: actions/setup-node@v4
+        if: env.HAS_SECRETS == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        if: env.HAS_SECRETS == 'true'
+      - run: npx playwright install --with-deps chromium
+        if: env.HAS_SECRETS == 'true'
+      - run: npm test
+        if: env.HAS_SECRETS == 'true'
+      - uses: actions/upload-artifact@v4
+        if: failure() && env.HAS_SECRETS == 'true'
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

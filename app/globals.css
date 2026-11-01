@@ -12796,3 +12796,72 @@ body {
 .site-shell .owner-bookings li .status-chip { justify-self: start; }
 .site-shell .owner-bookings p { margin: 0; color: #24324a; font-size: 14px; line-height: 1.7; }
 .site-shell .owner-bookings .button { justify-self: start; }
+
+/* Booking timeline (guest profile). */
+.site-shell .booking-timeline { display: flex; flex-wrap: wrap; gap: 6px 4px; margin: 10px 0 2px; padding: 0; list-style: none; grid-column: 1 / -1; }
+.site-shell .booking-timeline li { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 999px; background: #f1f4f8; color: #5b6576; font-size: 12.5px; font-weight: 600; }
+.site-shell .booking-timeline-dot { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #dfe5ec; color: #4b5565; font-size: 11px; }
+.site-shell .booking-timeline li.is-done { background: #e8f5ee; color: #1f7a5a; }
+.site-shell .booking-timeline li.is-done .booking-timeline-dot { background: #1f7a5a; color: #fff; }
+.site-shell .booking-timeline li.is-current { background: #14213d; color: #fff; }
+.site-shell .booking-timeline li.is-current .booking-timeline-dot { background: #fff; color: #14213d; }
+
+/* Reviews: the guest's form, the listing section, the admin list. */
+.site-shell .review-form { display: grid; gap: 10px; grid-column: 1 / -1; margin-top: 10px; padding: 14px; border: 1px solid #e3e7ec; border-radius: 12px; background: #fbfcfd; }
+.site-shell .review-stars { display: flex; gap: 4px; }
+.site-shell .review-stars button { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: #c3cad4; cursor: pointer; }
+.site-shell .review-stars button.is-on { color: #e8a317; }
+.site-shell .review-stars button.is-on svg { fill: currentColor; }
+.site-shell .review-stars button:focus-visible { outline: 2px solid #1f7a5a; }
+.listing-review-stars { color: #e8a317; letter-spacing: 2px; font-size: 16px; }
+.listing-review-stars span { color: #d5dae1; }
+.site-shell .listing-reviews h2 { display: flex; align-items: center; gap: 8px; }
+.site-shell .listing-reviews-star { color: #e8a317; fill: #e8a317; }
+.site-shell .listing-reviews-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.site-shell .listing-reviews-list li { display: grid; gap: 6px; padding: 14px; border: 1px solid #e3e7ec; border-radius: 12px; }
+.site-shell .listing-reviews-list p { margin: 0; color: #24324a; line-height: 1.7; }
+.site-shell .listing-reviews-list small { color: #6b7485; }
+.admin-reviews, .admin-errors ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.admin-reviews li { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid #e3e7ec; border-radius: 12px; background: #fff; }
+.admin-reviews li > div { display: grid; gap: 4px; }
+.admin-reviews li p { margin: 0; }
+.admin-reviews li.is-hidden { opacity: .6; }
+
+/* Booked dates on the listing card. */
+.site-shell .listing-booked { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #fff7e8; color: #6b4a0b; font-size: 14px; }
+.site-shell .listing-booked ul { margin: 4px 0 0; padding-inline-start: 18px; }
+
+/* Host money. */
+.site-shell .host-earnings-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.site-shell .host-earnings-stats div { display: grid; gap: 4px; padding: 14px; border: 1px solid #e3e7ec; border-radius: 12px; }
+.site-shell .host-earnings-stats span { color: #5b6576; font-size: 13px; }
+.site-shell .host-earnings-stats strong { color: #14213d; font-size: 18px; }
+@media (max-width: 560px) { .site-shell .host-earnings-stats { grid-template-columns: 1fr; } }
+
+/* Admin: grouped menu, today's list, roles, errors. */
+.admin-nav-group { display: grid; gap: 4px; }
+.admin-nav-group + .admin-nav-group { margin-top: 10px; }
+.admin-nav-heading { padding: 4px 12px 2px; color: #7a8494; font-size: 11.5px; font-weight: 700; letter-spacing: .3px; }
+@media (max-width: 900px) {
+  .admin-nav-group { display: contents; }
+  .admin-nav-heading { display: none; }
+}
+.admin-today-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.admin-today-list li { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid #e3e7ec; border-inline-start: 4px solid #8aa0b8; border-radius: 12px; background: #fff; }
+.admin-today-list li.is-urgent { border-inline-start-color: #c2410c; }
+.admin-today-list li > div { display: grid; gap: 2px; }
+.admin-today-list small { color: #5b6576; }
+.admin-today-count { min-width: 40px; color: #14213d; font-size: 24px; font-weight: 800; text-align: center; }
+@media (max-width: 600px) { .admin-today-list li { grid-template-columns: auto 1fr auto; } .admin-today-list li .admin-btn { grid-column: 1 / -1; } }
+.admin-team-role { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.admin-team-role select { min-height: 32px; padding: 2px 8px; border: 1px solid #d5dae1; border-radius: 8px; background: #fff; font: inherit; }
+.admin-errors { display: grid; gap: 12px; justify-items: start; }
+.admin-errors ul { width: 100%; }
+.admin-errors li { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid #f1d5cc; border-radius: 12px; background: #fff; }
+.admin-errors pre { overflow-x: auto; max-height: 220px; margin: 6px 0; font-size: 12px; white-space: pre-wrap; }
+/* With grouped menus the admin sidebar can be taller than the screen: it scrolls on its own. */
+@media (min-width: 901px) {
+  .admin-sidebar { overflow-y: auto; overscroll-behavior: contain; }
+  .admin-nav button { min-height: 42px; }
+  .admin-nav { gap: 3px; }
+}

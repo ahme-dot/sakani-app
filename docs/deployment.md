@@ -20,8 +20,14 @@ Never put a Supabase service-role key or any payment secret in a `NEXT_PUBLIC_` 
 
 1. Run any new file in `supabase/migrations/` in the Supabase SQL Editor, **in order**, before pushing code that needs it. Every migration is safe to run twice.
 2. Run the tests locally: `npm run dev -- --port 3100` in one terminal, then `$env:SAKANI_TEST_URL="http://localhost:3100"; npx playwright test --project=local`.
-3. Push to `main`. Vercel builds and deploys.
+3. Push to `main`. Vercel builds and deploys, and GitHub Actions checks lint, types and the build (and runs the tests when the repository secrets are set; see the README).
 4. Optionally run the live tests: `npm run test:live`.
+
+## Day to day
+
+- **Admin → Today** lists everything waiting for the team, most urgent first (refunds due, transfers to check, unread chats, hosts to pay, deposits to send, listings to review).
+- **Admin → Errors** shows errors that happened in visitors' browsers. The same error coming back means something needs fixing.
+- **Admin → Team**: give helpers **Review only** access. They can review listings, chat and handle reports, but the database refuses any change they try to make to money, policies, legal pages or the team.
 
 ## First-time setup
 
