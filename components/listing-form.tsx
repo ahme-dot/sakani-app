@@ -232,6 +232,10 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
     }
 
     // Owners write the title and description once, in either language; both language versions show the same text.
+    const optional = (name: string) => {
+  const value = String(formData.get(name) ?? "").trim();
+  return value === "" ? null : Number(value);
+};
     const title = String(formData.get("title")).trim();
     const description = String(formData.get("description")).trim();
     const values = {
@@ -247,6 +251,11 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
       deposit: Number(formData.get("deposit")),
       available_beds: Number(formData.get("available_beds")),
       total_beds: Number(formData.get("total_beds")),
+      bedrooms: optional("bedrooms"),
+      bathrooms: optional("bathrooms"),
+      area_sqm: optional("area_sqm"),
+      min_months: Number(formData.get("min_months") || 1),
+      available_from: String(formData.get("available_from") ?? "") || null,
       whatsapp_number: String(formData.get("whatsapp_number")).trim(),
       wifi: formData.has("wifi"),
       air_conditioning: formData.has("air_conditioning"),
@@ -415,6 +424,11 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
         <div className="owner-form-grid">
           <label className="owner-field"><span>{t.availableBeds}</span><input name="available_beds" type="number" inputMode="numeric" min="1" max="100" defaultValue={editing?.available_beds ?? text("available_beds") ?? 1} required /></label>
           <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" type="number" inputMode="numeric" min="1" max="100" defaultValue={editing?.total_beds ?? text("total_beds") ?? 1} required /></label>
+          <label className="owner-field"><span>{t.bedroomsLabel}</span><input name="bedrooms" type="number" inputMode="numeric" min="0" max="20" defaultValue={editing?.bedrooms ?? text("bedrooms") ?? ""} /></label>
+          <label className="owner-field"><span>{t.bathroomsLabel}</span><input name="bathrooms" type="number" inputMode="numeric" min="0" max="20" defaultValue={editing?.bathrooms ?? text("bathrooms") ?? ""} /></label>
+          <label className="owner-field"><span>{t.areaSqmLabel}</span><input name="area_sqm" type="number" inputMode="numeric" min="5" max="2000" defaultValue={editing?.area_sqm ?? text("area_sqm") ?? ""} /></label>
+          <label className="owner-field"><span>{t.minMonthsLabel}</span><input name="min_months" type="number" inputMode="numeric" min="1" max="24" defaultValue={editing?.min_months ?? text("min_months") ?? 1} required /></label>
+          <label className="owner-field"><span>{t.availableFromLabel}</span><input name="available_from" type="date" dir="ltr" defaultValue={editing?.available_from ?? text("available_from") ?? ""} /></label>
         </div>
       ))}
 

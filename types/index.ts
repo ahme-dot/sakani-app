@@ -36,4 +36,10 @@ export interface Property {
     is_demo?: boolean;
     /** The host's account, for "Hosted by" on the listing page. */
     host_id?: string;
+    bedrooms?: number | null;
+    bathrooms?: number | null;
+    area_sqm?: number | null;
+    /** Shortest stay the host accepts, in months. */
+    min_months?: number;
+    available_from?: string | null;
   }

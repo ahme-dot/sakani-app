@@ -29,15 +29,25 @@ export type MarketplaceListing = {
   verified: boolean;
   verified_at: string | null;
   is_demo?: boolean;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  area_sqm?: number | null;
+  min_months?: number;
+  available_from?: string | null;
   rejection_reason: string | null;
-  status: "pending" | "approved" | "rejected" | "paused";
+  status: ListingStatus;
   created_at: string;
   updated_at: string;
 };
 
+/** Published listings are "approved"; reserved / rented / suspended / paused ones are hidden from search. */
+export type ListingStatus = "pending" | "approved" | "rejected" | "paused" | "reserved" | "rented" | "suspended";
+/** Hidden from search but kept: the admin "Paused" tab shows all of these. */
+export const HIDDEN_STATUSES = ["paused", "reserved", "rented", "suspended"] as const;
+
 /** Columns that are safe to show to anyone. Excludes owner_id and review notes. */
 export const PUBLIC_LISTING_COLUMNS =
-  "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,image_url,image_urls,verified,verified_at,is_demo,status,created_at,updated_at";
+  "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,image_url,image_urls,verified,verified_at,is_demo,bedrooms,bathrooms,area_sqm,min_months,available_from,status,created_at,updated_at";
 
 /** Short reference guests quote to the Sakani team, e.g. "SK-3F9A2C". */
 export function listingRef(id: string) {
@@ -69,6 +79,11 @@ export type ListingFilters = {
   propertyType: string;
   minPrice: string;
   maxPrice: string;
+  /** At least this many bedrooms / bathrooms. */
+  bedrooms: string;
+  bathrooms: string;
+  /** The guest wants to stay this many months: places whose minimum stay is longer are left out. */
+  stay: string;
   amenities: AmenityFilter[];
   verified: boolean;
   sort: ListingSort;
@@ -81,13 +96,16 @@ export const EMPTY_FILTERS: ListingFilters = {
   propertyType: "",
   minPrice: "",
   maxPrice: "",
+  bedrooms: "",
+  bathrooms: "",
+  stay: "",
   amenities: [],
   verified: false,
   sort: "newest",
 };
 
 export function hasActiveFilters(filters: ListingFilters) {
-  return Boolean(filters.governorate || filters.area || filters.gender || filters.propertyType || filters.minPrice || filters.maxPrice || filters.amenities.length || filters.verified);
+  return Boolean(filters.governorate || filters.area || filters.gender || filters.propertyType || filters.minPrice || filters.maxPrice || filters.bedrooms || filters.bathrooms || filters.stay || filters.amenities.length || filters.verified);
 }
 
 const SORTS: ListingSort[] = ["newest", "price_asc", "price_desc"];
@@ -108,6 +126,9 @@ export function filtersFromParams(params: Record<string, string | string[] | und
     propertyType: ["room", "apartment", "bed", "studio"].includes(one("type")) ? one("type") : "",
     minPrice: PRICE_PATTERN.test(one("min")) ? one("min") : "",
     maxPrice: PRICE_PATTERN.test(one("max")) ? one("max") : "",
+    bedrooms: /^[1-9]$/.test(one("beds")) ? one("beds") : "",
+    bathrooms: /^[1-9]$/.test(one("baths")) ? one("baths") : "",
+    stay: /^([1-9]|1\d|2[0-4])$/.test(one("stay")) ? one("stay") : "",
     amenities,
     verified: one("verified") === "1",
     sort: SORTS.includes(sort) ? sort : "newest",
@@ -123,6 +144,9 @@ export function filtersToParams(filters: ListingFilters) {
   if (filters.propertyType) params.set("type", filters.propertyType);
   if (filters.minPrice) params.set("min", filters.minPrice);
   if (filters.maxPrice) params.set("max", filters.maxPrice);
+  if (filters.bedrooms) params.set("beds", filters.bedrooms);
+  if (filters.bathrooms) params.set("baths", filters.bathrooms);
+  if (filters.stay) params.set("stay", filters.stay);
   if (filters.amenities.length) params.set("amenities", filters.amenities.join(","));
   if (filters.verified) params.set("verified", "1");
   if (filters.sort !== "newest") params.set("sort", filters.sort);
@@ -181,6 +205,9 @@ function applyFilters<T>(query: T, filters: ListingFilters): T {
   if (filters.minPrice && Number.isFinite(minPrice) && minPrice > 0) next = next.gte("monthly_price", minPrice);
   const maxPrice = Number(filters.maxPrice);
   if (filters.maxPrice && Number.isFinite(maxPrice) && maxPrice > 0) next = next.lte("monthly_price", maxPrice);
+  if (filters.bedrooms) next = next.gte("bedrooms", Number(filters.bedrooms));
+  if (filters.bathrooms) next = next.gte("bathrooms", Number(filters.bathrooms));
+  if (filters.stay) next = next.lte("min_months", Number(filters.stay));
   for (const amenity of filters.amenities) next = next.eq(amenity, true);
   if (filters.verified) next = next.eq("verified", true);
   return next as unknown as T;
@@ -263,6 +290,11 @@ export function toProperty(listing: MarketplaceListing): Property {
     created_at: listing.created_at || now,
     updated_at: listing.updated_at || listing.created_at || now,
     is_demo: Boolean(listing.is_demo),
+    bedrooms: listing.bedrooms ?? null,
+    bathrooms: listing.bathrooms ?? null,
+    area_sqm: listing.area_sqm ?? null,
+    min_months: listing.min_months ?? 1,
+    available_from: listing.available_from ?? null,
     host_id: (listing as { owner_id?: string }).owner_id,
   };
 }

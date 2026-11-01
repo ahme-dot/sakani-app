@@ -86,6 +86,7 @@ test.describe("bookings", () => {
     await expect(form.locator(".book-total .is-total")).toContainText("EGP");
     await form.locator('input[name="move_in"]').fill(tomorrow());
     await form.locator('select[name="months"]').selectOption("3");
+    await form.locator('input[name="agree"]').check();
     await form.locator(".book-submit").click();
 
     // Pay now: first month + 8%, by InstaPay only.
@@ -146,7 +147,7 @@ test.describe("bookings", () => {
       expect((await api("/rest/v1/rpc/admin_confirm_booking_payment", { token: admin, method: "POST", body: { target_booking: bookingId } })).status).toBeLessThan(300);
       expect((await status()).status).toBe("confirmed");
       const listing = await api<Array<{ status: string }>>(`/rest/v1/properties?select=status&id=eq.${listingId}`, { token: admin });
-      expect(listing.data[0].status).toBe("paused");
+      expect(listing.data[0].status).toBe("reserved");
 
       // The guest moves in; the team pays the host and records the transfer.
       expect((await api("/rest/v1/rpc/admin_mark_payout", { token: admin, method: "POST", body: { target_booking: bookingId, transfer_reference: "IP-OUT-1" } })).status).toBeGreaterThanOrEqual(400);

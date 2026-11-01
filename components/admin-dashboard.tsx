@@ -6,10 +6,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
+  Ban,
   CalendarCheck,
   FlaskConical,
   MessagesSquare,
   ScrollText,
+  ChartColumn,
+  Gavel,
+  IdCard,
+  Scale,
   BadgeCheck,
   BedDouble,
   Building2,
@@ -41,6 +46,10 @@ import {
 import AdminGrow from "@/components/admin-grow";
 import AdminPayments from "@/components/admin-payments";
 import AdminAudit from "@/components/admin-audit";
+import AdminFinance from "@/components/admin-finance";
+import AdminIdentity from "@/components/admin-identity";
+import AdminLegal from "@/components/admin-legal";
+import AdminPolicies from "@/components/admin-policies";
 import AdminChat from "@/components/admin-chat";
 import AdminDemo from "@/components/admin-demo";
 import AdminRequests from "@/components/admin-requests";
@@ -53,7 +62,7 @@ import AdminTeam from "@/components/admin-team";
 import AdminUsers, { type DirectoryUser } from "@/components/admin-users";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { PUBLIC_LISTING_COLUMNS, fetchPrivateContacts, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
+import { HIDDEN_STATUSES, PUBLIC_LISTING_COLUMNS, fetchPrivateContacts, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
 import { storagePathFromPublicUrl } from "@/lib/images";
 import { listingPath, whatsappLink } from "@/lib/site";
 import { placeLabel } from "@/lib/egypt";
@@ -67,8 +76,9 @@ const SEARCH_DEBOUNCE_MS = 300;
 const STALE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
-type ReviewFilter = MarketplaceListing["status"];
-type AdminView = "listings" | "add" | "requests" | "chat" | "reports" | "inbox" | "payments" | "audit" | "users" | "demo" | "grow" | "team";
+/** The admin tabs; "paused" also shows reserved, rented and suspended listings (everything hidden from search). */
+type ReviewFilter = "pending" | "approved" | "rejected" | "paused";
+type AdminView = "listings" | "add" | "requests" | "chat" | "reports" | "inbox" | "payments" | "finance" | "policies" | "legal" | "audit" | "users" | "identity" | "demo" | "grow" | "team";
 type ListingStats = { views: number; whatsapp_clicks: number };
 type AdminListing = MarketplaceListing;
 type ListingPatch = Partial<Pick<AdminListing, "status" | "verified" | "rejection_reason">>;
@@ -186,10 +196,9 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   useEffect(() => {
     if (!supabase || state !== "ready") return;
     let mounted = true;
-    let request = supabase
-      .from("properties")
-      .select(ADMIN_LISTING_COLUMNS)
-      .eq("status", filter);
+    let request = filter === "paused"
+      ? supabase.from("properties").select(ADMIN_LISTING_COLUMNS).in("status", [...HIDDEN_STATUSES])
+      : supabase.from("properties").select(ADMIN_LISTING_COLUMNS).eq("status", filter);
     if (query) request = request.or(SEARCH_COLUMNS.map((column) => `${column}.ilike.*${query}*`).join(","));
     if (ownerFilter) request = request.eq("owner_id", ownerFilter.user_id);
     if (listingIdFilter) request = request.eq("id", listingIdFilter);
@@ -267,7 +276,9 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     if (!supabase || state !== "ready") return;
     let mounted = true;
     const count = (status: ReviewFilter, verifiedOnly = false) => {
-      let request = supabase.from("properties").select("id", { count: "exact", head: true }).eq("status", status);
+      let request = status === "paused"
+        ? supabase.from("properties").select("id", { count: "exact", head: true }).in("status", [...HIDDEN_STATUSES])
+        : supabase.from("properties").select("id", { count: "exact", head: true }).eq("status", status);
       if (verifiedOnly) request = request.eq("verified", true);
       return request.then(({ count: value }) => value ?? 0);
     };
@@ -338,6 +349,23 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     refreshCounts();
   }
 
+  async function suspendListing(listingId: string, suspend: boolean) {
+    if (!supabase) return;
+    setUpdatingId(listingId);
+    setError("");
+    setMessage("");
+    const { error: suspendError } = await supabase.rpc("admin_suspend_listing", { target_listing: listingId, suspend });
+    setUpdatingId(null);
+    if (suspendError) {
+      console.error("Could not change the suspension:", suspendError);
+      setError(t.adminUpdateError);
+      return;
+    }
+    setListings((current) => current.filter((item) => item.id !== listingId));
+    setMessage(t.adminStatusUpdated);
+    refreshCounts();
+  }
+
   async function updateListing(listingId: string, patch: ListingPatch) {
     if (!supabase) return;
     setUpdatingId(listingId);
@@ -348,7 +376,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       .from("properties")
       .update(patch)
       .eq("id", listingId)
-      .eq("status", filter)
+      .in("status", filter === "paused" ? [...HIDDEN_STATUSES] : [filter])
       .select("id");
 
     // Row-level security silently skips rows the user may not update, so an empty result is also a failure.
@@ -470,14 +498,14 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     setError("");
   }
 
-  function reviewReportedListing(listingId: string, status: ReviewFilter) {
+  function reviewReportedListing(listingId: string, status: MarketplaceListing["status"]) {
     setLoadingListings(true);
     setEditingId(null);
     setRejectingId(null);
     setDeletingId(null);
     setOwnerFilter(null);
     setListingIdFilter(listingId);
-    setFilter(status);
+    setFilter((HIDDEN_STATUSES as readonly string[]).includes(status) ? "paused" : (status as ReviewFilter));
     setView("listings");
   }
 
@@ -525,7 +553,15 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     );
   }
 
-  const statusLabel: Record<ReviewFilter, string> = { pending: t.adminPending, approved: t.adminApproved, rejected: t.adminRejected, paused: t.adminStatusPaused };
+  const statusLabel: Record<MarketplaceListing["status"], string> = {
+    pending: t.adminPending,
+    approved: t.adminApproved,
+    rejected: t.adminRejected,
+    paused: t.adminStatusPaused,
+    reserved: t.listingStatus.reserved,
+    rented: t.listingStatus.rented,
+    suspended: t.listingStatus.suspended,
+  };
   const stats: Array<{ value: ReviewFilter; label: string; hint: string }> = [
     { value: "pending", label: t.adminPending, hint: t.adminStatPendingHint },
     { value: "approved", label: t.adminApproved, hint: t.adminStatApprovedHint },
@@ -542,8 +578,12 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     { value: "reports", label: t.adminViewReports, icon: Flag, badge: openReports },
     { value: "inbox", label: t.adminViewInbox, icon: Inbox, badge: openMessages },
     { value: "payments", label: t.adminViewPayments, icon: Wallet, badge: feesToCheck },
+    { value: "finance", label: t.adminViewFinance, icon: ChartColumn },
+    { value: "policies", label: t.adminViewPolicies, icon: Scale },
+    { value: "legal", label: t.adminViewLegal, icon: Gavel },
     { value: "audit", label: t.adminViewAudit, icon: ScrollText },
     { value: "users", label: t.adminViewUsers, icon: UsersRound },
+    { value: "identity", label: t.adminViewIdentity, icon: IdCard },
     { value: "demo", label: t.adminViewDemo, icon: FlaskConical },
     { value: "grow", label: t.adminViewGrow, icon: Megaphone },
     { value: "team", label: t.adminViewTeam, icon: Users },
@@ -558,6 +598,10 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     chat: { title: t.adminViewChat, description: t.adminChatDescription },
     demo: { title: t.adminViewDemo, description: t.demoDescription },
     audit: { title: t.adminViewAudit, description: t.auditDescription },
+    finance: { title: t.adminViewFinance, description: t.financeDescription },
+    policies: { title: t.adminViewPolicies, description: t.policiesDescription },
+    legal: { title: t.adminViewLegal, description: t.legalAdminDescription },
+    identity: { title: t.adminViewIdentity, description: t.identityAdminDescription },
     users: { title: t.usersTitle, description: t.usersDescription },
     grow: { title: t.growTitle, description: t.growDescription },
     team: { title: t.teamTitle, description: t.teamDescription },
@@ -630,6 +674,14 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           />
         ) : view === "chat" ? (
           <AdminChat key={`${chatTarget?.userId ?? ""}-${chatTarget?.bookingId ?? ""}`} locale={locale} supabase={supabase!} openUserId={chatTarget?.userId} openBookingId={chatTarget?.bookingId} onChanged={refreshCounts} />
+        ) : view === "finance" ? (
+          <AdminFinance locale={locale} supabase={supabase!} />
+        ) : view === "policies" ? (
+          <AdminPolicies locale={locale} supabase={supabase!} />
+        ) : view === "legal" ? (
+          <AdminLegal locale={locale} supabase={supabase!} />
+        ) : view === "identity" ? (
+          <AdminIdentity locale={locale} supabase={supabase!} />
         ) : view === "audit" ? (
           <AdminAudit locale={locale} supabase={supabase!} />
         ) : view === "demo" ? (
@@ -872,6 +924,11 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                             </button>
                             {listing.status === "approved" && (
                               <Link className="admin-btn admin-btn-ghost" href={listingPath(locale, listing.id)} target="_blank"><ExternalLink size={14} /> {t.adminViewPublic}</Link>
+                            )}
+                            {(listing.status === "approved" || listing.status === "suspended") && (
+                              <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void suspendListing(listing.id, listing.status === "approved")}>
+                                <Ban size={14} /> {listing.status === "approved" ? t.adminSuspend : t.adminUnsuspend}
+                              </button>
                             )}
                             {(listing.status === "approved" || listing.status === "paused") && (
                               <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void chargeFee(listing.id)}>

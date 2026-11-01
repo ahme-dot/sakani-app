@@ -135,7 +135,18 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
           <div className="listing3-main">
             <section className="listing3-summary">
               <h2>{t.homesIn(t[listing.property_type], areaLabel)} · {t[listing.gender]}</h2>
-              <p>{t.bedsSummary(listing.available_beds, listing.total_beds)}</p>
+              <p>
+                {[
+                  t.bedsSummary(listing.available_beds, listing.total_beds),
+                  listing.bedrooms ? t.bedroomsCount(listing.bedrooms) : null,
+                  listing.bathrooms ? t.bathroomsCount(listing.bathrooms) : null,
+                  listing.area_sqm ? t.areaSqm(numberFormat.format(listing.area_sqm)) : null,
+                ].filter(Boolean).join(" · ")}
+              </p>
+              <p>
+                {t.minStay(t.monthsCount(listing.min_months ?? 1))}
+                {listing.available_from ? ` · ${t.availableFrom(dateFormat.format(new Date(listing.available_from)))}` : ""}
+              </p>
               <p className="listing3-location"><MapPin size={15} /> {place}</p>
             </section>
 
@@ -211,7 +222,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
               </dl>
               <p className="listing3-ref">{t.listingRefLabel}: <strong dir="ltr">{ref}</strong></p>
               {listing.is_demo && <p className="demo-pill-line"><span className="demo-pill">{t.demoBadge}</span></p>}
-              <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} />
+              <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} minMonths={listing.min_months ?? 1} />
               <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-whatsapp" />
               <p className="listing3-middleman"><ShieldCheck size={16} /> {t.middlemanNote}</p>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>

@@ -312,6 +312,7 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
     if (status === "approved") return t.statusApproved;
     if (status === "rejected") return t.statusRejected;
     if (status === "paused") return t.statusPaused;
+    if (status === "reserved" || status === "rented" || status === "suspended") return t.listingStatus[status];
     return t.statusPending;
   };
 

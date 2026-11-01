@@ -27,6 +27,7 @@ import PropertyCard from "@/components/property-card";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { PHONE_PATTERN, type AccountRole, type Profile } from "@/lib/account";
 import { GOVERNORATES, governorateLabel } from "@/lib/egypt";
+import { DOCUMENT_VERSION } from "@/lib/documents";
 import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
 import { RENTAL_FEE_COLUMNS, type RentalFee } from "@/lib/payments";
 import { LANGUAGE_OPTIONS } from "@/lib/profiles";
@@ -58,7 +59,7 @@ type Props = {
   onSignOut: () => Promise<void>;
 };
 
-type BookingStatus = "pending_payment" | "payment_review" | "confirmed" | "moved_in" | "completed" | "refund_pending" | "refunded" | "cancelled";
+type BookingStatus = "pending_payment" | "payment_review" | "confirmed" | "moved_in" | "completed" | "cancellation_requested" | "refund_pending" | "refunded" | "cancelled";
 
 type GuestBooking = {
   id: string;
@@ -72,6 +73,7 @@ type GuestBooking = {
   fee_id: string | null;
   refund_due_at: string | null;
   refund_reference: string | null;
+  contract_signed_at: string | null;
   created_at: string;
 };
 
@@ -98,7 +100,7 @@ type HostListing = { id: string; title_ar: string; title_en: string; status: str
 
 const AVATAR_BUCKET = "sakani-avatars";
 const PROFILE_COLUMNS = "id,role,full_name,phone,avatar_url,bio,governorate,gender,occupation,languages,instapay_address,id_verified,created_at";
-const BOOKING_COLUMNS = "id,listing_id,listing_title,move_in,months,guests,status,total_amount,fee_id,refund_due_at,refund_reference,created_at";
+const BOOKING_COLUMNS = "id,listing_id,listing_title,move_in,months,guests,status,total_amount,fee_id,refund_due_at,refund_reference,contract_signed_at,created_at";
 
 /** The signed-in account: about me, then bookings and saved places (guests) or booking requests, payouts and places (hosts). */
 export default function ProfilePage({ locale, supabase, user, profile: initialProfile, notice, onSignOut }: Props) {
@@ -125,6 +127,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
   const [fees, setFees] = useState<RentalFee[] | null>(null);
   const [saved, setSaved] = useState<Property[] | null>(null);
   const [problemFor, setProblemFor] = useState<string | null>(null);
+  const [identity, setIdentity] = useState<"pending" | "approved" | "rejected" | null>(null);
   const [version, setVersion] = useState(0);
   const savedIds = useSavedListings();
   const savedKey = savedIds.join(",");
@@ -140,6 +143,18 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
       active = false;
     };
   }, [initialProfile, supabase, user.id]);
+
+  // The latest identity check, if any.
+  useEffect(() => {
+    if (!initialProfile) return;
+    let active = true;
+    void supabase.from("identity_verifications").select("status").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).then(({ data }) => {
+      if (active) setIdentity(((data ?? [])[0] as { status: "pending" | "approved" | "rejected" } | undefined)?.status ?? null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [initialProfile, supabase, user.id, version]);
 
   // Each role loads its own sections.
   useEffect(() => {
@@ -242,6 +257,29 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
     const oldPath = profile.avatar_url ? storagePathFromPublicUrl(profile.avatar_url, AVATAR_BUCKET) : null;
     if (oldPath) void supabase.storage.from(AVATAR_BUCKET).remove([oldPath]);
     setProfile({ ...profile, avatar_url: url });
+  }
+
+  /** Uploads an ID photo or PDF to private storage and asks the team to review it. */
+  async function uploadIdentity(file: File | undefined) {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setError(t.identityFileError);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    const extension = file.type === "application/pdf" ? "pdf" : file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await supabase.storage.from("sakani-identity").upload(path, file, { contentType: file.type });
+    const { error: saveError } = uploadError ? { error: uploadError } : await supabase.from("identity_verifications").insert({ user_id: user.id, file_path: path });
+    setBusy(false);
+    if (saveError) {
+      console.error("Could not send the identity document:", saveError);
+      setError(t.formError);
+      return;
+    }
+    setMessage(t.identitySent);
+    setVersion((value) => value + 1);
   }
 
   async function switchRole() {
@@ -369,6 +407,18 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
               {profile.bio && <p className="profile-bio">{profile.bio}</p>}
             </>
           )}
+          {initialProfile && !profile.id_verified && (
+            <div className="profile-identity">
+              <strong>{t.identityTitle}</strong>
+              <p className="field-hint">{identity === "pending" ? t.identityPending : identity === "rejected" ? t.identityRejectedNote : t.identityHint}</p>
+              {identity !== "pending" && (
+                <label className="button button-outline profile-identity-upload">
+                  {t.identityUpload}
+                  <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => void uploadIdentity(event.target.files?.[0])} />
+                </label>
+              )}
+            </div>
+          )}
           {message && <p className="owner-feedback owner-feedback-success" role="status">{message}</p>}
           {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
           <div className="profile-actions">
@@ -401,14 +451,51 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                       <span className={`status-chip is-${booking.status}`}>{t.bookingStatus[booking.status]}</span>
                       {booking.host_decision === "pending" && (booking.status === "pending_payment" || booking.status === "payment_review") ? (
                         <span className="profile-row-actions">
-                          <button className="button button-primary" type="button" disabled={busy} onClick={() => void bookingAction("host_decide_booking", { target_booking: booking.id, accept: true })}>{t.hostAccept}</button>
+                          <button
+                            className="button button-primary"
+                            type="button"
+                            disabled={busy}
+                            onClick={() => {
+                              // Accepting a booking records the host's acceptance of the platform agreement.
+                              void bookingAction("accept_document", { target_booking: null, doc: "host_platform", doc_version: DOCUMENT_VERSION }).then((ok) => ok && bookingAction("host_decide_booking", { target_booking: booking.id, accept: true }));
+                            }}
+                          >
+                            {t.hostAccept}
+                          </button>
                           <button className="text-button" type="button" disabled={busy} onClick={() => void bookingAction("host_decide_booking", { target_booking: booking.id, accept: false })}>{t.hostDecline}</button>
                         </span>
                       ) : (
                         <small className="profile-decision">{t.hostDecision[booking.host_decision]}</small>
                       )}
+                      {booking.host_decision === "pending" && (booking.status === "pending_payment" || booking.status === "payment_review") && (
+                        <small className="profile-decision">{t.hostAgreeNote} <Link href={`/${locale}/agreements/host`} target="_blank">{t.hostAgreeLink}</Link></small>
+                      )}
+                      {(booking.status === "confirmed" || booking.status === "moved_in" || booking.status === "completed") && (
+                        <Link className="text-button" href={`/${locale}/documents/${booking.id}?doc=rental_agreement`}>{t.contractLink}</Link>
+                      )}
+                      <Link className="text-button" href={`/${locale}/documents/${booking.id}`}>{t.documentsLink}</Link>
                       {booking.deposit_status === "transferred" && (
                         <button className="button button-primary" type="button" disabled={busy} onClick={() => void bookingAction("host_acknowledge_deposit", { target_booking: booking.id })}>{t.depositAcknowledge}</button>
+                      )}
+                      {(booking.status === "payment_review" || booking.status === "confirmed" || booking.status === "moved_in") && problemFor !== booking.id && (
+                        <button className="text-button" type="button" onClick={() => setProblemFor(booking.id)}>{t.hostCancelButton}</button>
+                      )}
+                      {problemFor === booking.id && (
+                        <form
+                          className="profile-problem"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            const reason = String(new FormData(event.currentTarget).get("note") ?? "");
+                            void bookingAction("request_cancellation", { target_booking: booking.id, cancel_scenario: "host_cancels", cancel_reason: reason }).then((ok) => ok && setProblemFor(null));
+                          }}
+                        >
+                          <label className="owner-field"><span>{t.cancelReasonLabel}</span><textarea name="note" rows={2} minLength={5} maxLength={1000} required /></label>
+                          <p className="field-hint">{t.cancelPolicyNote}</p>
+                          <span className="profile-row-actions">
+                            <button className="button button-primary" type="submit" disabled={busy}>{t.cancelSubmit}</button>
+                            <button className="text-button" type="button" onClick={() => setProblemFor(null)}>{t.cancel}</button>
+                          </span>
+                        </form>
                       )}
                       <Link className="text-button" href={`/${locale}/messages?booking=${booking.id}`}><Headset size={14} /> {t.chatAboutBooking}</Link>
                     </li>
@@ -505,9 +592,13 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                           {booking.status === "pending_payment" && (
                             <button className="text-button" type="button" disabled={busy} onClick={() => void bookingAction("guest_cancel_booking", { target_booking: booking.id })}>{t.bookingCancel}</button>
                           )}
+                          {(booking.status === "confirmed" || booking.status === "moved_in") && !booking.contract_signed_at && (
+                            <Link className="button button-primary" href={`/${locale}/documents/${booking.id}?doc=rental_agreement`}>{t.signContract}</Link>
+                          )}
                           {booking.status === "confirmed" && (
                             <button className="button button-primary" type="button" disabled={busy} onClick={() => void bookingAction("guest_confirm_move_in", { target_booking: booking.id })}>{t.movedInButton}</button>
                           )}
+                          <Link className="text-button" href={`/${locale}/documents/${booking.id}`}>{t.documentsLink}</Link>
                           {canReport && problemFor !== booking.id && (
                             <button className="text-button" type="button" onClick={() => setProblemFor(booking.id)}>{t.reportProblem}</button>
                           )}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 import { CalendarCheck, CreditCard, LoaderCircle, LogIn, ShieldCheck } from "lucide-react";
 import { useAccount } from "@/lib/account";
+import { DOCUMENT_VERSION } from "@/lib/documents";
 import { bookingAmounts } from "@/lib/finance";
 import { ratesFrom, type PaymentSettings } from "@/lib/payments";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -18,6 +19,8 @@ type Props = {
   fees: PaymentSettings;
   /** Demo listings show the box but can't be booked. */
   isDemo?: boolean;
+  /** Shortest stay the host accepts, in months. */
+  minMonths?: number;
 };
 
 type Created = { booking_id: string; pay_token: string; total: number; rent: number; fee: number; deposit: number };
@@ -31,7 +34,7 @@ function today() {
  * A signed-in guest books and pays straight away (first month + Sakani fee, by InstaPay).
  * Sakani holds the money: it is refunded within 24 hours if anything goes wrong, and the host is paid after move-in.
  */
-export default function BookHome({ locale, listingId, monthlyPrice, deposit, fees, isDemo = false }: Props) {
+export default function BookHome({ locale, listingId, monthlyPrice, deposit, fees, isDemo = false, minMonths = 1 }: Props) {
   const t = SITE_COPY[locale];
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const account = useAccount(supabase);
@@ -53,6 +56,10 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
       setError(t.bookError);
       return;
     }
+    if (!form.has("agree")) {
+      setError(t.bookAgreeRequired);
+      return;
+    }
     setState("sending");
     setError("");
     const { data, error: bookError } = await supabase.rpc("guest_create_booking", {
@@ -68,6 +75,7 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
       const message = bookError.message;
       setError(
         message.includes("phone_required") ? t.bookPhoneRequired
+          : message.includes("stay_too_short") ? t.minStay(t.monthsCount(minMonths))
           : message.includes("request_limit") ? t.bookBusy
             : message.includes("own_listing") ? t.bookOwnListing
               : message.includes("listing_not_available") ? t.bookUnavailable
@@ -75,6 +83,8 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
       );
       return;
     }
+    // Record the guest's acceptance of the platform agreement (with its version and time).
+    await supabase.rpc("accept_document", { target_booking: null, doc: "guest_platform", doc_version: DOCUMENT_VERSION });
     setCreated(data as Created);
   }
 
@@ -118,8 +128,8 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
             <label className="owner-field"><span>{t.bookMoveIn}</span><input name="move_in" type="date" required min={today()} dir="ltr" /></label>
             <label className="owner-field">
               <span>{t.bookMonths}</span>
-              <select name="months" defaultValue="6">
-                {[1, 2, 3, 4, 5, 6, 9, 12].map((months) => <option key={months} value={months}>{t.monthsCount(months)}</option>)}
+              <select name="months" defaultValue={String(Math.max(6, minMonths))}>
+                {[...new Set([1, 2, 3, 4, 5, 6, 9, 12, minMonths])].filter((months) => months >= minMonths).sort((a, b) => a - b).map((months) => <option key={months} value={months}>{t.monthsCount(months)}</option>)}
               </select>
             </label>
           </div>
@@ -137,6 +147,10 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
             <div className="is-total"><dt>{t.bookTotalNow}</dt><dd>{numberFormat.format(amounts.guestTotal)} {t.currency}</dd></div>
           </dl>
           <p className="book-fee-note">{t.bookFeeNote}</p>
+          <label className="book-agree">
+            <input type="checkbox" name="agree" required />
+            <span>{t.bookAgreePrefix} <Link href={`/${locale}/agreements/guest`} target="_blank">{t.bookAgreeLink}</Link></span>
+          </label>
           {error && (
             <p className="owner-feedback owner-feedback-error" role="alert">
               {error}{error === t.bookPhoneRequired && <> <Link href={`/${locale}/account`}>{t.profileEdit}</Link></>}

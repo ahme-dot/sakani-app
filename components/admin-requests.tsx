@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CalendarCheck, CheckCircle2, ExternalLink, Headset, LoaderCircle, Phone, RotateCcw, Timer, Wallet, X } from "lucide-react";
+import { CalendarCheck, CheckCircle2, ExternalLink, FileText, Headset, LoaderCircle, Phone, RotateCcw, Timer, Wallet, X } from "lucide-react";
 import { isMissingFunction } from "@/lib/payments";
 import { listingPath, whatsappLink } from "@/lib/site";
 import { fetchPrivateContacts, listingRef } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
-type BookingStatus = "pending_payment" | "payment_review" | "confirmed" | "moved_in" | "completed" | "refund_pending" | "refunded" | "cancelled";
+type BookingStatus = "pending_payment" | "payment_review" | "confirmed" | "moved_in" | "completed" | "cancellation_requested" | "refund_pending" | "refunded" | "cancelled";
+type CancellationInfo = { id: string; booking_id: string; requesting_party: string; scenario: string; reason: string; status: string; refundable_amount: number | null };
+export const CANCELLATION_SCENARIOS = ["host_cancels", "guest_before_contract", "guest_after_contract", "property_unavailable", "inaccurate_listing", "platform_failure", "mutual"] as const;
 type Booking = {
   id: string;
   listing_id: string | null;
@@ -46,7 +48,7 @@ type FeeInfo = { id: string; status: string; reference: string | null; payer_pho
 type HostInfo = { id: string; full_name: string; instapay_address: string };
 
 // Most urgent first: money to check, money to return, hosts to pay.
-const TABS: BookingStatus[] = ["payment_review", "refund_pending", "moved_in", "confirmed", "pending_payment", "completed", "refunded", "cancelled"];
+const TABS: BookingStatus[] = ["payment_review", "cancellation_requested", "refund_pending", "moved_in", "confirmed", "pending_payment", "completed", "refunded", "cancelled"];
 const BOOKING_COLUMNS =
   "id,listing_id,listing_title,name,contact,note,status,move_in,months,guests,guest_id,host_id,fee_id,host_decision,rent_amount,guest_fee,host_fee,total_amount,payout_amount,paid_at,problem_note,refund_due_at,refund_reference,payout_reference,deposit_amount,guest_fee_percent,host_fee_percent,contract_signed_at,created_at";
 
@@ -71,6 +73,8 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
   const [hosts, setHosts] = useState<Record<string, HostInfo>>({});
   const [hostNumbers, setHostNumbers] = useState<Record<string, string>>({});
   const [deposits, setDeposits] = useState<Record<string, DepositInfo>>({});
+  const [cancellations, setCancellations] = useState<Record<string, CancellationInfo>>({});
+  const [scenarios, setScenarios] = useState<Record<string, string>>({});
   const [depositNotes, setDepositNotes] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<BookingStatus>("payment_review");
   const [version, setVersion] = useState(0);
@@ -105,17 +109,22 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
       const hostIds = [...new Set(rows.map((row) => row.host_id).filter((id): id is string => Boolean(id)))];
       const listingIds = [...new Set(rows.map((row) => row.listing_id).filter((id): id is string => Boolean(id)))];
       const bookingIds = rows.map((row) => row.id);
-      const [feeRows, hostRows, numbers, depositRows] = await Promise.all([
+      const [feeRows, hostRows, numbers, depositRows, cancellationRows] = await Promise.all([
         feeIds.length ? supabase.from("rental_fees").select("id,status,reference,payer_phone").in("id", feeIds) : Promise.resolve({ data: [] }),
         hostIds.length ? supabase.from("profiles").select("id,full_name,instapay_address").in("id", hostIds) : Promise.resolve({ data: [] }),
         fetchPrivateContacts(supabase, listingIds),
         bookingIds.length ? supabase.from("deposit_transfers").select("booking_id,status,amount,transfer_reference,acknowledged_at").in("booking_id", bookingIds) : Promise.resolve({ data: [] }),
+        bookingIds.length ? supabase.from("cancellation_requests").select("id,booking_id,requesting_party,scenario,reason,status,refundable_amount").in("booking_id", bookingIds).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
       ]);
       if (!mounted) return;
       setFees(Object.fromEntries(((feeRows.data ?? []) as FeeInfo[]).map((fee) => [fee.id, fee])));
       setHosts(Object.fromEntries(((hostRows.data ?? []) as HostInfo[]).map((host) => [host.id, host])));
       setHostNumbers(numbers);
       setDeposits(Object.fromEntries(((depositRows.data ?? []) as DepositInfo[]).map((row) => [row.booking_id, row])));
+      // The newest request per booking.
+      const latest: Record<string, CancellationInfo> = {};
+      for (const row of (cancellationRows.data ?? []) as CancellationInfo[]) latest[row.booking_id] ??= row;
+      setCancellations(latest);
     })();
     return () => {
       mounted = false;
@@ -133,6 +142,8 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
       setError(
         runError.message.includes("invalid_reference") || runError.message.includes("invalid_note") ? t.referenceRequired
           : runError.message.includes("contract_not_signed") ? t.depositNeedsContract
+            : runError.message.includes("policy_not_active") ? t.policyNotActive
+              : runError.message.includes("rule_not_set") ? t.ruleNotSet
             : runError.message.includes("already_transferred") ? t.depositAlreadySent
               : t.adminUpdateError,
       );
@@ -175,6 +186,8 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
             const reference = references[booking.id] ?? "";
             const left = booking.refund_due_at ? hoursLeft(booking.refund_due_at) : null;
             const deposit = deposits[booking.id];
+            const cancellation = cancellations[booking.id];
+            const scenario = scenarios[booking.id] ?? cancellation?.scenario ?? "";
             const depositNote = depositNotes[booking.id] ?? "";
             const paidAndConfirmed = booking.status === "confirmed" || booking.status === "moved_in" || booking.status === "completed";
             return (
@@ -198,6 +211,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                   <div><dt>{t.requestStudent}</dt><dd>{booking.name} · <span dir="ltr">{booking.contact}</span></dd></div>
                   <div><dt>{t.bookTitle}</dt><dd>{booking.move_in ? t.bookingFrom(dayFormat.format(new Date(booking.move_in))) : "—"}{booking.months ? ` · ${t.monthsCount(booking.months)}` : ""} · {t.guestsCount(booking.guests)}</dd></div>
                   <div><dt>{t.adminAmounts}</dt><dd>{t.adminAmountsLine(egp(booking.rent_amount), egp(booking.guest_fee), egp(booking.host_fee), egp(booking.payout_amount))}</dd></div>
+                  <div><dt>{t.contractLabel}</dt><dd>{booking.contract_signed_at ? t.contractSignedOn(dayFormat.format(new Date(booking.contract_signed_at))) : t.contractNotSigned}</dd></div>
                   {booking.guest_fee_percent !== null && <div><dt>{t.ratesKept}</dt><dd>{t.ratesLine(numberFormat.format(booking.guest_fee_percent), numberFormat.format(booking.host_fee_percent ?? 0))}</dd></div>}
                   {booking.deposit_amount > 0 && (
                     <div>
@@ -212,12 +226,22 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                   {fee?.reference && <div><dt>{t.payInstapay}</dt><dd dir="ltr">{fee.reference}{fee.payer_phone ? ` · ${fee.payer_phone}` : ""}</dd></div>}
                   {booking.note && <div><dt>{t.requestNote}</dt><dd>{booking.note}</dd></div>}
                   {booking.problem_note && <div><dt>{t.problemLabel}</dt><dd>{booking.problem_note}</dd></div>}
+                  {cancellation && (
+                    <div>
+                      <dt>{t.cancelRequestLabel}</dt>
+                      <dd>
+                        {t.cancelParty[cancellation.requesting_party as keyof typeof t.cancelParty] ?? cancellation.requesting_party} · {t.cancelScenarios[cancellation.scenario as keyof typeof t.cancelScenarios] ?? cancellation.scenario}
+                        {cancellation.refundable_amount !== null && <> · {t.refundableLine(egp(cancellation.refundable_amount))}</>}
+                      </dd>
+                    </div>
+                  )}
                   {booking.status === "moved_in" && <div><dt>{t.instapayLabel}</dt><dd dir="ltr">{host?.instapay_address || t.instapayMissingAdmin}</dd></div>}
                   {booking.refund_reference && <div><dt>{t.refundRefLabel}</dt><dd dir="ltr">{booking.refund_reference}</dd></div>}
                   {booking.payout_reference && <div><dt>{t.payoutRefLabel}</dt><dd dir="ltr">{booking.payout_reference}</dd></div>}
                 </dl>
 
                 <div className="admin-card-actions">
+                  <Link className="admin-btn admin-btn-ghost" href={`/${locale}/documents/${booking.id}`} target="_blank"><FileText size={15} /> {t.documentsLink}</Link>
                   {booking.guest_id && <button className="admin-btn admin-btn-ghost" type="button" onClick={() => onOpenChat(booking.guest_id!, booking.id)}><Headset size={15} /> {t.chatWithGuest}</button>}
                   {booking.host_id && <button className="admin-btn admin-btn-ghost" type="button" onClick={() => onOpenChat(booking.host_id!, booking.id)}><Headset size={15} /> {t.chatWithHost}</button>}
                   {hostNumber && <a className="admin-btn admin-btn-ghost" href={whatsappLink(hostNumber)} target="_blank" rel="noreferrer"><Phone size={15} /> {t.requestOwner}</a>}
@@ -263,6 +287,20 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                           <button className="admin-btn admin-btn-danger-outline" type="button" disabled={busy} onClick={() => void run(booking, "admin_update_deposit", { target_booking: booking.id, new_status: "disputed", note: depositNote }, t.adminStatusUpdated)}>{t.depositMarkDisputed}</button>
                         </>
                       )}
+                    </span>
+                  )}
+
+                  {booking.status === "cancellation_requested" && cancellation?.status === "pending" && (
+                    <span className="admin-reference">
+                      <select value={scenario} onChange={(event) => setScenarios({ ...scenarios, [booking.id]: event.target.value })} aria-label={t.cancelScenarioLabel}>
+                        {CANCELLATION_SCENARIOS.map((item) => <option key={item} value={item}>{t.cancelScenarios[item]}</option>)}
+                      </select>
+                      <button className="admin-btn admin-btn-primary" type="button" disabled={busy} onClick={() => void run(booking, "admin_decide_cancellation", { target_request: cancellation.id, approve: true, chosen_scenario: scenario, note: "" }, t.cancelApproved)}>
+                        <CheckCircle2 size={15} /> {t.cancelApprove}
+                      </button>
+                      <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void run(booking, "admin_decide_cancellation", { target_request: cancellation.id, approve: false, chosen_scenario: scenario, note: "" }, t.adminStatusUpdated)}>
+                        <X size={15} /> {t.cancelReject}
+                      </button>
                     </span>
                   )}
 

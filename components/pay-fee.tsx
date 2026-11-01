@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { CheckCircle2, Clock3, LoaderCircle, Wallet } from "lucide-react";
+import { CheckCircle2, Clock3, FlaskConical, LoaderCircle, Wallet } from "lucide-react";
+import { paymentProvider } from "@/lib/payment-providers";
 import { CopyValue } from "@/components/owner-payments";
 import { fetchPaymentSettings, type FeeStatus, type PaymentMethod, type PaymentSettings } from "@/lib/payments";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -86,6 +87,21 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
   if (fee === "invalid") return <p className="owner-feedback owner-feedback-error" role="alert">{t.payInvalid}</p>;
 
   const upfront = fee.kind === "upfront";
+  const provider = paymentProvider(settings?.payment_mode);
+
+  async function simulate(succeed: boolean) {
+    if (!supabase || !provider.settle) return;
+    setBusy(true);
+    setError("");
+    const { error: settleError } = await provider.settle(supabase, token, succeed);
+    setBusy(false);
+    if (settleError) {
+      console.error("Could not simulate the payment:", settleError);
+      setError(t.payError);
+      return;
+    }
+    setVersion((value) => value + 1);
+  }
 
   return (
     <article className={`fee-card pay-page-card is-${fee.status}`}>
@@ -110,7 +126,18 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
 
       {fee.admin_note && <p className="fee-note"><strong>{t.feeNote}:</strong> {fee.admin_note}</p>}
 
-      {fee.status === "due" && (
+      {fee.status === "due" && provider.settle && (
+        <div className="pay-sandbox">
+          <p><FlaskConical size={16} /> {t.sandboxNotice}</p>
+          <div className="profile-row-actions">
+            <button className="button button-primary" type="button" disabled={busy} onClick={() => void simulate(true)}>{t.sandboxSucceed}</button>
+            <button className="button button-outline" type="button" disabled={busy} onClick={() => void simulate(false)}>{t.sandboxFail}</button>
+          </div>
+          {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
+        </div>
+      )}
+
+      {fee.status === "due" && provider.asksForReference && (
         settings?.instapay_address ? (
           <form className="fee-pay" onSubmit={(event) => void submit(event)}>
             <p>{t.feeHowTo}</p>

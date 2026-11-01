@@ -88,6 +88,30 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
           </section>
 
           <section>
+            <h3>{t.filtersRooms}</h3>
+            <div className="owner-form-grid owner-form-grid-three">
+              <label className="owner-field"><span>{t.bedroomsLabel}</span>
+                <select value={draft.bedrooms} onChange={(event) => set({ bedrooms: event.target.value })}>
+                  <option value="">{t.anyCount}</option>
+                  {["1", "2", "3", "4"].map((count) => <option key={count} value={count}>{t.atLeast(count)}</option>)}
+                </select>
+              </label>
+              <label className="owner-field"><span>{t.bathroomsLabel}</span>
+                <select value={draft.bathrooms} onChange={(event) => set({ bathrooms: event.target.value })}>
+                  <option value="">{t.anyCount}</option>
+                  {["1", "2", "3"].map((count) => <option key={count} value={count}>{t.atLeast(count)}</option>)}
+                </select>
+              </label>
+              <label className="owner-field"><span>{t.stayFilterLabel}</span>
+                <select value={draft.stay} onChange={(event) => set({ stay: event.target.value })}>
+                  <option value="">{t.anyCount}</option>
+                  {["1", "3", "6", "12"].map((months) => <option key={months} value={months}>{t.monthsCount(Number(months))}</option>)}
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section>
             <h3>{t.propertyType}</h3>
             <div className="choice-row">
               {choice("type", "", draft.propertyType, t.allTypes, () => set({ propertyType: "" }))}

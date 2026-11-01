@@ -12,6 +12,8 @@ export type PaymentSettings = {
   team_whatsapp: string;
   student_fee_percent: number;
   student_fee_minimum: number;
+  /** "manual" InstaPay, or "sandbox" for testing without real money (lib/payment-providers.ts). */
+  payment_mode?: "manual" | "sandbox";
 };
 
 export type FeeStatus = "due" | "submitted" | "paid" | "waived" | "refunded";
@@ -70,7 +72,7 @@ export const FEE_GRACE_DAYS = 14;
 export async function fetchPaymentSettings(client: SupabaseClient): Promise<PaymentSettings | null> {
   const { data, error } = await client
     .from("app_settings")
-    .select("payee_name,instapay_address,vodafone_cash_number,fee_percent,fee_minimum,team_whatsapp,student_fee_percent,student_fee_minimum")
+    .select("payee_name,instapay_address,vodafone_cash_number,fee_percent,fee_minimum,team_whatsapp,student_fee_percent,student_fee_minimum,payment_mode")
     .eq("id", 1)
     .maybeSingle();
   if (error || !data) return null;

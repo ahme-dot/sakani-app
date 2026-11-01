@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowLeft, ArrowRight, LoaderCircle, MessagesSquare } from "lucide-react";
 import SupportChat, { type ChatContext } from "@/components/support-chat";
+import SupportTickets from "@/components/support-tickets";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 type Thread = { id: string; user_id: string; last_message_at: string; team_last_read: string };
@@ -106,6 +107,7 @@ export default function AdminChat({ locale, supabase, openUserId = null, openBoo
               <strong>{person?.full_name || t.noName}</strong>
               {person && <span className={`role-chip is-${person.role}`}>{person.role === "host" ? t.roleHost : t.roleGuest}</span>}
             </header>
+            {current && <SupportTickets key={current.user_id} locale={locale} supabase={supabase} userId={current.user_id} asTeam />}
             <SupportChat key={selected} locale={locale} supabase={supabase} threadId={selected} asTeam context={context} onContextClear={() => setContext(null)} />
           </>
         ) : (

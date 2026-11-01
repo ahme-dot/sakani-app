@@ -33,6 +33,10 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
 
     setSaving(true);
     setError("");
+    const optional = (name: string) => {
+  const value = String(formData.get(name) ?? "").trim();
+  return value === "" ? null : Number(value);
+};
     const values = {
       title_ar: String(formData.get("title_ar")).trim(),
       title_en: String(formData.get("title_en")).trim(),
@@ -46,6 +50,11 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       deposit: Number(formData.get("deposit")),
       available_beds: Number(formData.get("available_beds")),
       total_beds: Number(formData.get("total_beds")),
+      bedrooms: optional("bedrooms"),
+      bathrooms: optional("bathrooms"),
+      area_sqm: optional("area_sqm"),
+      min_months: Number(formData.get("min_months") || 1),
+      available_from: String(formData.get("available_from") ?? "") || null,
       whatsapp_number: String(formData.get("whatsapp_number")).trim(),
       wifi: formData.has("wifi"),
       air_conditioning: formData.has("air_conditioning"),
@@ -93,6 +102,13 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       <div className="owner-form-grid owner-form-grid-three">
         <label className="owner-field"><span>{t.availableBeds}</span><input name="available_beds" type="number" min="1" max="100" required defaultValue={listing.available_beds} /></label>
         <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" type="number" min="1" max="100" required defaultValue={listing.total_beds} /></label>
+      </div>
+      <div className="owner-form-grid owner-form-grid-three">
+        <label className="owner-field"><span>{t.bedroomsLabel}</span><input name="bedrooms" type="number" min="0" max="20" defaultValue={listing.bedrooms ?? ""} /></label>
+        <label className="owner-field"><span>{t.bathroomsLabel}</span><input name="bathrooms" type="number" min="0" max="20" defaultValue={listing.bathrooms ?? ""} /></label>
+        <label className="owner-field"><span>{t.areaSqmLabel}</span><input name="area_sqm" type="number" min="5" max="2000" defaultValue={listing.area_sqm ?? ""} /></label>
+        <label className="owner-field"><span>{t.minMonthsLabel}</span><input name="min_months" type="number" min="1" max="24" required defaultValue={listing.min_months ?? 1} /></label>
+        <label className="owner-field"><span>{t.availableFromLabel}</span><input name="available_from" type="date" dir="ltr" defaultValue={listing.available_from ?? ""} /></label>
       </div>
       <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" pattern="[0-9+ \(\)\-]{8,20}" required dir="ltr" defaultValue={listing.whatsapp_number} /></label>
       <fieldset className="amenity-fieldset">

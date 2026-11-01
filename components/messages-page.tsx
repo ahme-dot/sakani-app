@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Headset, LoaderCircle, LogIn } from "lucide-react";
 import SupportChat, { type ChatContext } from "@/components/support-chat";
+import SupportTickets from "@/components/support-tickets";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { useAccount } from "@/lib/account";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -20,6 +21,7 @@ export default function MessagesPage({ locale, listingId, bookingId }: { locale:
   const [failed, setFailed] = useState(false);
   const [context, setContext] = useState<ChatContext | null>(null);
   const [listingTitles, setListingTitles] = useState<Record<string, string>>({});
+  const [chatVersion, setChatVersion] = useState(0);
   const signedInId = account.status === "signedIn" ? account.user.id : null;
 
   useEffect(() => {
@@ -93,7 +95,10 @@ export default function MessagesPage({ locale, listingId, bookingId }: { locale:
         ) : failed ? (
           <p className="owner-feedback owner-feedback-error" role="alert">{t.chatLoadError}</p>
         ) : threadId && supabase ? (
-          <SupportChat locale={locale} supabase={supabase} threadId={threadId} context={context} onContextClear={() => setContext(null)} listingTitles={listingTitles} />
+          <>
+            {signedInId && <SupportTickets locale={locale} supabase={supabase} userId={signedInId} bookingId={context?.bookingId ?? null} onCreated={() => setChatVersion((value) => value + 1)} />}
+            <SupportChat key={chatVersion} locale={locale} supabase={supabase} threadId={threadId} context={context} onContextClear={() => setContext(null)} listingTitles={listingTitles} />
+          </>
         ) : (
           <p className="profile-loading"><LoaderCircle className="spinner" size={18} /> {t.loading}</p>
         )}

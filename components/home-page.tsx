@@ -157,7 +157,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
   const closeFilters = useCallback(() => setFiltersOpen(false), []);
 
   // Count of Filters-window settings not visible as a category or in the search pill.
-  const extraCount = [filters.minPrice, filters.maxPrice].filter(Boolean).length + filters.amenities.length;
+  const extraCount = [filters.minPrice, filters.maxPrice, filters.bedrooms, filters.bathrooms, filters.stay].filter(Boolean).length + filters.amenities.length;
   const hasMore = !isDemoMode && listings.length < total;
   const searchValue = { governorate: filters.governorate, propertyType: filters.propertyType, gender: filters.gender };
 

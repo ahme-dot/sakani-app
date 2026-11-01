@@ -3,7 +3,9 @@ import Link from "next/link";
 import { Building2, Globe } from "lucide-react";
 import BottomTabs, { type BottomTab } from "@/components/bottom-tabs";
 import SearchPill from "@/components/search-pill";
+import NotificationsBell from "@/components/notifications-bell";
 import UserMenu from "@/components/user-menu";
+import { LEGAL_SLUGS } from "@/messages/legal-pages";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 export function Brand({ locale, href }: { locale: SiteLocale; href?: string }) {
@@ -38,6 +40,7 @@ export function SiteHeader({ locale, switchHref, search, children }: HeaderProps
           <Link className="header-lang" href={switchHref} hrefLang={locale === "ar" ? "en" : "ar"} aria-label={t.languageName} title={t.languageName}>
             <Globe size={18} />
           </Link>
+          <NotificationsBell locale={locale} />
           <UserMenu locale={locale} switchHref={switchHref} />
         </div>
       </div>
@@ -64,6 +67,12 @@ export function SiteFooter({ locale, switchHref, tab }: { locale: SiteLocale; sw
             <Link href={`/${locale}/host`}>{t.navOwner}</Link>
             <Link href={`/${locale}/account`}>{t.footerOwnerAccount}</Link>
             <Link href={`/${locale}/sign-in`} rel="nofollow">{t.adminNav}</Link>
+          </nav>
+          <nav aria-label={t.footerPolicies}>
+            <h3>{t.footerPolicies}</h3>
+            {LEGAL_SLUGS.map((slug) => <Link key={slug} href={`/${locale}/legal/${slug}`}>{t.legalTitles[slug]}</Link>)}
+            <Link href={`/${locale}/agreements/guest`}>{t.footerGuestAgreement}</Link>
+            <Link href={`/${locale}/agreements/host`}>{t.footerHostAgreement}</Link>
           </nav>
           <nav aria-label={t.footerSakani}>
             <h3>{t.footerSakani}</h3>
