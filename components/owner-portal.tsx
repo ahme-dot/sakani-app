@@ -16,6 +16,7 @@ import {
   type PaymentSettings,
   type RentalFee,
 } from "@/lib/payments";
+import { useListingTitles } from "@/lib/listing-titles";
 import { listingPath } from "@/lib/site";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -72,7 +73,8 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
   const [feesVersion, setFeesVersion] = useState(0);
   const [reportingId, setReportingId] = useState<string | null>(null);
   // Bookings on this owner's places (a host without an account can see them, but needs one to answer).
-  const [bookings, setBookings] = useState<Array<{ id: string; listing_title: string; guest_first_name: string; move_in: string; months: number; status: string; host_decision: string | null }>>([]);
+  const [bookings, setBookings] = useState<Array<{ id: string; listing_id: string | null; listing_title: string; guest_first_name: string; move_in: string; months: number; status: string; host_decision: string | null }>>([]);
+  const titleOf = useListingTitles(supabase, bookings.map((booking) => booking.listing_id), locale);
   // Returning owners see their listings first; the form opens with "Add another home".
   const [formOpen, setFormOpen] = useState(false);
 
@@ -391,7 +393,7 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                   <ul>
                     {bookings.map((booking) => (
                       <li key={booking.id}>
-                        <strong>{booking.listing_title}</strong>
+                        <strong>{titleOf(booking.listing_id, booking.listing_title)}</strong>
                         <span>{booking.guest_first_name ? `${booking.guest_first_name} · ` : ""}{t.bookingFrom(dateFormat.format(new Date(booking.move_in)))} · {t.monthsCount(booking.months)}</span>
                         <span className="status-chip">{t.hostDecision[(booking.host_decision ?? "pending") as "pending" | "accepted" | "declined"]}</span>
                       </li>

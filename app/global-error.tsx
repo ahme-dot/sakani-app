@@ -10,7 +10,7 @@ export default function GlobalError({ retry }: { error: unknown; retry: () => vo
           <h1 style={{ margin: "0 0 8px", fontSize: 22 }}>حدث خطأ غير متوقع</h1>
           <p style={{ margin: "0 0 4px", color: "#53655e" }}>تعذر تحميل سكني الآن. حاول مرة أخرى بعد قليل.</p>
           <p dir="ltr" style={{ margin: "0 0 20px", color: "#53655e" }}>Something went wrong. Please try again in a moment.</p>
-          <button type="button" onClick={() => retry()} style={{ minHeight: 46, padding: "0 22px", border: 0, borderRadius: 12, background: "#246b53", color: "#fff", font: "inherit", fontWeight: 700, cursor: "pointer" }}>
+          <button type="button" onClick={() => retry()} style={{ minHeight: 46, padding: "0 22px", border: 0, borderRadius: 12, background: "#14213d", color: "#fff", font: "inherit", fontWeight: 700, cursor: "pointer" }}>
             حاول مرة أخرى · Try again
           </button>
         </main>

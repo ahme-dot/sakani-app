@@ -88,14 +88,14 @@ export default function DocumentView({ locale, bookingId, doc }: Props) {
       <section className="documents-index">
         <header className="documents-head">
           <h1>{d.documentsTitle}</h1>
-          <p>{title} · <span dir="ltr">{ref}</span></p>
+          <p>{title} · <bdi dir="ltr">{ref}</bdi></p>
           <p className="field-hint">{d.documentsIntro}</p>
         </header>
         <ul className="profile-list">
           {BOOKING_DOCUMENTS.map((item) => {
             const ready = documentReady(item, data);
             return (
-              <li key={item}>
+              <li key={item} className={ready ? "" : "is-waiting"}>
                 <FileText size={20} />
                 <div><strong>{d.titles[item]}</strong>{!ready && <small>{d.notAvailableYet}</small>}</div>
                 {ready && <Link className="button button-outline" href={`/${locale}/documents/${bookingId}?doc=${item}`}>{d.open}</Link>}
@@ -150,7 +150,7 @@ export default function DocumentView({ locale, bookingId, doc }: Props) {
       </div>
 
       <header className="document-head">
-        <strong className="document-brand">{t.brandLabel} · SAKANY</strong>
+        <strong className="document-brand">{t.brandLabel} · {locale === "ar" ? "Sakani" : "سكني"}</strong>
         <h1>{d.titles[doc]}</h1>
         <dl className="document-meta">
           <div><dt>{d.reference}</dt><dd dir="ltr">{ref}</dd></div>

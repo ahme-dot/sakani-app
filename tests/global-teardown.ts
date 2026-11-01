@@ -17,6 +17,8 @@ export default async function globalTeardown() {
   // Requests and fees outlive their listing (their link is set to null), so remove them explicitly.
   await api("/rest/v1/rental_fees?listing_title=like.*E2E%20TEST*", { token, method: "DELETE" });
   await api("/rest/v1/support_messages?body=like.*E2E*", { token, method: "DELETE" });
+  // Tickets can't be deleted from the site; close the test ones so they fold away.
+  await api("/rest/v1/support_tickets?subject=like.*E2E*&status=neq.closed&select=id", { token, method: "PATCH", body: { status: "closed" } });
   await api("/rest/v1/listing_requests?listing_title=like.*E2E%20TEST*", { token, method: "DELETE" });
   await api("/rest/v1/properties?title_en=like.*E2E%20TEST*", { token, method: "DELETE" });
 }

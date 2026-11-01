@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CalendarCheck, CheckCircle2, ExternalLink, FileText, Headset, LoaderCircle, Phone, RotateCcw, Timer, Wallet, X } from "lucide-react";
 import { isMissingFunction } from "@/lib/payments";
+import { useListingTitles } from "@/lib/listing-titles";
 import { listingPath, whatsappLink } from "@/lib/site";
 import { fetchPrivateContacts, listingRef } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
@@ -69,6 +70,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
   const dayFormat = new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium" });
   const [ready, setReady] = useState<boolean | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const titleOf = useListingTitles(supabase, bookings.map((booking) => booking.listing_id), locale);
   const [fees, setFees] = useState<Record<string, FeeInfo>>({});
   const [hosts, setHosts] = useState<Record<string, HostInfo>>({});
   const [hostNumbers, setHostNumbers] = useState<Record<string, string>>({});
@@ -195,7 +197,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                 <div className="admin-fee-main">
                   <strong>{egp(booking.total_amount)} <span className={`payer-chip is-student`}>{t.adminBookingTabs[booking.status]}</span></strong>
                   <span>
-                    {booking.listing_title}
+                    {titleOf(booking.listing_id, booking.listing_title)}
                     {booking.listing_id && <> · <bdi dir="ltr">{listingRef(booking.listing_id)}</bdi> · <Link href={listingPath(locale, booking.listing_id)} target="_blank"><ExternalLink size={12} /> {t.adminViewPublic}</Link></>}
                   </span>
                   <small>{dateFormat.format(new Date(booking.created_at))}</small>
@@ -208,7 +210,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                 )}
 
                 <dl className="admin-fee-ref">
-                  <div><dt>{t.requestStudent}</dt><dd>{booking.name} · <span dir="ltr">{booking.contact}</span></dd></div>
+                  <div><dt>{t.requestStudent}</dt><dd>{booking.name && booking.name !== "Guest" ? booking.name : t.noName} · <bdi dir="ltr">{booking.contact}</bdi></dd></div>
                   <div><dt>{t.bookTitle}</dt><dd>{booking.move_in ? t.bookingFrom(dayFormat.format(new Date(booking.move_in))) : "—"}{booking.months ? ` · ${t.monthsCount(booking.months)}` : ""} · {t.guestsCount(booking.guests)}</dd></div>
                   <div><dt>{t.adminAmounts}</dt><dd>{t.adminAmountsLine(egp(booking.rent_amount), egp(booking.guest_fee), egp(booking.host_fee), egp(booking.payout_amount))}</dd></div>
                   <div><dt>{t.contractLabel}</dt><dd>{booking.contract_signed_at ? t.contractSignedOn(dayFormat.format(new Date(booking.contract_signed_at))) : t.contractNotSigned}</dd></div>

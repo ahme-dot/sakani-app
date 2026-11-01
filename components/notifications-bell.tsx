@@ -58,6 +58,7 @@ export default function NotificationsBell({ locale }: { locale: SiteLocale }) {
 
   const href = (notice: Notice) => {
     if (notice.kind === "team_reply") return `/${locale}/messages`;
+    if (notice.kind === "new_review") return `/${locale}/account#requests`;
     if (notice.kind === "agreement_ready" || notice.kind === "agreement_signed" || notice.kind === "deposit_transferred") return notice.booking_id ? `/${locale}/documents/${notice.booking_id}` : `/${locale}/account`;
     return `/${locale}/account#bookings`;
   };

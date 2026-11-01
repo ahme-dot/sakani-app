@@ -6,6 +6,7 @@ import { paymentProvider } from "@/lib/payment-providers";
 import { CopyValue } from "@/components/owner-payments";
 import { fetchPaymentSettings, type FeeStatus, type PaymentMethod, type PaymentSettings } from "@/lib/payments";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useListingTitles } from "@/lib/listing-titles";
 import { listingRef } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -41,6 +42,7 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
   const [error, setError] = useState("");
 
   const tokenValid = Boolean(supabase) && TOKEN_PATTERN.test(token);
+  const titleOf = useListingTitles(supabase, [fee && fee !== "invalid" ? fee.listing_id : null], locale);
 
   useEffect(() => {
     if (!supabase || !tokenValid) return;
@@ -124,7 +126,7 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
         <div>
           <span>{upfront ? t.payUpfrontTitle : fee.payer === "student" ? t.payStudentFee : t.payOwnerFee}</span>
           <strong>{numberFormat.format(fee.amount)} {locale === "ar" ? "جنيه" : "EGP"}</strong>
-          <span>{t.feeFor(fee.listing_title)}{fee.listing_id && <> · <bdi dir="ltr">{listingRef(fee.listing_id)}</bdi></>}</span>
+          <span>{t.feeFor(titleOf(fee.listing_id, fee.listing_title))}{fee.listing_id && <> · <bdi dir="ltr">{listingRef(fee.listing_id)}</bdi></>}</span>
         </div>
         <span className={`fee-status is-${fee.status}`}>{t.feeStatus[fee.status]}</span>
       </div>

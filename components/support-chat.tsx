@@ -6,6 +6,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Headset, House, LoaderCircle, Send, X } from "lucide-react";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
+const BOOKING_MESSAGE = /^طلب حجز جديد \/ New booking: (.*) — (\d{4}-\d{2}-\d{2}) — (\d+) mo$/;
+
 export type SupportMessage = {
   id: string;
   thread_id: string;
@@ -38,6 +40,14 @@ type Props = {
 /** One conversation with the Sakani team: live messages (Realtime, with polling as a fallback) and a reply box. */
 export default function SupportChat({ locale, supabase, threadId, asTeam = false, context, onContextClear, listingTitles = {} }: Props) {
   const t = SITE_COPY[locale];
+  const dayFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
+  // Booking requests are saved by the database in both languages; show them in the page's language.
+  const readableBody = (body: string) => {
+    const booking = body.match(BOOKING_MESSAGE);
+    if (!booking) return body;
+    const [, title, date, months] = booking;
+    return t.chatBookingMessage(title, dayFormat.format(new Date(date)), t.monthsCount(Number(months)));
+  };
   const timeFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium", timeStyle: "short" });
   const [messages, setMessages] = useState<SupportMessage[] | null>(null);
   const [draft, setDraft] = useState("");
@@ -129,7 +139,7 @@ export default function SupportChat({ locale, supabase, threadId, asTeam = false
                     <House size={13} /> {listingTitles[message.listing_id] ?? t.chatAboutListing}
                   </Link>
                 )}
-                <p>{message.body}</p>
+                <p>{readableBody(message.body)}</p>
                 <time dateTime={message.created_at}>{timeFormat.format(new Date(message.created_at))}</time>
               </li>
             );

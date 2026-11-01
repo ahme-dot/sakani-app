@@ -71,7 +71,7 @@ export default function PhotoCarousel({ locale, images, alt, href, sizes, counte
             {rtl ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
           {counter ? (
-            <span className="carousel-counter">{t.photoOf(index + 1, photos.length)}</span>
+            <span className="carousel-counter" dir="ltr">{t.photoOf(index + 1, photos.length)}</span>
           ) : (
             <span className="carousel-dots" aria-hidden="true">
               {photos.slice(0, MAX_DOTS).map((src, dot) => (

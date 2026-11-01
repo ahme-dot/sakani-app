@@ -48,7 +48,10 @@ for (const locale of LOCALES) {
   test(`/${locale} unknown page shows the friendly 404`, async ({ page }) => {
     const response = await page.goto(`/${locale}/no-such-page`);
     expect(response?.status()).toBe(404);
-    await expect(page.locator(".not-found-panel h1")).toBeVisible();
+    await expect(page.locator(".not-found-card h1")).toBeVisible();
+    // Inside the normal site: header and footer, so the visitor can carry on.
+    await expect(page.locator(".site-header")).toBeVisible();
+    await expect(page.locator(".site-footer")).toBeVisible();
   });
 }
 

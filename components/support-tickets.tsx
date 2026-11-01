@@ -29,6 +29,8 @@ export default function SupportTickets({ locale, supabase, userId, asTeam = fals
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [version, setVersion] = useState(0);
+  // Finished tickets fold away so the open ones stay on top.
+  const [showDone, setShowDone] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -99,7 +101,7 @@ export default function SupportTickets({ locale, supabase, userId, asTeam = fals
       )}
       {tickets.length > 0 && (
         <ul className="tickets-list">
-          {tickets.map((ticket) => (
+          {tickets.filter((ticket) => asTeam || showDone || (ticket.status !== "resolved" && ticket.status !== "closed")).map((ticket) => (
             <li key={ticket.id}>
               <span dir="ltr">#{ticket.number}</span>
               <span className="tickets-subject">{ticket.subject} · {t.ticketCategories[ticket.category as keyof typeof t.ticketCategories]} · {dateFormat.format(new Date(ticket.created_at))}</span>
@@ -114,6 +116,12 @@ export default function SupportTickets({ locale, supabase, userId, asTeam = fals
           ))}
         </ul>
       )}
+      {!asTeam && tickets.some((ticket) => ticket.status === "resolved" || ticket.status === "closed") && (
+        <button className="text-button tickets-toggle" type="button" onClick={() => setShowDone((value) => !value)}>
+          {showDone ? t.ticketsHideDone : t.ticketsShowDone(tickets.filter((ticket) => ticket.status === "resolved" || ticket.status === "closed").length)}
+        </button>
+      )}
+      {!asTeam && !open && tickets.length === 0 && <p className="field-hint">{t.ticketsEmpty}</p>}
     </section>
   );
 }

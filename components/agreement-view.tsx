@@ -61,7 +61,7 @@ export default function AgreementView({ locale, document }: { locale: SiteLocale
         <button className="button button-primary" type="button" onClick={() => window.print()}><Printer size={16} /> {d.print}</button>
       </div>
       <header className="document-head">
-        <strong className="document-brand">{t.brandLabel} · SAKANY</strong>
+        <strong className="document-brand">{t.brandLabel} · {locale === "ar" ? "Sakani" : "سكني"}</strong>
         <h1>{d.titles[document]}</h1>
         <dl className="document-meta">
           <div><dt>{d.version}</dt><dd dir="ltr">{DOCUMENT_VERSION}</dd></div>

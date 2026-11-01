@@ -234,7 +234,8 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
             <div>
               {!showSaved && !filtersActive && <span className="section-kicker">{t.featuredKicker}</span>}
               <h2 id="homes-title">{showSaved ? t.savedTitle : filtersActive ? t.filteredTitle : t.featuredTitle}</h2>
-              <p aria-live="polite">{showSaved ? t.savedCount(savedIds.length) : filtersActive ? t.resultCount(total) : isDemoMode ? t.browseHint : t.approvedListingCount(total)}</p>
+              {/* No count while there are no homes yet: the empty state below says it better than "0". */}
+              <p aria-live="polite">{showSaved ? t.savedCount(savedIds.length) : filtersActive ? t.resultCount(total) : isDemoMode ? t.browseHint : total > 0 ? t.approvedListingCount(total) : ""}</p>
             </div>
             {!showSaved && (
               <label className="listing-sort">

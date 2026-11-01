@@ -24,6 +24,9 @@ export default async function FlyerPage({ locale }: { locale: SiteLocale }) {
         <ul className="flyer-points">
           {t.flyerPoints.map((point) => <li key={point}><Check size={22} /> {point}</li>)}
         </ul>
+        {/* A real room fills the middle of the page, so the sheet reads as a home poster, not a form. */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- printed page: a plain image prints reliably */}
+        <img className="flyer-photo" src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1400&q=80" alt="" />
         <div className="flyer-qr-block">
           <div className="flyer-qr" dangerouslySetInnerHTML={{ __html: qrSvg }} />
           <div>

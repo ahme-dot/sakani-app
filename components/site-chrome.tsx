@@ -56,6 +56,12 @@ export function SiteFooter({ locale, switchHref, tab }: { locale: SiteLocale; sw
     <>
       <footer className="site-footer">
         <div className="footer-inner footer-columns">
+          <nav className="footer-brand-column" aria-label={t.footerSakani}>
+            <h3>{t.footerSakani}</h3>
+            <Link href={`/${locale}`}>{t.headerSearch}</Link>
+            <Link href={`/${locale}?saved=1#homes`}>{t.menuSaved}</Link>
+            <p className="footer-about">{t.footerText}</p>
+          </nav>
           <nav aria-label={t.footerSupport}>
             <h3>{t.footerSupport}</h3>
             <Link href={`/${locale}/help`}>{t.footerHelp}</Link>
@@ -67,17 +73,11 @@ export function SiteFooter({ locale, switchHref, tab }: { locale: SiteLocale; sw
             <Link href={`/${locale}/host`}>{t.navOwner}</Link>
             <Link href={`/${locale}/account`}>{t.footerOwnerAccount}</Link>
           </nav>
-          <nav aria-label={t.footerPolicies}>
+          <nav className="footer-policies" aria-label={t.footerPolicies}>
             <h3>{t.footerPolicies}</h3>
             {LEGAL_SLUGS.map((slug) => <Link key={slug} href={`/${locale}/legal/${slug}`}>{t.legalTitles[slug]}</Link>)}
             <Link href={`/${locale}/agreements/guest`}>{t.footerGuestAgreement}</Link>
             <Link href={`/${locale}/agreements/host`}>{t.footerHostAgreement}</Link>
-          </nav>
-          <nav aria-label={t.footerSakani}>
-            <h3>{t.footerSakani}</h3>
-            <Link href={`/${locale}`}>{t.headerSearch}</Link>
-            <Link href={`/${locale}?saved=1#homes`}>{t.menuSaved}</Link>
-            <p className="footer-about">{t.footerText}</p>
           </nav>
         </div>
         <div className="footer-inner footer-bottom">

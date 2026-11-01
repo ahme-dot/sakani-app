@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LoaderCircle, ScrollText } from "lucide-react";
+import { DOCUMENTS_COPY } from "@/messages/documents";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 type AuditEntry = {
@@ -16,9 +17,10 @@ type AuditEntry = {
   new_data: Record<string, unknown> | null;
 };
 
-const ENTITIES = ["", "listing_requests", "rental_fees", "deposit_transfers", "app_settings"] as const;
+const ENTITIES = ["", "listing_requests", "rental_fees", "deposit_transfers", "contract_acceptances", "cancellation_requests", "app_settings"] as const;
 // The fields worth showing when they change; the full rows stay in the database.
-const WATCHED = ["status", "amount", "total_amount", "deposit_amount", "host_decision", "fee_percent", "student_fee_percent", "reference", "refund_reference", "payout_reference", "transfer_reference", "contract_signed_at"];
+const WATCHED = ["status", "amount", "total_amount", "deposit_amount", "host_decision", "fee_percent", "student_fee_percent", "reference", "refund_reference", "payout_reference", "transfer_reference", "contract_signed_at", "document", "document_version", "party", "scenario", "decision", "slug"];
+const ISO_TIME = /^d{4}-d{2}-d{2}Td{2}:d{2}/;
 
 /** Admin: the append-only record of every money change (bookings, payments, deposits, fee settings). */
 export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; supabase: SupabaseClient }) {
@@ -60,10 +62,20 @@ export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; s
     const map: Record<string, string> = entity === "rental_fees" ? t.feeStatus : entity === "listing_requests" ? t.adminBookingTabs : {};
     return typeof value === "string" ? map[value] ?? value : String(value ?? "—");
   };
-  const show = (entry: AuditEntry, key: string, value: unknown) => (value === null || value === undefined ? "—" : key === "status" ? statusWord(entry.entity, value) : key === "host_decision" ? t.hostDecisionAdmin[value as keyof typeof t.hostDecisionAdmin] ?? String(value) : String(value));
+  const documents = DOCUMENTS_COPY[locale].titles as Record<string, string>;
+  const show = (entry: AuditEntry, key: string, value: unknown) => {
+    if (value === null || value === undefined || value === "") return "—";
+    if (key === "status") return statusWord(entry.entity, value);
+    if (key === "host_decision") return t.hostDecisionAdmin[value as keyof typeof t.hostDecisionAdmin] ?? String(value);
+    if (key === "document") return documents[String(value)] ?? String(value);
+    if (key === "party") return value === "host" ? t.roleHost : t.roleGuest;
+    if (typeof value === "string" && ISO_TIME.test(value)) return timeFormat.format(new Date(value));
+    if (typeof value === "number") return new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG").format(value);
+    return String(value);
+  };
   const changes = (entry: AuditEntry) =>
     WATCHED.filter((key) => (entry.old_data?.[key] ?? null) !== (entry.new_data?.[key] ?? null) && (entry.new_data?.[key] !== undefined || entry.old_data?.[key] !== undefined))
-      .map((key) => `${t.auditFields[key as keyof typeof t.auditFields] ?? key}: ${show(entry, key, entry.old_data?.[key])} ${locale === "ar" ? "←" : "→"} ${show(entry, key, entry.new_data?.[key])}`);
+      .map((key) => ({ key, label: t.auditFields[key as keyof typeof t.auditFields] ?? key, from: show(entry, key, entry.old_data?.[key]), to: show(entry, key, entry.new_data?.[key]) }));
 
   if (failed) return <p className="owner-feedback owner-feedback-error">{t.auditLoadError}</p>;
 
@@ -94,9 +106,22 @@ export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; s
             <tbody>
               {entries.map((entry) => (
                 <tr key={entry.id}>
-                  <td>{timeFormat.format(new Date(entry.at))}</td>
-                  <td>{t.auditEntities[entry.entity as keyof typeof t.auditEntities] ?? entry.entity} · {t.auditActions[entry.action as keyof typeof t.auditActions] ?? entry.action}<br /><small dir="ltr">{entry.entity_id?.slice(0, 8)}</small></td>
-                  <td className="admin-audit-change">{changes(entry).join("\n") || "—"}</td>
+                  <td className="admin-audit-time">{timeFormat.format(new Date(entry.at))}</td>
+                  <td>{t.auditEntities[entry.entity as keyof typeof t.auditEntities] ?? entry.entity} · {t.auditActions[entry.action as keyof typeof t.auditActions] ?? entry.action}<br /><small dir="ltr" className="admin-audit-id">#{entry.entity_id?.slice(0, 8)}</small></td>
+                  <td className="admin-audit-change">
+                    {changes(entry).length === 0 ? "—" : (
+                      <ul>
+                        {/* Each value is isolated so numbers and codes keep their direction in Arabic lines. */}
+                        {changes(entry).map((change) => (
+                          <li key={change.key}>
+                            <span>{change.label}:</span>{" "}
+                            {change.from !== "—" && <><bdi>{change.from}</bdi> {locale === "ar" ? "←" : "→"} </>}
+                            <bdi><strong>{change.to}</strong></bdi>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
                   <td><small>{entry.actor ? names[entry.actor] || t.auditSomeone : t.auditSystem}</small></td>
                 </tr>
               ))}

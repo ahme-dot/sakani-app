@@ -34,6 +34,7 @@ import { GOVERNORATES, governorateLabel } from "@/lib/egypt";
 import { DOCUMENT_VERSION } from "@/lib/documents";
 import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
 import { RENTAL_FEE_COLUMNS, type RentalFee } from "@/lib/payments";
+import { useListingTitles } from "@/lib/listing-titles";
 import { LANGUAGE_OPTIONS } from "@/lib/profiles";
 import { useSavedListings } from "@/lib/saved";
 import { fetchListingsByIds } from "@/lib/supabase/listings";
@@ -132,6 +133,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
   const [fees, setFees] = useState<RentalFee[] | null>(null);
   const [saved, setSaved] = useState<Property[] | null>(null);
   const [problemFor, setProblemFor] = useState<string | null>(null);
+  const titleOf = useListingTitles(supabase, [...(bookings ?? []), ...(hostBookings ?? [])].map((booking) => booking.listing_id), locale);
   // Bookings the guest has already reviewed, and the one being reviewed now.
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
   const [reviewFor, setReviewFor] = useState<string | null>(null);
@@ -321,7 +323,8 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
     return true;
   }
 
-  const name = profile.full_name || user.email || t.navAccount;
+  // Without a name yet, the part of the email before the @ reads better than the whole address.
+  const name = profile.full_name || user.email?.split("@")[0] || t.navAccount;
   const loading = <p className="profile-loading"><LoaderCircle className="spinner" size={18} /> {t.loading}</p>;
   const egp = (amount: number | null | undefined) => `${numberFormat.format(amount ?? 0)} ${t.currency}`;
   const stay = (moveIn: string | null, months: number | null) =>
@@ -414,12 +417,16 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
               <dl className="profile-details">
                 <div><dt>{t.email}</dt><dd dir="ltr">{user.email}</dd></div>
                 <div><dt>{t.phoneLabel}</dt><dd dir="ltr">{profile.phone || "—"}</dd></div>
-                <div><dt>{t.governorate}</dt><dd>{profile.governorate ? governorateLabel(locale, profile.governorate) : "—"}</dd></div>
-                <div><dt>{t.occupationLabel}</dt><dd>{profile.occupation || "—"}</dd></div>
-                <div><dt>{t.languagesLabel}</dt><dd>{profile.languages?.length ? profile.languages.map((code) => languageNames.of(code) ?? code).join("، ") : "—"}</dd></div>
+                {/* Empty details stay hidden; "Edit my details" fills them in. */}
+                {profile.governorate && <div><dt>{t.governorate}</dt><dd>{governorateLabel(locale, profile.governorate)}</dd></div>}
+                {profile.occupation && <div><dt>{t.occupationLabel}</dt><dd>{profile.occupation}</dd></div>}
+                {Boolean(profile.languages?.length) && <div><dt>{t.languagesLabel}</dt><dd>{profile.languages!.map((code) => languageNames.of(code) ?? code).join(locale === "ar" ? "، " : ", ")}</dd></div>}
                 {role === "host" && <div><dt>{t.instapayLabel}</dt><dd dir="ltr">{profile.instapay_address || "—"}</dd></div>}
               </dl>
               {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+              {initialProfile && (!profile.full_name || !profile.governorate || !profile.bio) && (
+                <button className="profile-complete" type="button" onClick={() => { setEditing(true); setMessage(""); }}><Pencil size={14} /> {t.profileComplete}</button>
+              )}
             </>
           )}
           {initialProfile && !profile.id_verified && (
@@ -456,7 +463,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                   {hostBookings.map((booking) => (
                     <li key={booking.id}>
                       <div>
-                        <strong>{booking.listing_title}</strong>
+                        <strong>{titleOf(booking.listing_id, booking.listing_title)}</strong>
                         <span>{booking.guest_first_name} · {stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
                         <small>{t.hostPayoutLine(egp(booking.rent_amount), egp(booking.host_fee), egp(booking.payout_amount))}</small>
                         {booking.deposit_amount > 0 && (
@@ -529,7 +536,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                     <li key={booking.id}>
                       <div>
                         <strong>{egp(booking.payout_amount)}</strong>
-                        <span>{booking.listing_title}</span>
+                        <span>{titleOf(booking.listing_id, booking.listing_title)}</span>
                       </div>
                       <span className={`status-chip is-${booking.status === "completed" ? "paid" : "due"}`}>{booking.status === "completed" ? t.payoutSent : t.payoutDue}</span>
                       {booking.paid_out_at && <small>{dateFormat.format(new Date(booking.paid_out_at))}</small>}
@@ -595,7 +602,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                     return (
                       <li key={booking.id}>
                         <div>
-                          <strong>{booking.listing_id ? <Link href={`/${locale}/listings/${booking.listing_id}`}>{booking.listing_title}</Link> : booking.listing_title}</strong>
+                          <strong>{booking.listing_id ? <Link href={`/${locale}/listings/${booking.listing_id}`}>{titleOf(booking.listing_id, booking.listing_title)}</Link> : booking.listing_title}</strong>
                           <span>{stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
                           {booking.total_amount !== null && <small>{t.bookingPaidAmount(egp(booking.total_amount))}</small>}
                           {booking.status === "refund_pending" && booking.refund_due_at && <small className="profile-refund">{t.refundBy(timeFormat.format(new Date(booking.refund_due_at)))}</small>}

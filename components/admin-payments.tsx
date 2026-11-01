@@ -14,6 +14,7 @@ import {
 } from "@/lib/payments";
 import { SITE_URL, whatsappLink } from "@/lib/site";
 import { fetchPrivateContacts } from "@/lib/supabase/listings";
+import { useListingTitles } from "@/lib/listing-titles";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 type Props = { locale: SiteLocale; supabase: SupabaseClient; onChanged: () => void };
@@ -29,6 +30,7 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
   const [ready, setReady] = useState<boolean | null>(null);
   const [settings, setSettings] = useState<PaymentSettings>(DEFAULT_PAYMENT_SETTINGS);
   const [fees, setFees] = useState<RentalFee[]>([]);
+  const titleOf = useListingTitles(supabase, fees.map((fee) => fee.listing_id), locale);
   const [phones, setPhones] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<FeeStatus>("submitted");
   const [version, setVersion] = useState(0);
@@ -140,7 +142,7 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
               <article className="admin-fee" key={fee.id}>
                 <div className="admin-fee-main">
                   <strong>{numberFormat.format(fee.amount)} {t.currency} <span className={`payer-chip is-${fee.payer}`}>{fee.kind === "upfront" ? t.payUpfrontTitle : fee.payer === "student" ? t.payerStudent : t.payerOwner}</span></strong>
-                  <span>{fee.listing_title}</span>
+                  <span>{titleOf(fee.listing_id, fee.listing_title)}</span>
                   {fee.payer === "student" && fee.payer_name && <span>{fee.payer_name} · <span dir="ltr">{fee.payer_contact}</span></span>}
                   <small>{dateFormat.format(new Date(fee.submitted_at ?? fee.created_at))}{fee.created_by_admin ? ` · ${t.createdByAdmin}` : ""}</small>
                 </div>

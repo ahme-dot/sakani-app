@@ -1,7 +1,7 @@
 /** Sakani building mark for generated images (app icons, social previews). Plain inline SVG — no client code. */
 export function BrandMark({ size, radius, inverted = false }: { size: number; radius: number; inverted?: boolean }) {
-  const tile = inverted ? "#ffffff" : "#246b53";
-  const stroke = inverted ? "#246b53" : "#ffffff";
+  const tile = inverted ? "#ffffff" : "#14213d";
+  const stroke = inverted ? "#14213d" : "#ffffff";
   return (
     <div
       style={{
