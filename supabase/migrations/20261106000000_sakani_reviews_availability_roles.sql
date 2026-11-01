@@ -16,6 +16,7 @@ as $$
 declare
   place record;
   taken integer;
+  room_for integer;
 begin
   if new.listing_id is null or new.move_in is null then
     return new;
@@ -31,7 +32,9 @@ begin
     and b.status in ('pending_payment', 'payment_review', 'confirmed', 'moved_in', 'cancellation_requested')
     and daterange(b.move_in, (b.move_in + make_interval(months => coalesce(b.months, 1)))::date)
         && daterange(new.move_in, (new.move_in + make_interval(months => coalesce(new.months, 1)))::date);
-  if taken >= case when place.property_type in ('room', 'bed') then greatest(coalesce(place.available_beds, 1), 1) else 1 end then
+  -- Rooms and beds take as many guests as free beds; a flat or studio takes one booking at a time.
+  room_for := case when place.property_type in ('room', 'bed') then greatest(coalesce(place.available_beds, 1), 1) else 1 end;
+  if taken >= room_for then
     raise exception 'dates_taken' using errcode = 'P0001';
   end if;
   return new;
