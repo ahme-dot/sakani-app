@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN_EMAIL, ADMIN_PASSWORD, adminToken, api, guestSession, hasAdmin, watchErrors } from "./helpers";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, adminToken, api, guestSession, hasAdmin, passAdminCode, watchErrors } from "./helpers";
 
 // Every user talks only with the Sakani team. The admin account plays the user and then answers as the team.
 test.describe("chat with the Sakani team", () => {
@@ -48,6 +48,7 @@ test.describe("chat with the Sakani team", () => {
 
     // The team answers from the admin panel.
     await page.goto("/en/admin");
+    await passAdminCode(page);
     await page.locator(".admin-nav button", { hasText: "Chat" }).click();
     await page.locator(".admin-chat-thread").first().click();
     await expect(page.locator(".chat-message", { hasText: `question ${stamp}` })).toBeVisible();

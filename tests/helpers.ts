@@ -157,7 +157,11 @@ export async function signInAsAdmin(page: Page, locale: "ar" | "en" = "en") {
   await page.fill('input[name="password"]', ADMIN_PASSWORD);
   await page.click('button[type="submit"]');
   await page.waitForURL(/\/admin$/);
-  // Two-step sign-in: type the current code when the panel asks for it.
+  await passAdminCode(page);
+}
+
+/** On the admin page: types the current two-step code if the panel asks for it, then waits for the menu. */
+export async function passAdminCode(page: Page) {
   const challenge = page.locator(".admin-mfa input[name=code]");
   await Promise.race([challenge.waitFor(), page.locator(".admin-nav").waitFor()]);
   if (ADMIN_TOTP_SECRET && await challenge.isVisible()) {

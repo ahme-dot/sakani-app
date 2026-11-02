@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { SUPABASE_KEY, adminToken, api, guestSession, hasAdmin, sampleListing } from "./helpers";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_TOTP_SECRET, SUPABASE_KEY, adminToken, api, guestSession, hasAdmin, sampleListing } from "./helpers";
 
 // Reviews after a stay, no double bookings, admin roles and error reports.
 // The admin account books as a guest (with a phone number), then gets its profile back.
@@ -143,4 +143,15 @@ test("error reports: anyone can send one, only admins read and clear them", asyn
   const visitor = await api<unknown>(`/rest/v1/client_errors?select=id&message=eq.${encodeURIComponent(message)}`);
   expect(visitor.status >= 400 || (Array.isArray(visitor.data) && visitor.data.length === 0)).toBe(true);
   await api(`/rest/v1/client_errors?id=eq.${rows.data[0].id}`, { token: admin, method: "DELETE" });
+});
+
+test("two-step sign-in: with the password alone, admin actions are refused", async () => {
+  test.skip(!hasAdmin || !ADMIN_TOTP_SECRET, "two-step sign-in isn't set up for the test admin");
+  const passwordOnly = await api<{ access_token: string }>("/auth/v1/token?grant_type=password", {
+    method: "POST", body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+  });
+  const refused = await api("/rest/v1/rpc/admin_finance_summary", { token: passwordOnly.data.access_token, method: "POST", body: { from_date: "2026-01-01", to_date: "2026-12-31" } });
+  expect(refused.status).toBeGreaterThanOrEqual(400);
+  const allowed = await api("/rest/v1/rpc/admin_finance_summary", { token: await adminToken(), method: "POST", body: { from_date: "2026-01-01", to_date: "2026-12-31" } });
+  expect(allowed.status).toBe(200);
 });

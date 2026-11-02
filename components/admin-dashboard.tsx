@@ -109,6 +109,18 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [fullAdmin, setFullAdmin] = useState(true);
   // The bookings tab Today asked for (cleared when bookings are opened from the menu).
   const [requestsTab, setRequestsTab] = useState<string | null>(null);
+  // Full admin or reviewer, asked once the session is fully signed in (after the two-step code, if any):
+  // before the code, the database doesn't count the session as an admin at all.
+  useEffect(() => {
+    if (!supabase || state !== "ready") return;
+    let mounted = true;
+    void supabase.rpc("is_full_admin").then(({ data, error: roleError }) => {
+      if (mounted && !roleError) setFullAdmin(Boolean(data));
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [supabase, state]);
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [filter, setFilter] = useState<ReviewFilter>("pending");
   const [counts, setCounts] = useState<Counts | null>(null);
@@ -199,10 +211,6 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           });
         }
       });
-    // The role column arrives with the reviews migration; until then everyone is a full admin.
-    void supabase.rpc("is_full_admin").then(({ data, error: roleError }) => {
-      if (mounted && !roleError) setFullAdmin(Boolean(data));
-    });
 
     return () => {
       mounted = false;
