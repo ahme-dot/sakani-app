@@ -50,6 +50,7 @@ import AdminGrow from "@/components/admin-grow";
 import AdminErrors from "@/components/admin-errors";
 import AdminReviews from "@/components/admin-reviews";
 import AdminToday from "@/components/admin-today";
+import AdminMfaPanel, { AdminMfaChallenge, loadMfaStatus } from "@/components/admin-mfa";
 import AdminPayments from "@/components/admin-payments";
 import AdminAudit from "@/components/admin-audit";
 import AdminFinance from "@/components/admin-finance";
@@ -81,7 +82,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 /** Published listings not updated or confirmed for this long are flagged as possibly out of date. */
 const STALE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
-type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "ready";
+type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "mfa" | "ready";
 /** The admin tabs; "paused" also shows reserved, rented and suspended listings (everything hidden from search). */
 type ReviewFilter = "pending" | "approved" | "rejected" | "paused";
 type AdminView = "today" | "reviews" | "errors" | "listings" | "add" | "requests" | "chat" | "reports" | "inbox" | "payments" | "finance" | "policies" | "legal" | "audit" | "users" | "identity" | "demo" | "grow" | "team";
@@ -101,6 +102,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [user, setUser] = useState<User | null>(null);
   const [state, setState] = useState<DashboardState>(supabase ? "loading" : "unconfigured");
+  const [mfaFactor, setMfaFactor] = useState<string | null>(null);
+  const [mfaEnrolled, setMfaEnrolled] = useState(true);
   const [view, setView] = useState<AdminView>("today");
   // Reviewer admins see listings, chat and reports, but not money, policies or the team.
   const [fullAdmin, setFullAdmin] = useState(true);
@@ -183,7 +186,17 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           setError(t.adminLoadError);
           setState("denied");
         } else {
-          setState(data ? "ready" : "denied");
+          if (!data) {
+            setState("denied");
+            return;
+          }
+          // An admin with an authenticator app passes the 6-digit code before anything loads.
+          void loadMfaStatus(supabase).then((mfa) => {
+            if (!mounted) return;
+            setMfaFactor(mfa.factorId);
+            setMfaEnrolled(mfa.enrolled);
+            setState(mfa.passed ? "ready" : "mfa");
+          });
         }
       });
     // The role column arrives with the reviews migration; until then everyone is a full admin.
@@ -544,6 +557,14 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     return <main className="admin-page" dir={dir}><div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.loading}</div></main>;
   }
 
+  if (state === "mfa" && supabase && mfaFactor) {
+    return (
+      <main className="admin-page" dir={dir}>
+        <AdminMfaChallenge locale={locale} supabase={supabase} factorId={mfaFactor} onPassed={() => setState("ready")} />
+      </main>
+    );
+  }
+
   if (state !== "ready") {
     const unavailableMessage = state === "unconfigured"
       ? t.ownerSetupNeeded
@@ -690,6 +711,13 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
         </header>
 
         {view === "today" && supabase ? (
+          <>
+          {!mfaEnrolled && (
+            <p className="admin-mfa-nudge">
+              <ShieldCheck size={18} /> {t.mfaNudge}{" "}
+              <button type="button" className="text-button" onClick={() => { setRequestsTab(null); selectView("team"); }}>{t.mfaNudgeAction}</button>
+            </p>
+          )}
           <AdminToday
             locale={locale}
             supabase={supabase}
@@ -704,12 +732,16 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
               selectView(target);
             }}
           />
+          </>
         ) : view === "reviews" && supabase ? (
           <AdminReviews locale={locale} supabase={supabase} />
         ) : view === "errors" && supabase ? (
           <AdminErrors locale={locale} supabase={supabase} />
         ) : view === "team" && supabase && user ? (
-          <AdminTeam locale={locale} supabase={supabase} currentUserId={user.id} />
+          <>
+            <AdminMfaPanel locale={locale} supabase={supabase} onChanged={() => setMfaEnrolled(true)} />
+            <AdminTeam locale={locale} supabase={supabase} currentUserId={user.id} />
+          </>
         ) : view === "reports" && supabase && user ? (
           <AdminReports locale={locale} supabase={supabase} currentUserId={user.id} onChanged={refreshCounts} onReviewListing={reviewReportedListing} />
         ) : view === "add" && supabase && user ? (

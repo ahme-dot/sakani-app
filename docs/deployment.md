@@ -41,3 +41,14 @@ Never put a Supabase service-role key or any payment secret in a `NEXT_PUBLIC_` 
 ## Tests
 
 `npx playwright test` covers every page (Arabic/English, phone/desktop), booking and payment, finance calculations (the ten cases in the project brief), deposits, contracts, cancellations, chat and permissions.
+
+## Security settings (Supabase dashboard)
+
+Set these once; the site's code can't change them.
+
+1. **Authentication → Sign In / Providers → Email:** turn on **Confirm email**, so nobody can sign up with someone else's address. Supabase's built-in email sends only a few messages an hour, so connect your own sender first (Authentication → Emails → SMTP settings, e.g. Resend).
+2. **Authentication → Sign In / Providers → Passwords** (or Attack Protection): minimum length **8**, and turn on **leaked password protection**.
+3. **Authentication → Multi-Factor:** keep **TOTP (authenticator app)** enabled. Then each admin opens Admin → Team → **Turn on two-step sign-in**. After that, every admin action needs the 6-digit code; the database enforces it (migration `20261107000000_sakani_security.sql`). Copy the key shown during setup into `.env.local` and the GitHub secrets as `SAKANI_ADMIN_TOTP_SECRET`, so the automated tests can sign in. Lost phone: Authentication → Users → the admin → remove the MFA factor, then set it up again.
+4. **Bot protection:** create a free Cloudflare Turnstile site, put its site key in Vercel as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, and its secret in Supabase → Authentication → Attack Protection → CAPTCHA (Turnstile).
+
+The site already sends a Content-Security-Policy and the other security headers (see `next.config.ts`).

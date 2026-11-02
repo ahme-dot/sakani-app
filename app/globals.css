@@ -13029,3 +13029,15 @@ body {
 .admin-request .admin-reference select { min-height: 38px; padding: 0 34px 0 12px; border: 1px solid #d5dae1; border-radius: 10px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat; background-position: left 12px center; appearance: none; color: #14213d; font: inherit; font-size: 14px; }
 [dir="ltr"] .admin-request .admin-reference select { padding: 0 12px 0 34px; background-position: right 12px center; }
 [dir="rtl"] .admin-request .admin-reference select { padding: 0 12px 0 34px; background-position: left 12px center; }
+
+/* Two-step sign-in for admins. */
+.admin-mfa { max-width: 440px; }
+.admin-mfa .auth-form { width: 100%; margin-top: 8px; }
+.admin-mfa input[name="code"] { letter-spacing: 6px; font-size: 20px; text-align: center; }
+.admin-mfa-setup { display: grid; gap: 10px; margin-bottom: 22px; padding: 18px 20px; border: 1px solid #e3e7ec; border-radius: 16px; background: #fff; }
+.admin-mfa-setup.is-on { border-color: #b9dccb; background: #f3faf6; }
+.admin-mfa-setup .admin-btn { justify-self: start; }
+.admin-mfa-steps ol { display: grid; gap: 14px; margin: 0 0 12px; padding-inline-start: 20px; }
+.admin-mfa-qr { display: block; width: 180px; height: 180px; margin: 10px 0; border: 1px solid #e3e7ec; border-radius: 12px; background: #fff; }
+.admin-mfa-nudge { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; padding: 12px 16px; border: 1px solid #f1d5a8; border-radius: 12px; background: #fff7e8; color: #6b4a0b; font-size: 14px; }
+.admin-mfa-nudge .text-button { color: #14213d; font-weight: 700; text-decoration: underline; }

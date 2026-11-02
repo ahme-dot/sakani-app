@@ -1,6 +1,7 @@
 # Checks every push and pull request: lint, types and a production build.
 # The browser tests run too once the repository has these secrets (Settings → Secrets → Actions):
 #   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SAKANI_ADMIN_EMAIL, SAKANI_ADMIN_PASSWORD
+#   (and SAKANI_ADMIN_TOTP_SECRET once the admin turns on two-step sign-in)
 # They use the real Supabase project and remove everything they create.
 name: CI
 
@@ -40,6 +41,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       SAKANI_ADMIN_EMAIL: ${{ secrets.SAKANI_ADMIN_EMAIL }}
       SAKANI_ADMIN_PASSWORD: ${{ secrets.SAKANI_ADMIN_PASSWORD }}
+      SAKANI_ADMIN_TOTP_SECRET: ${{ secrets.SAKANI_ADMIN_TOTP_SECRET }}
       HAS_SECRETS: ${{ secrets.SAKANI_ADMIN_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v4

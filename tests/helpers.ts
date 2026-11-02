@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 
@@ -21,6 +22,21 @@ export const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? env.NEX
 export const ADMIN_EMAIL = process.env.SAKANI_ADMIN_EMAIL ?? env.SAKANI_ADMIN_EMAIL ?? "";
 export const ADMIN_PASSWORD = process.env.SAKANI_ADMIN_PASSWORD ?? env.SAKANI_ADMIN_PASSWORD ?? "";
 export const hasAdmin = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD && SUPABASE_URL);
+// The admin's authenticator key, once two-step sign-in is on (shown once when it is set up).
+export const ADMIN_TOTP_SECRET = process.env.SAKANI_ADMIN_TOTP_SECRET ?? env.SAKANI_ADMIN_TOTP_SECRET ?? "";
+
+/** The current 6-digit code for a base32 authenticator key (RFC 6238, 30-second steps). */
+export function totpCode(secret: string, time = Date.now()) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const char of secret.replace(/=+$/, "").replace(/\s/g, "").toUpperCase()) bits += alphabet.indexOf(char).toString(2).padStart(5, "0");
+  const key = Buffer.from((bits.match(/.{8}/g) ?? []).map((byte) => parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(time / 30_000)));
+  const hash = createHmac("sha1", key).update(counter).digest();
+  const offset = hash[hash.length - 1] & 15;
+  return String((hash.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, "0");
+}
 export const TEST_TAG = "[E2E TEST]";
 export const LOCALES = ["ar", "en"] as const;
 
@@ -51,7 +67,16 @@ export async function adminToken() {
     method: "POST",
     body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
   });
-  return data.access_token;
+  if (!ADMIN_TOTP_SECRET) return data.access_token;
+  // Two-step sign-in is on: pass the code so the token counts as admin.
+  const user = await api<{ factors?: Array<{ id: string; status: string; factor_type: string }> }>("/auth/v1/user", { token: data.access_token });
+  const factor = user.data.factors?.find((item) => item.status === "verified" && item.factor_type === "totp");
+  if (!factor) return data.access_token;
+  const challenge = await api<{ id: string }>(`/auth/v1/factors/${factor.id}/challenge`, { token: data.access_token, method: "POST", body: {} });
+  const verified = await api<{ access_token: string }>(`/auth/v1/factors/${factor.id}/verify`, {
+    token: data.access_token, method: "POST", body: { challenge_id: challenge.data.id, code: totpCode(ADMIN_TOTP_SECRET) },
+  });
+  return verified.data.access_token;
 }
 
 /** A fresh anonymous (guest) session, like an owner who continues without an account. */
@@ -132,5 +157,12 @@ export async function signInAsAdmin(page: Page, locale: "ar" | "en" = "en") {
   await page.fill('input[name="password"]', ADMIN_PASSWORD);
   await page.click('button[type="submit"]');
   await page.waitForURL(/\/admin$/);
+  // Two-step sign-in: type the current code when the panel asks for it.
+  const challenge = page.locator(".admin-mfa input[name=code]");
+  await Promise.race([challenge.waitFor(), page.locator(".admin-nav").waitFor()]);
+  if (ADMIN_TOTP_SECRET && await challenge.isVisible()) {
+    await challenge.fill(totpCode(ADMIN_TOTP_SECRET));
+    await page.locator(".admin-mfa button[type=submit]").click();
+  }
   await page.locator(".admin-nav").waitFor();
 }
