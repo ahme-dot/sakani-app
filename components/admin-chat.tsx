@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowLeft, ArrowRight, LoaderCircle, MessagesSquare } from "lucide-react";
-import SupportChat, { type ChatContext } from "@/components/support-chat";
+import SupportChat, { readableMessage, type ChatContext } from "@/components/support-chat";
 import SupportTickets from "@/components/support-tickets";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -26,6 +26,7 @@ export default function AdminChat({ locale, supabase, openUserId = null, openBoo
   const timeFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "short", timeStyle: "short" });
   const [threads, setThreads] = useState<Thread[] | null>(null);
   const [people, setPeople] = useState<Record<string, Person>>({});
+  const [previews, setPreviews] = useState<Record<string, { body: string; from_team: boolean }>>({});
   const [selected, setSelected] = useState<string | null>(null);
   const [context, setContext] = useState<ChatContext | null>(null);
   const [version, setVersion] = useState(0);
@@ -52,6 +53,14 @@ export default function AdminChat({ locale, supabase, openUserId = null, openBoo
       }
       const rows = (data ?? []) as Thread[];
       setThreads(rows);
+      // The latest message of each conversation, for a preview line in the list.
+      const threadIds = rows.slice(0, 100).map((row) => row.id);
+      if (threadIds.length) {
+        const { data: recent } = await supabase.from("support_messages").select("thread_id,body,from_team").in("thread_id", threadIds).order("created_at", { ascending: false }).limit(400);
+        const last: Record<string, { body: string; from_team: boolean }> = {};
+        for (const row of (recent ?? []) as Array<{ thread_id: string; body: string; from_team: boolean }>) last[row.thread_id] ??= row;
+        if (active) setPreviews(last);
+      }
       const ids = rows.map((row) => row.user_id);
       if (ids.length) {
         const { data: profiles } = await supabase.from("profiles").select("id,full_name,role").in("id", ids);
@@ -94,6 +103,11 @@ export default function AdminChat({ locale, supabase, openUserId = null, openBoo
                 <strong>{who?.full_name || t.noName}</strong>
                 <span className={`role-chip is-${who?.role ?? "guest"}`}>{who?.role === "host" ? t.roleHost : t.roleGuest}</span>
                 <small>{timeFormat.format(new Date(thread.last_message_at))}</small>
+                {previews[thread.id] && (
+                  <span className="admin-chat-preview">
+                    {previews[thread.id].from_team ? `${t.chatYou}: ` : ""}{readableMessage(locale, previews[thread.id].body)}
+                  </span>
+                )}
               </button>
             </li>
           );

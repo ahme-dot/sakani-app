@@ -17,7 +17,8 @@ type Props = {
   openMessages: number;
   /** Reviewer admins don't handle money. */
   canHandleMoney: boolean;
-  onOpen: (target: TodayTarget) => void;
+  /** For bookings, the tab that holds this work. */
+  onOpen: (target: TodayTarget, bookingTab?: string) => void;
 };
 
 type Counts = { transfers: number; cancellations: number; refunds: number; refundDue: string | null; payouts: number; deposits: number; identity: number; errors: number | null };
@@ -67,12 +68,12 @@ export default function AdminToday({ locale, supabase, pendingListings, unreadCh
   if (!counts) return <div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.loading}</div>;
 
   const tasks = [
-    canHandleMoney && { key: "refunds", icon: Undo2, count: counts.refunds, title: t.todayRefunds, hint: counts.refundDue ? t.todayRefundsBy(timeFormat.format(new Date(counts.refundDue))) : t.todayRefundsHint, target: "requests" as const, urgent: true },
-    canHandleMoney && { key: "transfers", icon: Wallet, count: counts.transfers, title: t.todayTransfers, hint: t.todayTransfersHint, target: "requests" as const, urgent: true },
-    canHandleMoney && { key: "cancellations", icon: AlertTriangle, count: counts.cancellations, title: t.todayCancellations, hint: t.todayCancellationsHint, target: "requests" as const, urgent: true },
+    canHandleMoney && { key: "refunds", icon: Undo2, count: counts.refunds, title: t.todayRefunds, hint: counts.refundDue ? t.todayRefundsBy(timeFormat.format(new Date(counts.refundDue))) : t.todayRefundsHint, target: "requests" as const, tab: "refund_pending", urgent: true },
+    canHandleMoney && { key: "transfers", icon: Wallet, count: counts.transfers, title: t.todayTransfers, hint: t.todayTransfersHint, target: "requests" as const, tab: "payment_review", urgent: true },
+    canHandleMoney && { key: "cancellations", icon: AlertTriangle, count: counts.cancellations, title: t.todayCancellations, hint: t.todayCancellationsHint, target: "requests" as const, tab: "cancellation_requested", urgent: true },
     { key: "chats", icon: MessagesSquare, count: unreadChats, title: t.todayChats, hint: t.todayChatsHint, target: "chat" as const, urgent: true },
-    canHandleMoney && { key: "payouts", icon: HandCoins, count: counts.payouts, title: t.todayPayouts, hint: t.todayPayoutsHint, target: "requests" as const, urgent: false },
-    canHandleMoney && { key: "deposits", icon: CalendarCheck, count: counts.deposits, title: t.todayDeposits, hint: t.todayDepositsHint, target: "requests" as const, urgent: false },
+    canHandleMoney && { key: "payouts", icon: HandCoins, count: counts.payouts, title: t.todayPayouts, hint: t.todayPayoutsHint, target: "requests" as const, tab: "moved_in", urgent: false },
+    canHandleMoney && { key: "deposits", icon: CalendarCheck, count: counts.deposits, title: t.todayDeposits, hint: t.todayDepositsHint, target: "requests" as const, tab: "confirmed", urgent: false },
     { key: "listings", icon: LayoutList, count: pendingListings, title: t.todayListings, hint: t.todayListingsHint, target: "listings" as const, urgent: false },
     { key: "reports", icon: Flag, count: openReports, title: t.todayReports, hint: t.todayReportsHint, target: "reports" as const, urgent: false },
     { key: "messages", icon: Inbox, count: openMessages, title: t.todayMessages, hint: t.todayMessagesHint, target: "inbox" as const, urgent: false },
@@ -87,7 +88,7 @@ export default function AdminToday({ locale, supabase, pendingListings, unreadCh
         <section className="admin-empty-state"><CheckCircle2 size={28} /><p>{t.todayAllClear}</p></section>
       ) : (
         <ul className="admin-today-list">
-          {open.map(({ key, icon: Icon, count: value, title, hint, target, urgent }) => (
+          {open.map(({ key, icon: Icon, count: value, title, hint, target, urgent, ...rest }) => (
             <li key={key} className={urgent ? "is-urgent" : ""}>
               <Icon size={22} />
               <div>
@@ -95,7 +96,7 @@ export default function AdminToday({ locale, supabase, pendingListings, unreadCh
                 <small>{hint}</small>
               </div>
               <span className="admin-today-count">{numberFormat.format(value)}</span>
-              <button className="admin-btn admin-btn-primary" type="button" onClick={() => onOpen(target)}>{t.todayOpen}</button>
+              <button className="admin-btn admin-btn-primary" type="button" onClick={() => onOpen(target, "tab" in rest ? (rest.tab as string) : undefined)}>{t.todayOpen}</button>
             </li>
           ))}
         </ul>

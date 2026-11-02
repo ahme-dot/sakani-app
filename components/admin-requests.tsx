@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CalendarCheck, CheckCircle2, ExternalLink, FileText, Headset, LoaderCircle, Phone, RotateCcw, Timer, Wallet, X } from "lucide-react";
@@ -59,10 +59,14 @@ type Props = {
   onChanged: () => void;
   /** Opens the chat with a user (guest or host), about this booking. */
   onOpenChat: (userId: string, bookingId: string) => void;
+  /** The tab to open on (from Today); otherwise the first tab with work in it. */
+  initialTab?: BookingStatus;
 };
 
+const REFRESH_MS = 30_000;
+
 /** Admin: bookings paid upfront. Check the transfer, record the host's answer, refund within 24 hours, pay the host after move-in. */
-export default function AdminRequests({ locale, supabase, onChanged, onOpenChat }: Props) {
+export default function AdminRequests({ locale, supabase, onChanged, onOpenChat, initialTab }: Props) {
   const t = SITE_COPY[locale];
   const intlLocale = locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG";
   const numberFormat = new Intl.NumberFormat(intlLocale);
@@ -78,13 +82,28 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
   const [cancellations, setCancellations] = useState<Record<string, CancellationInfo>>({});
   const [scenarios, setScenarios] = useState<Record<string, string>>({});
   const [depositNotes, setDepositNotes] = useState<Record<string, string>>({});
-  const [tab, setTab] = useState<BookingStatus>("payment_review");
+  const [tab, setTab] = useState<BookingStatus>(initialTab ?? "payment_review");
+  const tabChosen = useRef(Boolean(initialTab));
   const [version, setVersion] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const busyRef = useRef(false);
+  useEffect(() => {
+    busyRef.current = busyId !== null;
+  }, [busyId]);
   const [references, setReferences] = useState<Record<string, string>>({});
   const [now, setNow] = useState(() => Date.now());
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  // A failed action shows its message inside that booking, next to what needs fixing.
+  const [errorFor, setErrorFor] = useState<string | null>(null);
+
+  // The list refreshes on its own while the screen is open, so guests' and hosts' steps show up.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible" && !busyRef.current) setVersion((value) => value + 1);
+    }, REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // The refund countdown ticks every minute.
   useEffect(() => {
@@ -107,6 +126,12 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
       const rows = (data ?? []) as Booking[];
       setBookings(rows);
       setReady(true);
+      // First load without a chosen tab: open the first one that has work.
+      if (!tabChosen.current) {
+        tabChosen.current = true;
+        const firstBusy = TABS.find((status) => rows.some((row) => row.status === status));
+        if (firstBusy) setTab(firstBusy);
+      }
       const feeIds = rows.map((row) => row.fee_id).filter((id): id is string => Boolean(id));
       const hostIds = [...new Set(rows.map((row) => row.host_id).filter((id): id is string => Boolean(id)))];
       const listingIds = [...new Set(rows.map((row) => row.listing_id).filter((id): id is string => Boolean(id)))];
@@ -136,11 +161,13 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
   async function run(booking: Booking, fn: string, args: Record<string, unknown>, done: string) {
     setBusyId(booking.id);
     setError("");
+    setErrorFor(null);
     setMessage("");
     const { error: runError } = await supabase.rpc(fn, args);
     setBusyId(null);
     if (runError) {
       console.error(`Could not run ${fn}:`, runError);
+      setErrorFor(booking.id);
       setError(
         runError.message.includes("invalid_reference") || runError.message.includes("invalid_note") ? t.referenceRequired
           : runError.message.includes("contract_not_signed") ? t.depositNeedsContract
@@ -152,6 +179,9 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
       return;
     }
     setMessage(done);
+    // The numbers typed for this booking were used; empty the boxes for the next step.
+    setDepositNotes((notes) => ({ ...notes, [booking.id]: "" }));
+    setReferences((refs) => ({ ...refs, [booking.id]: "" }));
     setVersion((value) => value + 1);
     onChanged();
   }
@@ -174,7 +204,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
       </div>
 
       {message && <p className="owner-feedback owner-feedback-success admin-feedback" role="status">{message}</p>}
-      {error && <p className="owner-feedback owner-feedback-error admin-feedback" role="alert">{error}</p>}
+      {error && !errorFor && <p className="owner-feedback owner-feedback-error admin-feedback" role="alert">{error}</p>}
 
       {visible.length === 0 ? (
         <section className="admin-empty-state"><CalendarCheck size={26} /><p>{t.requestsEmpty}</p></section>
@@ -270,12 +300,14 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                   )}
 
                   {booking.deposit_amount > 0 && paidAndConfirmed && (!deposit ? booking.contract_signed_at : deposit.status === "transferred" || deposit.status === "acknowledged" || deposit.status === "refund_pending" || deposit.status === "disputed") && (
-                    <span className="admin-reference">
+                    <span className="admin-reference admin-step">
+                      {/* Each money step has its own title and box, so a number can't land in the wrong one. */}
+                      <strong className="admin-step-title">{deposit ? t.adminStepDepositSent(egp(booking.deposit_amount)) : t.adminStepDeposit(egp(booking.deposit_amount))}</strong>
                       <input
                         value={depositNote}
                         onChange={(event) => setDepositNotes({ ...depositNotes, [booking.id]: event.target.value })}
-                        placeholder={deposit ? t.depositNotePlaceholder : t.payReference}
-                        aria-label={t.payReference}
+                        placeholder={deposit ? t.depositNotePlaceholder : t.depositReferencePlaceholder}
+                        aria-label={deposit ? t.depositNotePlaceholder : t.depositReferencePlaceholder}
                         maxLength={deposit ? 1000 : 64}
                         dir="auto"
                       />
@@ -307,12 +339,13 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                   )}
 
                   {(booking.status === "refund_pending" || booking.status === "moved_in") && (
-                    <span className="admin-reference">
+                    <span className="admin-reference admin-step">
+                      <strong className="admin-step-title">{booking.status === "refund_pending" ? t.adminStepRefund(egp(booking.total_amount)) : t.adminStepPayout(egp(booking.payout_amount))}</strong>
                       <input
                         value={reference}
                         onChange={(event) => setReferences({ ...references, [booking.id]: event.target.value })}
-                        placeholder={t.payReference}
-                        aria-label={t.payReference}
+                        placeholder={booking.status === "refund_pending" ? t.refundReferencePlaceholder : t.payoutReferencePlaceholder}
+                        aria-label={booking.status === "refund_pending" ? t.refundReferencePlaceholder : t.payoutReferencePlaceholder}
                         maxLength={64}
                         dir="ltr"
                       />
@@ -328,6 +361,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat 
                     </span>
                   )}
                 </div>
+                {errorFor === booking.id && error && <p className="owner-feedback owner-feedback-error admin-card-error" role="alert">{error}</p>}
               </article>
             );
           })}

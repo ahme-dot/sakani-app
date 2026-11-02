@@ -104,6 +104,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [view, setView] = useState<AdminView>("today");
   // Reviewer admins see listings, chat and reports, but not money, policies or the team.
   const [fullAdmin, setFullAdmin] = useState(true);
+  // The bookings tab Today asked for (cleared when bookings are opened from the menu).
+  const [requestsTab, setRequestsTab] = useState<string | null>(null);
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [filter, setFilter] = useState<ReviewFilter>("pending");
   const [counts, setCounts] = useState<Counts | null>(null);
@@ -662,7 +664,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
             <div className="admin-nav-group" key={group.label} role="group" aria-label={group.label}>
               <span className="admin-nav-heading">{group.label}</span>
               {group.items.map(({ value, label, icon: Icon, badge }) => (
-                <button key={value} type="button" className={view === value ? "is-active" : ""} aria-current={view === value ? "page" : undefined} onClick={() => selectView(value)}>
+                <button key={value} type="button" className={view === value ? "is-active" : ""} aria-current={view === value ? "page" : undefined} onClick={() => { setRequestsTab(null); selectView(value); }}>
                   <Icon size={18} />
                   <span>{label}</span>
                   {Boolean(badge) && <span className="admin-nav-badge">{numberFormat.format(badge!)}</span>}
@@ -696,8 +698,9 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
             openReports={openReports}
             openMessages={openMessages}
             canHandleMoney={fullAdmin}
-            onOpen={(target) => {
+            onOpen={(target, bookingTab) => {
               if (target === "listings") selectFilter("pending");
+              setRequestsTab(bookingTab ?? null);
               selectView(target);
             }}
           />
@@ -730,6 +733,8 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
           </section>
         ) : view === "requests" ? (
           <AdminRequests
+            key={requestsTab ?? "auto"}
+            initialTab={(requestsTab ?? undefined) as Parameters<typeof AdminRequests>[0]["initialTab"]}
             locale={locale}
             supabase={supabase!}
             onChanged={refreshCounts}

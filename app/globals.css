@@ -13009,3 +13009,23 @@ body {
 .site-shell .owner-listing-actions .listing-status { margin-inline-end: auto; }
 .site-shell .owner-listing-row:not(:has(.owner-listing-thumb)) { grid-template-columns: minmax(0, 1fr); }
 .site-shell .profile-see-all { display: inline-block; margin-top: 10px; }
+
+/* Admin bookings: each money step in its own box with a title; errors inside the booking. */
+.admin-request .admin-step { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 10px; flex-basis: 100%; padding: 12px; border: 1px solid #e3e7ec; border-radius: 12px; background: #f9fafb; }
+.admin-request .admin-step-title { grid-column: 1 / -1; color: #14213d; font-size: 14px; }
+.admin-request .admin-step input { min-width: 0; }
+.admin-request .admin-step > :nth-child(n + 4) { grid-column: 1 / -1; justify-self: start; }
+.admin-request .admin-card-error { margin: 10px 0 0; }
+.admin-chat-thread .admin-chat-preview { display: -webkit-box; grid-column: 1 / -1; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: #64748b; font-size: 13px; line-height: 1.5; text-align: start; }
+.admin-chat-thread.is-unread .admin-chat-preview { color: #14213d; font-weight: 600; }
+
+/* Admin on a phone: the top bar is just the scrolling menu, no empty space above or below it. */
+@media (max-width: 900px) {
+  .admin-shell { grid-template-rows: auto 1fr; align-content: start; }
+  .admin-shell .admin-sidebar { display: block; height: auto; min-height: 0; padding: 8px 12px; overflow: visible; }
+  .admin-shell .admin-nav { margin: 0; }
+}
+/* The cancellation scenario picker in a booking, styled like the other admin fields. */
+.admin-request .admin-reference select { min-height: 38px; padding: 0 34px 0 12px; border: 1px solid #d5dae1; border-radius: 10px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat; background-position: left 12px center; appearance: none; color: #14213d; font: inherit; font-size: 14px; }
+[dir="ltr"] .admin-request .admin-reference select { padding: 0 12px 0 34px; background-position: right 12px center; }
+[dir="rtl"] .admin-request .admin-reference select { padding: 0 12px 0 34px; background-position: left 12px center; }
