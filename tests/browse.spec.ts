@@ -46,7 +46,9 @@ test("price filters from a shared link are restored in the filters window", asyn
 
 test("header search on another page opens the home page with that search", async ({ page }) => {
   await page.goto("/en/help");
-  await page.locator(".search-pill select").nth(2).selectOption("female");
+  const forWhom = page.locator(".search-pill .search-select-button").nth(2);
+  await forWhom.click();
+  await page.getByRole("option", { name: "Women" }).click();
   await page.locator(".search-pill-go").click();
   await expect(page).toHaveURL(/\/en\?gender=female/);
   await expect(page.locator(".search-pill .search-seg-value").nth(2)).toHaveText("Women");
@@ -96,12 +98,21 @@ test.describe("phone", () => {
 
 test("search is by place, type and men or women only", async ({ page }) => {
   await page.goto("/en/help");
-  const selects = page.locator(".search-pill select");
-  await expect(selects).toHaveCount(3);
-  const genders = await selects.nth(2).locator("option").evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value));
-  expect(genders).toEqual(["", "female", "male"]);
-  await selects.nth(0).selectOption("Alexandria");
-  await selects.nth(1).selectOption("apartment");
+  const parts = page.locator(".search-pill .search-select-button");
+  await expect(parts).toHaveCount(3);
+  // For whom: anyone, women or men — nothing else.
+  await parts.nth(2).click();
+  await expect(page.getByRole("listbox").getByRole("option")).toHaveText(["Anyone", "Women", "Men"]);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(parts.nth(2)).toBeFocused();
+  // Where, from the keyboard: open, type to jump to Alexandria, choose with Enter.
+  await parts.nth(0).focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("Alex");
+  await page.keyboard.press("Enter");
+  await parts.nth(1).click();
+  await page.getByRole("option", { name: "Apartment" }).click();
   await page.locator(".search-pill-go").click();
   await expect(page).toHaveURL(/gov=Alexandria/);
   await expect(page).toHaveURL(/type=apartment/);

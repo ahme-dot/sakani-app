@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
+import SearchSelect from "@/components/search-select";
 import { GOVERNORATES, governorateLabel } from "@/lib/egypt";
 import { EMPTY_FILTERS, filtersToParams } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
@@ -62,6 +63,21 @@ export default function SearchPill({ locale, value = EMPTY_SEARCH, onSearch }: P
     };
   }, [sheetOpen]);
 
+  const governorateOptions = [{ value: "", label: t.searchAnywhere }, ...GOVERNORATES.map((item) => ({ value: item.name_en, label: locale === "ar" ? item.name : item.name_en }))];
+  const typeOptions = [{ value: "", label: t.allTypes }, ...(["room", "studio", "apartment", "bed"] as const).map((type) => ({ value: type, label: t[type] }))];
+  const genderOptions = [{ value: "", label: t.searchAnyone }, { value: "female", label: t.female }, { value: "male", label: t.male }];
+
+  // Desktop: Sakani-styled lists. The phone sheet keeps the phone's own picker, which suits touch best.
+  const desktopFields = (
+    <>
+      <SearchSelect label={t.searchWhere} value={draft.governorate} options={governorateOptions} onChange={(governorate) => setDraft({ ...draft, governorate })} />
+      <span className="search-seg-divider" aria-hidden="true" />
+      <SearchSelect label={t.propertyType} value={draft.propertyType} options={typeOptions} onChange={(propertyType) => setDraft({ ...draft, propertyType })} />
+      <span className="search-seg-divider" aria-hidden="true" />
+      <SearchSelect label={t.searchWho} value={draft.gender} options={genderOptions} onChange={(gender) => setDraft({ ...draft, gender })} />
+    </>
+  );
+
   const fields = (
     <>
       <label className="search-seg">
@@ -104,7 +120,7 @@ export default function SearchPill({ locale, value = EMPTY_SEARCH, onSearch }: P
   return (
     <>
       <form className="search-pill" role="search" aria-label={t.searchTitle} onSubmit={submit}>
-        {fields}
+        {desktopFields}
         <button className="search-pill-go" type="submit" aria-label={t.searchButton}>
           <Search size={17} strokeWidth={2.6} />
         </button>
