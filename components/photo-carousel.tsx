@@ -43,7 +43,20 @@ export default function PhotoCarousel({ locale, images, alt, href, sizes, counte
 
   return (
     <div className="carousel">
-      <div className="carousel-track" ref={track} onScroll={onScroll}>
+      {/* With more than one photo the strip scrolls, so the keyboard can reach it: Tab, then arrows. */}
+      <div
+        className="carousel-track"
+        ref={track}
+        onScroll={onScroll}
+        tabIndex={photos.length > 1 ? 0 : undefined}
+        role={photos.length > 1 ? "group" : undefined}
+        aria-label={photos.length > 1 ? alt : undefined}
+        onKeyDown={(event) => {
+          if (photos.length < 2 || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+          event.preventDefault();
+          go((event.key === "ArrowRight") !== rtl ? 1 : -1);
+        }}
+      >
         {photos.map((src, photoIndex) => {
           const image = (
             <Image

@@ -10,6 +10,8 @@ import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
 import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings, successFee, type PaymentSettings } from "@/lib/payments";
 import { listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
+import SakaniSelect from "@/components/sakani-select";
+import SakaniDate from "@/components/sakani-date";
 
 const STORAGE_BUCKET = "sakani-listings";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -416,10 +418,10 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
         <div className="owner-form-grid">
           <label className="owner-field">
             <span>{t.governorate}</span>
-            <select name="governorate" required value={governorate} onChange={(event) => setGovernorate(event.target.value)}>
+            <SakaniSelect name="governorate" required value={governorate} onChange={(event) => setGovernorate(event.target.value)}>
               <option value="" disabled>{t.chooseGovernorate}</option>
               {GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}
-            </select>
+            </SakaniSelect>
           </label>
           <label className="owner-field">
             <span>{t.area}</span>
@@ -441,7 +443,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
           <label className="owner-field"><span>{t.bathroomsLabel}</span><input name="bathrooms" type="number" inputMode="numeric" min="0" max="20" defaultValue={editing?.bathrooms ?? text("bathrooms") ?? ""} /></label>
           <label className="owner-field"><span>{t.areaSqmLabel}</span><input name="area_sqm" type="number" inputMode="numeric" min="5" max="2000" defaultValue={editing?.area_sqm ?? text("area_sqm") ?? ""} /></label>
           <label className="owner-field"><span>{t.minMonthsLabel}</span><input name="min_months" type="number" inputMode="numeric" min="1" max="24" defaultValue={editing?.min_months ?? text("min_months") ?? 1} required /></label>
-          <label className="owner-field"><span>{t.availableFromLabel}</span><input name="available_from" type="date" dir="ltr" defaultValue={editing?.available_from ?? text("available_from") ?? ""} /></label>
+          <label className="owner-field"><span>{t.availableFromLabel}</span><SakaniDate name="available_from" dir="ltr" defaultValue={editing?.available_from ?? text("available_from") ?? ""} /></label>
         </div>
       ))}
 

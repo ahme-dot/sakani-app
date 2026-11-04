@@ -9,6 +9,8 @@ import { bookingAmounts } from "@/lib/finance";
 import { ratesFrom, type PaymentSettings } from "@/lib/payments";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
+import SakaniSelect from "@/components/sakani-select";
+import SakaniDate from "@/components/sakani-date";
 
 type Props = {
   locale: SiteLocale;
@@ -143,21 +145,21 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
           <div className="book-form-grid">
             <label className="owner-field">
               <span>{t.bookMoveIn}</span>
-              <input name="move_in" type="date" required min={earliest} dir="ltr" aria-invalid={dateError || undefined} onChange={() => error && setError("")} />
+              <SakaniDate name="move_in" required min={earliest} dir="ltr" aria-invalid={dateError || undefined} onChange={() => error && setError("")} />
               {dateError && <small className="field-error" role="alert">{error}</small>}
             </label>
             <label className="owner-field">
               <span>{t.bookMonths}</span>
-              <select name="months" defaultValue={String(Math.max(6, minMonths))}>
+              <SakaniSelect name="months" defaultValue={String(Math.max(6, minMonths))}>
                 {[...new Set([1, 2, 3, 4, 5, 6, 9, 12, minMonths])].filter((months) => months >= minMonths).sort((a, b) => a - b).map((months) => <option key={months} value={months}>{t.monthsCount(months)}</option>)}
-              </select>
+              </SakaniSelect>
             </label>
           </div>
           <label className="owner-field">
             <span>{t.bookGuests}</span>
-            <select name="guests" defaultValue="1">
+            <SakaniSelect name="guests" defaultValue="1">
               {[1, 2, 3, 4, 5, 6].map((count) => <option key={count} value={count}>{numberFormat.format(count)}</option>)}
-            </select>
+            </SakaniSelect>
           </label>
           <label className="owner-field"><span>{t.requestNote}</span><textarea name="note" rows={2} maxLength={1000} placeholder={t.bookNotePlaceholder} /></label>
           <dl className="book-total">

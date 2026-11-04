@@ -40,6 +40,7 @@ import { useSavedListings } from "@/lib/saved";
 import { fetchListingsByIds } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import type { Property } from "@/types";
+import SakaniSelect from "@/components/sakani-select";
 
 /** Everything the account page edits; the extra fields arrive with the 20261102 migration. */
 type FullProfile = Profile & {
@@ -374,18 +375,18 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
               <label className="owner-field"><span>{t.phoneLabel}</span><input name="phone" type="tel" inputMode="tel" dir="ltr" defaultValue={profile.phone} pattern="[0-9+ \(\)\-]{8,20}" autoComplete="tel" /></label>
               <label className="owner-field">
                 <span>{t.governorate}</span>
-                <select name="governorate" defaultValue={profile.governorate ?? ""}>
+                <SakaniSelect name="governorate" defaultValue={profile.governorate ?? ""}>
                   <option value="">—</option>
                   {GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}
-                </select>
+                </SakaniSelect>
               </label>
               <label className="owner-field">
                 <span>{t.genderLabel}</span>
-                <select name="gender" defaultValue={profile.gender ?? ""}>
+                <SakaniSelect name="gender" defaultValue={profile.gender ?? ""}>
                   <option value="">—</option>
                   <option value="male">{t.genderMale}</option>
                   <option value="female">{t.genderFemale}</option>
-                </select>
+                </SakaniSelect>
               </label>
               <label className="owner-field"><span>{t.occupationLabel}</span><input name="occupation" defaultValue={profile.occupation ?? ""} maxLength={80} placeholder={t.occupationPlaceholder} /></label>
               {role === "host" && (

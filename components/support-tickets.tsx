@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Ticket } from "lucide-react";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
+import SakaniSelect from "@/components/sakani-select";
 
 export const TICKET_CATEGORIES = ["booking", "payment", "refund", "property", "other"] as const;
 export const TICKET_STATUSES = ["open", "in_progress", "resolved", "closed"] as const;
@@ -89,9 +90,9 @@ export default function SupportTickets({ locale, supabase, userId, asTeam = fals
         <form className="tickets-form" onSubmit={(event) => void create(event)}>
           <label className="owner-field">
             <span>{t.ticketCategory}</span>
-            <select name="category" defaultValue={bookingId ? "booking" : "other"}>
+            <SakaniSelect name="category" defaultValue={bookingId ? "booking" : "other"}>
               {TICKET_CATEGORIES.map((category) => <option key={category} value={category}>{t.ticketCategories[category]}</option>)}
-            </select>
+            </SakaniSelect>
           </label>
           <label className="owner-field"><span>{t.ticketSubject}</span><input name="subject" maxLength={120} required /></label>
           <label className="owner-field"><span>{t.chatPlaceholder}</span><textarea name="body" rows={3} maxLength={2000} required /></label>
@@ -106,9 +107,9 @@ export default function SupportTickets({ locale, supabase, userId, asTeam = fals
               <span dir="ltr">#{ticket.number}</span>
               <span className="tickets-subject">{ticket.subject} · {t.ticketCategories[ticket.category as keyof typeof t.ticketCategories]} · {dateFormat.format(new Date(ticket.created_at))}</span>
               {asTeam ? (
-                <select value={ticket.status} onChange={(event) => void setStatus(ticket, event.target.value)} aria-label={t.ticketStatusLabel}>
+                <SakaniSelect value={ticket.status} onChange={(event) => void setStatus(ticket, event.target.value)} aria-label={t.ticketStatusLabel}>
                   {TICKET_STATUSES.map((status) => <option key={status} value={status}>{t.ticketStatus[status]}</option>)}
-                </select>
+                </SakaniSelect>
               ) : (
                 <span className={`status-chip is-${ticket.status === "resolved" || ticket.status === "closed" ? "paid" : "pending"}`}>{t.ticketStatus[ticket.status]}</span>
               )}

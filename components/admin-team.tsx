@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { LoaderCircle, MailCheck, ShieldCheck, UserPlus } from "lucide-react";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
+import SakaniSelect from "@/components/sakani-select";
 
 type TeamMember = {
   user_id: string;
@@ -169,10 +170,10 @@ export default function AdminTeam({ locale, supabase, currentUserId }: { locale:
                   ) : (
                     <label className="admin-team-role">
                       <span>{t.teamRoleLabel}</span>
-                      <select value={member.role} disabled={busy} onChange={(event) => void setRole(member, event.target.value as "full" | "reviewer")}>
+                      <SakaniSelect value={member.role} disabled={busy} onChange={(event) => void setRole(member, event.target.value as "full" | "reviewer")}>
                         <option value="full">{t.teamRoles.full}</option>
                         <option value="reviewer">{t.teamRoles.reviewer}</option>
-                      </select>
+                      </SakaniSelect>
                     </label>
                   ))}
                   <small>

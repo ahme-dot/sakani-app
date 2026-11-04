@@ -14,5 +14,5 @@ export default function ListingBar({ children }: { children: ReactNode }) {
     return () => observer.disconnect();
   }, []);
 
-  return <div className={`listing2-bar${hidden ? " is-hidden" : ""}`} aria-hidden={hidden || undefined}>{children}</div>;
+  return <div className={`listing2-bar${hidden ? " is-hidden" : ""}`} inert={hidden || undefined}>{children}</div>;
 }

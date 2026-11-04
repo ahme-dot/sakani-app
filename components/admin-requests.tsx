@@ -9,6 +9,7 @@ import { useListingTitles } from "@/lib/listing-titles";
 import { listingPath, whatsappLink } from "@/lib/site";
 import { fetchPrivateContacts, listingRef } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
+import SakaniSelect from "@/components/sakani-select";
 
 type BookingStatus = "pending_payment" | "payment_review" | "confirmed" | "moved_in" | "completed" | "cancellation_requested" | "refund_pending" | "refunded" | "cancelled";
 type CancellationInfo = { id: string; booking_id: string; requesting_party: string; scenario: string; reason: string; status: string; refundable_amount: number | null };
@@ -326,9 +327,9 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
 
                   {booking.status === "cancellation_requested" && cancellation?.status === "pending" && (
                     <span className="admin-reference">
-                      <select value={scenario} onChange={(event) => setScenarios({ ...scenarios, [booking.id]: event.target.value })} aria-label={t.cancelScenarioLabel}>
+                      <SakaniSelect value={scenario} onChange={(event) => setScenarios({ ...scenarios, [booking.id]: event.target.value })} aria-label={t.cancelScenarioLabel}>
                         {CANCELLATION_SCENARIOS.map((item) => <option key={item} value={item}>{t.cancelScenarios[item]}</option>)}
-                      </select>
+                      </SakaniSelect>
                       <button className="admin-btn admin-btn-primary" type="button" disabled={busy} onClick={() => void run(booking, "admin_decide_cancellation", { target_request: cancellation.id, approve: true, chosen_scenario: scenario, note: "" }, t.cancelApproved)}>
                         <CheckCircle2 size={15} /> {t.cancelApprove}
                       </button>

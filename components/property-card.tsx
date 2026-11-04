@@ -25,7 +25,7 @@ export default function PropertyCard({ property, locale, linkToDetails = true }:
           images={property.images}
           alt={t.sampleImageAlt(title)}
           href={detailsHref}
-          sizes="(max-width: 640px) 100vw, (max-width: 1100px) 50vw, (max-width: 1400px) 33vw, 25vw"
+          sizes="(max-width: 760px) 100vw, (max-width: 1023px) 50vw, (max-width: 1599px) 25vw, 20vw"
         />
         {verified && <span className="property-pill"><BadgeCheck size={14} /> {t.verified}</span>}
         {property.is_demo && <span className="demo-pill property-demo">{t.demoBadge}</span>}

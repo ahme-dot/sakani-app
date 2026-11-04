@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Download, LoaderCircle } from "lucide-react";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
+import SakaniDate from "@/components/sakani-date";
 
 type Summary = {
   booking_value: number;
@@ -105,8 +106,8 @@ export default function AdminFinance({ locale, supabase }: { locale: SiteLocale;
   return (
     <section className="admin-finance">
       <div className="admin-users-toolbar">
-        <label className="owner-field"><span>{t.financeFrom}</span><input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} dir="ltr" /></label>
-        <label className="owner-field"><span>{t.financeTo}</span><input type="date" value={to} min={from} onChange={(event) => setTo(event.target.value)} dir="ltr" /></label>
+        <label className="owner-field"><span>{t.financeFrom}</span><SakaniDate value={from} max={to} onChange={(event) => setFrom(event.target.value)} dir="ltr" /></label>
+        <label className="owner-field"><span>{t.financeTo}</span><SakaniDate value={to} min={from} onChange={(event) => setTo(event.target.value)} dir="ltr" /></label>
         <button className="admin-btn admin-btn-ghost" type="button" disabled={exporting} onClick={() => void exportCsv()}>
           {exporting ? <LoaderCircle className="spinner" size={15} /> : <Download size={15} />} {t.financeExport}
         </button>

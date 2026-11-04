@@ -1,6 +1,7 @@
 "use client";
 
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
+import SakaniDate from "@/components/sakani-date";
 
 const CHECKS = ["photos_match", "beds_match", "price_confirmed", "owner_identity", "building_safe"] as const;
 type CheckKey = (typeof CHECKS)[number];
@@ -41,7 +42,7 @@ export default function VisitChecklist({ locale }: { locale: SiteLocale }) {
       <p className="field-hint">{t.visitIntro}</p>
       <label className="owner-field visit-date">
         <span>{t.visitDate}</span>
-        <input name="visit_date" type="date" required max={today} defaultValue={today} dir="ltr" />
+        <SakaniDate name="visit_date" required max={today} defaultValue={today} dir="ltr" />
       </label>
       <div className="visit-checks" role="group" aria-label={t.visitChecksLabel}>
         {CHECKS.map((key) => (

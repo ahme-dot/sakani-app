@@ -132,6 +132,8 @@ export async function designProblems(page: Page) {
       const name = `${el.tagName.toLowerCase()}${el.name ? `[name=${el.name}]` : ""}${el.className ? `.${String(el.className).split(" ")[0]}` : ""}`;
       if (!/Cairo|Inter/.test(style.fontFamily)) problems.push(`${name}: not using the site font`);
       if (el.tagName === "SELECT" && style.appearance === "auto") problems.push(`${name}: browser-default dropdown`);
+      // On a computer the browser's date box (e.g. 11/26/2026) must be replaced by the Sakani calendar.
+      if (el.getAttribute("type") === "date" && !el.classList.contains("sakani-date-native") && matchMedia("(hover: hover) and (pointer: fine)").matches) problems.push(`${name}: browser date box`);
       if (el.tagName !== "BUTTON" && innerWidth < 500 && parseFloat(style.fontSize) < 16) problems.push(`${name}: text under 16px on phone (zooms on tap)`);
     }
     for (const img of document.images) {

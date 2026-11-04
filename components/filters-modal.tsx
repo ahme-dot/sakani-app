@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { GOVERNORATES, areaSuggestions } from "@/lib/egypt";
 import { AMENITY_FILTERS, EMPTY_FILTERS, countApprovedListings, type AmenityFilter, type ListingFilters } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
+import SakaniSelect from "@/components/sakani-select";
 
 type Props = {
   locale: SiteLocale;
@@ -91,22 +92,22 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
             <h3>{t.filtersRooms}</h3>
             <div className="owner-form-grid owner-form-grid-three">
               <label className="owner-field"><span>{t.bedroomsLabel}</span>
-                <select value={draft.bedrooms} onChange={(event) => set({ bedrooms: event.target.value })}>
+                <SakaniSelect value={draft.bedrooms} onChange={(event) => set({ bedrooms: event.target.value })}>
                   <option value="">{t.anyCount}</option>
                   {["1", "2", "3", "4"].map((count) => <option key={count} value={count}>{t.atLeast(count)}</option>)}
-                </select>
+                </SakaniSelect>
               </label>
               <label className="owner-field"><span>{t.bathroomsLabel}</span>
-                <select value={draft.bathrooms} onChange={(event) => set({ bathrooms: event.target.value })}>
+                <SakaniSelect value={draft.bathrooms} onChange={(event) => set({ bathrooms: event.target.value })}>
                   <option value="">{t.anyCount}</option>
                   {["1", "2", "3"].map((count) => <option key={count} value={count}>{t.atLeast(count)}</option>)}
-                </select>
+                </SakaniSelect>
               </label>
               <label className="owner-field"><span>{t.stayFilterLabel}</span>
-                <select value={draft.stay} onChange={(event) => set({ stay: event.target.value })}>
+                <SakaniSelect value={draft.stay} onChange={(event) => set({ stay: event.target.value })}>
                   <option value="">{t.anyStay}</option>
                   {["1", "3", "6", "12"].map((months) => <option key={months} value={months}>{t.monthsCount(Number(months))}</option>)}
-                </select>
+                </SakaniSelect>
               </label>
             </div>
           </section>
@@ -132,10 +133,10 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
             <div className="owner-form-grid">
               <label className="owner-field">
                 <span>{t.governorate}</span>
-                <select value={draft.governorate} onChange={(event) => set({ governorate: event.target.value })}>
+                <SakaniSelect value={draft.governorate} onChange={(event) => set({ governorate: event.target.value })}>
                   <option value="">{t.searchAnywhere}</option>
                   {GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}
-                </select>
+                </SakaniSelect>
               </label>
               <label className="owner-field">
                 <span>{t.area}</span>

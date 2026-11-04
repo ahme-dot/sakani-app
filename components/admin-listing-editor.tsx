@@ -5,6 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { GOVERNORATES, areaLabel, normalizeArea } from "@/lib/egypt";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import type { MarketplaceListing } from "@/lib/supabase/listings";
+import SakaniSelect from "@/components/sakani-select";
+import SakaniDate from "@/components/sakani-date";
 
 type AdminListing = Omit<MarketplaceListing, "owner_id">;
 
@@ -89,13 +91,13 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
         <label className="owner-field"><span>{t.descriptionEnglish}</span><textarea name="description_en" required minLength={20} rows={4} maxLength={2000} dir="ltr" defaultValue={listing.description_en} /></label>
       </div>
       <div className="owner-form-grid owner-form-grid-three">
-        <label className="owner-field"><span>{t.governorate}</span><select name="governorate" required defaultValue={listing.governorate || "Giza"}>{GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}</select></label>
+        <label className="owner-field"><span>{t.governorate}</span><SakaniSelect name="governorate" required defaultValue={listing.governorate || "Giza"}>{GOVERNORATES.map((item) => <option key={item.id} value={item.name_en}>{locale === "ar" ? item.name : item.name_en}</option>)}</SakaniSelect></label>
         <label className="owner-field"><span>{t.area}</span><input name="area" required minLength={2} maxLength={60} defaultValue={areaLabel(locale, listing.area)} /></label>
         {/* Old "mixed" listings must be given men or women before saving. */}
-        <label className="owner-field"><span>{t.housing}</span><select name="gender" required defaultValue={listing.gender === "male" || listing.gender === "female" ? listing.gender : ""}><option value="" disabled>{t.chooseGender}</option><option value="male">{t.male}</option><option value="female">{t.female}</option></select></label>
+        <label className="owner-field"><span>{t.housing}</span><SakaniSelect name="gender" required defaultValue={listing.gender === "male" || listing.gender === "female" ? listing.gender : ""}><option value="" disabled>{t.chooseGender}</option><option value="male">{t.male}</option><option value="female">{t.female}</option></SakaniSelect></label>
       </div>
       <div className="owner-form-grid owner-form-grid-three">
-        <label className="owner-field"><span>{t.propertyType}</span><select name="property_type" required defaultValue={listing.property_type}><option value="room">{t.room}</option><option value="studio">{t.studio}</option><option value="apartment">{t.apartment}</option><option value="bed">{t.bed}</option></select></label>
+        <label className="owner-field"><span>{t.propertyType}</span><SakaniSelect name="property_type" required defaultValue={listing.property_type}><option value="room">{t.room}</option><option value="studio">{t.studio}</option><option value="apartment">{t.apartment}</option><option value="bed">{t.bed}</option></SakaniSelect></label>
         <label className="owner-field"><span>{t.price}</span><input name="monthly_price" type="number" min="1" max="1000000" required defaultValue={listing.monthly_price} /></label>
         <label className="owner-field"><span>{t.deposit}</span><input name="deposit" type="number" min="0" max="1000000" required defaultValue={listing.deposit} /></label>
       </div>
@@ -108,7 +110,7 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
         <label className="owner-field"><span>{t.bathroomsLabel}</span><input name="bathrooms" type="number" min="0" max="20" defaultValue={listing.bathrooms ?? ""} /></label>
         <label className="owner-field"><span>{t.areaSqmLabel}</span><input name="area_sqm" type="number" min="5" max="2000" defaultValue={listing.area_sqm ?? ""} /></label>
         <label className="owner-field"><span>{t.minMonthsLabel}</span><input name="min_months" type="number" min="1" max="24" required defaultValue={listing.min_months ?? 1} /></label>
-        <label className="owner-field"><span>{t.availableFromLabel}</span><input name="available_from" type="date" dir="ltr" defaultValue={listing.available_from ?? ""} /></label>
+        <label className="owner-field"><span>{t.availableFromLabel}</span><SakaniDate name="available_from" dir="ltr" defaultValue={listing.available_from ?? ""} /></label>
       </div>
       <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" pattern="[0-9+ \(\)\-]{8,20}" required dir="ltr" defaultValue={listing.whatsapp_number} /></label>
       <fieldset className="amenity-fieldset">

@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { LoaderCircle, Save } from "lucide-react";
 import { CANCELLATION_SCENARIOS } from "@/components/admin-requests";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
+import SakaniSelect from "@/components/sakani-select";
 
 type Rule = { scenario: string; refund_rent_percent: number | null; refund_guest_fee: boolean | null; refund_deposit: boolean | null; notes: string };
 type Settings = { payment_mode: "manual" | "sandbox"; cancellation_policy_active: boolean; cancellation_policy_note: string };
@@ -106,10 +107,10 @@ export default function AdminPolicies({ locale, supabase }: { locale: SiteLocale
         <label className="owner-field"><span>{t.policyNoteLabel}</span><input name="cancellation_policy_note" defaultValue={settings.cancellation_policy_note} maxLength={500} placeholder={t.policyNotePlaceholder} /></label>
         <label className="owner-field">
           <span>{t.paymentModeLabel}</span>
-          <select name="payment_mode" defaultValue={settings.payment_mode}>
+          <SakaniSelect name="payment_mode" defaultValue={settings.payment_mode}>
             <option value="manual">{t.paymentModeManual}</option>
             <option value="sandbox">{t.paymentModeSandbox}</option>
-          </select>
+          </SakaniSelect>
           <small className="field-hint">{t.paymentModeHint}</small>
         </label>
         <button className="admin-btn admin-btn-primary" type="submit" disabled={busy}><Save size={15} /> {t.settingsSave}</button>
@@ -124,19 +125,19 @@ export default function AdminPolicies({ locale, supabase }: { locale: SiteLocale
             <label className="owner-field"><span>{t.ruleRentPercent}</span><input name="refund_rent_percent" type="number" min="0" max="100" defaultValue={rule.refund_rent_percent ?? ""} placeholder={t.ruleNotDecided} dir="ltr" /></label>
             <label className="owner-field">
               <span>{t.ruleGuestFee}</span>
-              <select name="refund_guest_fee" defaultValue={yesNo(rule.refund_guest_fee)}>
+              <SakaniSelect name="refund_guest_fee" defaultValue={yesNo(rule.refund_guest_fee)}>
                 <option value="">{t.ruleNotDecided}</option>
                 <option value="yes">{t.ruleYes}</option>
                 <option value="no">{t.ruleNo}</option>
-              </select>
+              </SakaniSelect>
             </label>
             <label className="owner-field">
               <span>{t.ruleDeposit}</span>
-              <select name="refund_deposit" defaultValue={yesNo(rule.refund_deposit)}>
+              <SakaniSelect name="refund_deposit" defaultValue={yesNo(rule.refund_deposit)}>
                 <option value="">{t.ruleNotDecided}</option>
                 <option value="yes">{t.ruleYes}</option>
                 <option value="no">{t.ruleNo}</option>
-              </select>
+              </SakaniSelect>
             </label>
             <label className="owner-field"><span>{t.ruleNotes}</span><input name="notes" defaultValue={rule.notes} maxLength={500} /></label>
             <button className="admin-btn admin-btn-ghost" type="submit" disabled={busy}><Save size={15} /> {t.settingsSave}</button>

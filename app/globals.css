@@ -589,8 +589,6 @@ button {
 
 .property-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
 }
 
 .property-card {
@@ -1694,9 +1692,6 @@ button {
     align-items: end;
   }
 
-  .property-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 
   .why-section > .section-wrap {
     grid-template-columns: 1fr;
@@ -1928,10 +1923,6 @@ button {
     padding-bottom: 64px;
   }
 
-  .property-grid {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
 
   .property-card {
     display: block;
@@ -3972,9 +3963,6 @@ button.admin-stat:hover {
 }
 
 /* Cards: larger, easier-to-read text */
-.property-grid {
-  gap: 24px;
-}
 
 .property-card {
   border-radius: 20px;
@@ -7161,8 +7149,6 @@ body:has(.site-shell) {
 
 .site-shell .property-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 40px 24px;
 }
 
 /* ---- Listing card ---- */
@@ -7184,7 +7170,6 @@ body:has(.site-shell) {
 .property-media {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 20 / 19;
   border-radius: 14px;
   background: #ececec;
 }
@@ -8093,11 +8078,6 @@ body:has(.site-shell) {
 }
 
 /* ---- Responsive ---- */
-@media (max-width: 1400px) {
-  .site-shell .property-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
 
 @media (max-width: 1100px) {
   .site-shell .section-wrap,
@@ -8116,9 +8096,6 @@ body:has(.site-shell) {
     padding-inline: 14px;
   }
 
-  .site-shell .property-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 900px) {
@@ -8226,14 +8203,7 @@ body:has(.site-shell) {
     inset-inline-end: -6px;
   }
 
-  .site-shell .property-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 32px;
-  }
 
-  .property-media {
-    aspect-ratio: 1 / 0.95;
-  }
 
   .listings-head {
     flex-direction: column;
@@ -9009,9 +8979,6 @@ body:has(.site-shell) {
   background: #fff;
 }
 
-.site-shell .property-grid {
-  gap: 32px 22px;
-}
 
 .site-shell .property-card {
   border-radius: 18px;
@@ -9279,9 +9246,6 @@ body:has(.site-shell) {
     padding-top: 30px;
   }
 
-  .site-shell .property-grid {
-    gap: 28px 14px;
-  }
 
   .property-media {
     border-radius: 14px;
@@ -9324,9 +9288,6 @@ body:has(.site-shell) {
     align-items: flex-start;
   }
 
-  .site-shell .property-grid {
-    gap: 24px 12px;
-  }
 
   .host-steps li {
     padding: 13px;
@@ -9461,7 +9422,6 @@ body:has(.site-shell) {
 .site-shell .listings-head { margin-bottom: 28px; }
 .site-shell .listings-head .section-kicker { display: block; margin-bottom: 5px; color: #367456; font-size: 12px; font-weight: 800; }
 .site-shell .listings-head h2 { font-size: clamp(25px, 3vw, 36px); font-weight: 800; letter-spacing: -.6px; }
-.site-shell .property-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 38px 24px; }
 .site-shell .property-card {
   min-width: 0;
   overflow: hidden;
@@ -9471,7 +9431,7 @@ body:has(.site-shell) {
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 .site-shell .property-card:hover { border-color: #ccd9ce; box-shadow: 0 14px 34px rgb(28 43 33 / 9%); opacity: 1; transform: translateY(-4px); }
-.site-shell .property-card .property-media { aspect-ratio: 1.35; border-radius: 0; background: #e8ece7; }
+.site-shell .property-card .property-media { border-radius: 0; background: #e8ece7; }
 .site-shell .property-content { padding: 16px 17px 18px; }
 .site-shell .property-location { color: #68766c; font-size: 12px; }
 .site-shell .property-title { margin-block: 5px 8px; font-size: 17px; line-height: 1.45; }
@@ -9560,7 +9520,6 @@ body:has(.site-shell) {
 
 @media (max-width: 1000px) {
   .home-hero-notes { display: none; }
-  .site-shell .property-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .host-hero-main { grid-template-columns: minmax(0, 1fr) minmax(0, .8fr); gap: 28px; padding: 34px; }
   .admin-shell { grid-template-columns: 220px minmax(0, 1fr); }
 }
@@ -9576,9 +9535,7 @@ body:has(.site-shell) {
   .home-hero-description { font-size: 15px; }
   .home-hero-actions { margin-top: 20px; }
   .home-hero-trust { gap: 8px 14px; margin-top: 20px; font-size: 11px; }
-  .site-shell .property-grid { gap: 24px 14px; }
   .site-shell .property-card { border-radius: 14px; }
-  .site-shell .property-card .property-media { aspect-ratio: 1.12; }
   .site-shell .property-content { padding: 12px; }
   .site-shell .property-meta { min-height: 0; }
   .site-shell .host-banner-card { grid-template-columns: minmax(0, 1fr); }
@@ -9625,8 +9582,6 @@ body:has(.site-shell) {
   .home-hero-badge { font-size: 11px; }
   .home-hero-trust { flex-direction: column; align-items: flex-start; }
   .home-hero-trust li { max-width: 100%; }
-  .site-shell .property-grid { grid-template-columns: minmax(0, 1fr); }
-  .site-shell .property-card .property-media { aspect-ratio: 1.45; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -9917,7 +9872,6 @@ body:has(.site-shell) { background: #f5f7fa; }
   box-shadow: none;
 }
 .site-shell .property-card:hover { border-color: #d3ad98; box-shadow: 0 14px 32px rgb(56 44 34 / 9%); }
-.site-shell .property-card .property-media { aspect-ratio: 1.4; }
 .site-shell .property-price strong { color: #1f7a5a; }
 .site-shell .property-badge,
 .site-shell .verified-badge { border-radius: 3px; }
@@ -12752,7 +12706,7 @@ body:has(.auth-page) { background: #f5f7fa; }
 .site-shell {
   --ink: #14213d;
   --ink-soft: #46546b;
-  --muted: #64748b;
+  --muted: #526072;
   --paper: #ffffff;
   --green: #1f7a5a;
   --green-dark: #17604a;
@@ -12841,7 +12795,7 @@ body {
 /* Admin: grouped menu, today's list, roles, errors. */
 .admin-nav-group { display: grid; gap: 4px; }
 .admin-nav-group + .admin-nav-group { margin-top: 10px; }
-.admin-nav-heading { padding: 4px 12px 2px; color: #7a8494; font-size: 11.5px; font-weight: 700; letter-spacing: .3px; }
+.admin-nav-heading { padding: 4px 12px 2px; color: #56606f; font-size: 11.5px; font-weight: 700; letter-spacing: .3px; }
 @media (max-width: 900px) {
   .admin-nav-group { display: contents; }
   .admin-nav-heading { display: none; }
@@ -12889,7 +12843,7 @@ body {
 /* Audit log: time on one line, the change readable, ids quiet. */
 .admin-audit .admin-table td.admin-audit-time { white-space: nowrap; font-size: 13px; }
 .admin-audit .admin-audit-change { white-space: pre-line; font-size: 13.5px; line-height: 1.7; }
-.admin-audit .admin-audit-id { color: #8a94a3; font-size: 11.5px; }
+.admin-audit .admin-audit-id { color: #5b6676; font-size: 11.5px; }
 
 /* Profile: the camera badge sits on the photo's edge (not clipped), and a nudge to complete the profile. */
 .site-shell .profile-avatar-edit { overflow: visible; }
@@ -12907,7 +12861,7 @@ body {
 .admin-shell, .admin-page {
   --ink: #14213d;
   --ink-soft: #46546b;
-  --muted: #64748b;
+  --muted: #526072;
   --line: #e3e7ec;
   --green: #1f7a5a;
   --green-dark: #17604a;
@@ -12928,10 +12882,10 @@ body {
 .site-shell .help-hero::after { display: none; }
 .site-shell .help-hero { min-height: 0; padding-block: clamp(32px, 5vw, 56px); }
 .admin-audit .admin-audit-change ul { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
-.admin-audit .admin-audit-change li span { color: #64748b; }
+.admin-audit .admin-audit-change li span { color: #526072; }
 .admin-audit .admin-audit-change strong { color: #14213d; font-weight: 700; }
 .admin-audit .admin-audit-change ul { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
-.admin-audit .admin-audit-change li span { color: #64748b; }
+.admin-audit .admin-audit-change li span { color: #526072; }
 .admin-audit .admin-audit-change strong { color: #14213d; font-weight: 700; }
 
 /* Listing on a phone: the bottom bar keeps price and button on one line each. */
@@ -12965,7 +12919,7 @@ body {
 
 /* Documents still to come are quieter than the ones ready to open. */
 .site-shell .documents-index li.is-waiting { opacity: .62; }
-.site-shell .documents-index li.is-waiting small { color: #64748b; }
+.site-shell .documents-index li.is-waiting small { color: #526072; }
 
 /* FAQ arrows in the site's green. */
 .site-shell .faq-item summary svg { color: #1f7a5a; }
@@ -12993,7 +12947,7 @@ body {
 /* Sign-in and sign-up: each problem under its field, the field outlined. */
 .auth-field .field-error { display: block; margin-top: 6px; color: #b42318; font-size: 13px; font-weight: 600; }
 .auth-input:has(input[aria-invalid="true"]) { border-color: #b42318; box-shadow: 0 0 0 3px rgb(180 35 24 / 12%); }
-.site-shell .profile-next-step { flex-basis: 100%; color: #64748b; font-size: 13px; }
+.site-shell .profile-next-step { flex-basis: 100%; color: #526072; font-size: 13px; }
 
 /* Host page: one quiet line while filling the form; listings as cards with a photo and price. */
 .site-shell .owner-guest-line { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #fff7e8; color: #6b4a0b; font-size: 13.5px; line-height: 1.6; }
@@ -13018,7 +12972,7 @@ body {
 .admin-request .admin-step input { min-width: 0; }
 .admin-request .admin-step > :nth-child(n + 4) { grid-column: 1 / -1; justify-self: start; }
 .admin-request .admin-card-error { margin: 10px 0 0; }
-.admin-chat-thread .admin-chat-preview { display: -webkit-box; grid-column: 1 / -1; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: #64748b; font-size: 13px; line-height: 1.5; text-align: start; }
+.admin-chat-thread .admin-chat-preview { display: -webkit-box; grid-column: 1 / -1; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: #526072; font-size: 13px; line-height: 1.5; text-align: start; }
 .admin-chat-thread.is-unread .admin-chat-preview { color: #14213d; font-weight: 600; }
 
 /* Admin on a phone: the top bar is just the scrolling menu, no empty space above or below it. */
@@ -13068,7 +13022,7 @@ body {
 }
 .site-shell .search-select-button .search-seg-label,
 .site-shell .search-select-button .search-seg-value { grid-column: 1; }
-.site-shell .search-select-chevron { grid-column: 2; grid-row: 1 / span 2; color: #64748b; transition: transform 150ms ease; }
+.site-shell .search-select-chevron { grid-column: 2; grid-row: 1 / span 2; color: #526072; transition: transform 150ms ease; }
 .site-shell .search-select.is-open .search-select-chevron { transform: rotate(180deg); }
 .site-shell .search-select-button:focus-visible { outline: 2px solid #1f7a5a; outline-offset: 2px; }
 .site-shell .search-select.is-open { background: #fff; box-shadow: 0 3px 12px rgb(0 0 0 / 12%); }
@@ -13150,3 +13104,208 @@ body {
   .site-shell .listings-head { margin-bottom: 14px; }
   .site-shell .listings-head h2, .site-shell[lang="ar"] .listings-head h2 { font-size: 24px; line-height: 1.2; }
 }
+
+/* ==== Sakani dropdowns everywhere (components/sakani-select.tsx), 2026-11-04 ==== */
+/* Every dropdown shows one arrow, on the reading side's end, whatever page it sits on. */
+select:not([multiple]):not(.search-seg select):not(.select-wrap select) {
+  appearance: none;
+  padding-inline-end: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2346546b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  cursor: pointer;
+}
+[dir="rtl"] select:not([multiple]):not(.search-seg select):not(.select-wrap select) { background-position: left 12px center; }
+select[aria-expanded="true"] { border-color: #1f7a5a; box-shadow: 0 0 0 3px rgb(31 122 90 / 14%); }
+/* The list itself: the same white card as the header search. */
+.sakani-select-list {
+  position: fixed;
+  z-index: 1000;
+  overflow-y: auto;
+  max-width: min(420px, calc(100vw - 24px));
+  margin: 0;
+  padding: 6px;
+  border: 1px solid #e3e7ec;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgb(20 33 61 / 16%);
+  list-style: none;
+  font-family: inherit;
+  animation: sakani-select-in 120ms ease-out;
+}
+html[dir="rtl"] .sakani-select-list { font-family: var(--font-arabic); }
+html[dir="ltr"] .sakani-select-list { font-family: var(--font-latin), sans-serif; }
+.sakani-select-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: #14213d;
+  font-size: 15px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.sakani-select-list li.is-active { background: #eef4f1; }
+.sakani-select-list li.is-selected { color: #1f7a5a; font-weight: 700; }
+.sakani-select-list li[aria-disabled="true"] { color: #5b6676; cursor: default; }
+.sakani-select-list li[aria-disabled="true"].is-active { background: transparent; }
+@keyframes sakani-select-in { from { opacity: 0; transform: translateY(-4px); } }
+.sakani-select-list.is-up { animation-name: sakani-select-in-up; }
+@keyframes sakani-select-in-up { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .sakani-select-list { animation: none; } }
+
+/* ==== Sakani calendar (components/sakani-date.tsx) ==== */
+/* On a computer the browser's date box stays in the form but out of sight; the date shows in words. */
+.sakani-date-native { position: absolute !important; width: 1px !important; height: 1px !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden; clip-path: inset(50%); border: 0 !important; opacity: 0; pointer-events: none; }
+.sakani-date-display {
+  cursor: pointer;
+  padding-inline-end: 40px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2346546b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") !important;
+  background-position: right 12px center !important;
+  background-repeat: no-repeat !important;
+  background-size: 16px !important;
+}
+[dir="rtl"] .sakani-date-display { background-position: left 12px center !important; }
+.sakani-date-display[aria-expanded="true"] { border-color: #1f7a5a !important; box-shadow: 0 0 0 3px rgb(31 122 90 / 14%) !important; }
+.sakani-date-display[aria-invalid="true"] { border-color: #b42318 !important; }
+.sakani-calendar {
+  position: fixed;
+  z-index: 1000;
+  width: 312px;
+  padding: 12px;
+  border: 1px solid #e3e7ec;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgb(20 33 61 / 16%);
+  color: #14213d;
+  animation: sakani-select-in 120ms ease-out;
+}
+html[dir="rtl"] .sakani-calendar, .sakani-calendar[lang="ar"] { font-family: var(--font-arabic); }
+.sakani-calendar[lang="en"] { font-family: var(--font-latin), sans-serif; }
+.sakani-calendar.is-up { animation-name: sakani-select-in-up; }
+.sakani-calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.sakani-calendar-head strong { font-size: 15px; font-weight: 700; }
+.sakani-calendar-head button {
+  display: grid; width: 36px; height: 36px; place-items: center;
+  border: 1px solid #e3e7ec; border-radius: 10px; background: #fff; color: #14213d; cursor: pointer;
+}
+.sakani-calendar-head button:hover:not(:disabled) { background: #eef4f1; }
+.sakani-calendar-head button:disabled { opacity: .35; cursor: default; }
+.sakani-calendar-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.sakani-calendar-week span { padding: 6px 0; color: #46546b; font-size: 12px; font-weight: 700; text-align: center; }
+.sakani-calendar-week button {
+  height: 38px; border: 0; border-radius: 10px; background: transparent;
+  color: #14213d; font: inherit; font-size: 14px; cursor: pointer;
+}
+.sakani-calendar-week button:hover:not(:disabled) { background: #eef4f1; }
+.sakani-calendar-week button.is-outside { color: #5b6676; }
+.sakani-calendar-week button.is-today { box-shadow: inset 0 0 0 1px #1f7a5a; font-weight: 700; }
+.sakani-calendar-week button.is-selected { background: #1f7a5a; color: #fff; font-weight: 700; }
+.sakani-calendar-week button:disabled { color: #c3c9d2; text-decoration: line-through; cursor: default; }
+.sakani-calendar-week button:focus-visible, .sakani-calendar-head button:focus-visible { outline: 2px solid #1f7a5a; outline-offset: 1px; }
+.sakani-calendar-foot { display: flex; justify-content: space-between; min-height: 8px; margin-top: 8px; }
+.sakani-calendar-foot:empty { display: none; }
+.sakani-calendar-foot .text-button { padding: 6px 4px; border: 0; background: none; color: #1f7a5a; font: inherit; font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+
+/* Photo and ID uploads: the browser's grey file button in Sakani's style. */
+input[type="file"]::file-selector-button {
+  margin-inline-end: 12px;
+  padding: 8px 14px;
+  border: 1px solid #14213d;
+  border-radius: 10px;
+  background: #fff;
+  color: #14213d;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+input[type="file"]::file-selector-button:hover { background: #eef4f1; }
+input[type="file"] { color: #46546b; font-size: 14px; }
+
+/* ==== Listing cards: one set of rules (replaces the earlier per-size overrides) ==== */
+/* The grid fits as many cards as the space allows, at least 224px each: 4 on a 1024–1366 laptop,
+   5 on 1440 and wider (the page is capped at 1440), 3 on a tablet, 1 on a phone. */
+.site-shell .property-grid { grid-template-columns: repeat(auto-fill, minmax(224px, 1fr)); gap: 28px 20px; }
+@media (max-width: 560px) { .site-shell .property-grid { grid-template-columns: minmax(0, 1fr); gap: 22px; } }
+.site-shell .property-card { display: flex; flex-direction: column; }
+.site-shell .property-card .property-media { aspect-ratio: 4 / 3; }
+.site-shell .property-content { display: flex; flex: 1; flex-direction: column; padding: 12px 14px 14px; }
+.site-shell .property-content .property-location { font-size: 13px; }
+.site-shell .property-content .property-title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-block: 4px 4px;
+  font-size: 15.5px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.site-shell .property-meta { min-height: 0; color: #46546b; font-size: 13px; line-height: 1.5; }
+.site-shell .property-content .property-price { margin-top: auto; padding-top: 8px; }
+.site-shell .property-content .property-price strong { font-size: 18px; }
+.site-shell .property-actions { margin-top: 10px; }
+.site-shell .property-actions .button { min-height: 36px; font-size: 13px; }
+@media (max-width: 560px) { .site-shell .property-card .property-media { aspect-ratio: 3 / 2; } }
+
+/* ==== Readable text everywhere (AA contrast), 2026-11-04 ==== */
+/* Secondary grey: one shade, dark enough on white and on the light grey/green boxes. */
+:root { --muted: #56645d; }
+.site-shell { --muted: #595959; }
+.admin-brand small { color: #46546b; }
+.role-chip.is-guest { color: #17604a; }
+a.auth-submit, a.auth-submit:hover { color: #fff; }
+.owner-feedback-error { color: #a3231a; }
+/* Disabled choices stay lighter on purpose (they can't be picked). */
+.sakani-select-list li[aria-disabled="true"] { color: #7d8794; }
+
+/* ==== Tablets (761–900px): one search bar instead of three cramped parts ==== */
+@media (min-width: 761px) and (max-width: 900px) {
+  .site-shell .search-pill { display: none; }
+  .site-shell .search-pill-mobile {
+    display: flex; width: 100%; max-width: 420px; min-height: 52px; align-items: center; gap: 12px; justify-self: center;
+    padding: 8px 18px; border: 1px solid var(--line); border-radius: 999px; background: #fff;
+    box-shadow: 0 3px 12px rgb(0 0 0 / 10%); color: var(--ink); cursor: pointer; text-align: start;
+  }
+  .site-shell .search-pill-mobile span { display: grid; min-width: 0; line-height: 1.3; }
+  .site-shell .search-pill-mobile strong { font-size: 14px; }
+  .site-shell .search-pill-mobile small { overflow: hidden; color: var(--muted); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* Listing terms: normal-case headings like the rest of the site. */
+.listing3-terms dt { font-size: 13px; text-transform: none; letter-spacing: 0; color: #14213d; }
+
+/* Admin audit log: fits the page on a laptop instead of cutting the last column. */
+.admin-audit .admin-table { min-width: 0; }
+.admin-audit .admin-table td.admin-audit-time { white-space: normal; min-width: 104px; }
+.admin-audit .admin-audit-change { overflow-wrap: anywhere; }
+/* Any table still wider than its box: a soft edge shows there is more to scroll. */
+.admin-table-wrap { background:
+  linear-gradient(90deg, #fff 30%, rgb(255 255 255 / 0)) left / 24px 100% no-repeat local,
+  linear-gradient(270deg, #fff 30%, rgb(255 255 255 / 0)) right / 24px 100% no-repeat local,
+  radial-gradient(farthest-side at 0 50%, rgb(20 33 61 / 14%), transparent) left / 10px 100% no-repeat scroll,
+  radial-gradient(farthest-side at 100% 50%, rgb(20 33 61 / 14%), transparent) right / 10px 100% no-repeat scroll,
+  #fff; }
+
+/* Category bar on phones: a soft fade where the tabs slide under the Filters button. */
+@media (max-width: 760px) {
+  .site-shell .category-scroll { mask-image: linear-gradient(to left, transparent 0, #000 28px); }
+  .site-shell[dir="rtl"] .category-scroll { mask-image: linear-gradient(to right, transparent 0, #000 28px); }
+}
+.carousel-track:focus-visible { outline: 3px solid #1f7a5a; outline-offset: -3px; }
+
+/* Phones: every sign-in and sign-up field at 16px, so the iPhone does not zoom in on tap. */
+@media (max-width: 640px) { .auth-input input { font-size: 16px; } }
+/* Green words on the light green chips: the darker green, so they pass AA (4.5:1). */
+.status-chip.is-approved, .status-chip.is-paid, .status-chip.is-rented, .role-chip.is-guest,
+.profile-checks li.is-done, .site-shell .booking-timeline li.is-done { color: #17604a; }
+.status-chip, .listing-status { color: #3d4a5c; }
+.status-chip.is-due, .status-chip.is-rejected { color: #8a3219; }
+.status-chip.is-submitted, .status-chip.is-contacted, .status-chip.is-visit, .status-chip.is-pending, .status-chip.is-new { color: #6b4c0c; }
+/* A link styled as the main button (e.g. "Sign in" after a password reset): white on navy. */
+.auth-form-side a.auth-submit:not(.auth-back), .auth-form-side a.auth-submit:hover { color: #fff; }

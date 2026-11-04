@@ -27,6 +27,7 @@ import {
 } from "@/lib/supabase/listings";
 import { SITE_URL } from "@/lib/site";
 import type { PaymentSettings } from "@/lib/payments";
+import SakaniSelect from "@/components/sakani-select";
 
 type HomePageProps = {
   locale: SiteLocale;
@@ -250,11 +251,11 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
               <label className="listing-sort">
                 <span className="visually-hidden">{t.sortLabel}</span>
                 <span className="select-wrap">
-                  <select value={filters.sort} aria-label={t.sortLabel} onChange={(event) => updateFilters({ sort: event.target.value as ListingSort })}>
+                  <SakaniSelect value={filters.sort} aria-label={t.sortLabel} onChange={(event) => updateFilters({ sort: event.target.value as ListingSort })}>
                     <option value="newest">{t.sortNewest}</option>
                     <option value="price_asc">{t.sortPriceAsc}</option>
                     <option value="price_desc">{t.sortPriceDesc}</option>
-                  </select>
+                  </SakaniSelect>
                   <ChevronDown size={16} />
                 </span>
               </label>

@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ExternalLink, LoaderCircle, Save } from "lucide-react";
 import { LEGAL_PAGE_DEFAULTS, LEGAL_SLUGS, type LegalSlug } from "@/messages/legal-pages";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
+import SakaniSelect from "@/components/sakani-select";
 
 type Page = { title: string; body: string; approved: boolean; saved: boolean };
 
@@ -66,9 +67,9 @@ export default function AdminLegal({ locale, supabase }: { locale: SiteLocale; s
       <div className="admin-users-toolbar">
         <label className="owner-field">
           <span>{t.legalPageLabel}</span>
-          <select value={slug} onChange={(event) => { setPage(null); setSlug(event.target.value as LegalSlug); }}>
+          <SakaniSelect value={slug} onChange={(event) => { setPage(null); setSlug(event.target.value as LegalSlug); }}>
             {LEGAL_SLUGS.map((item) => <option key={item} value={item}>{t.legalTitles[item]}</option>)}
-          </select>
+          </SakaniSelect>
         </label>
         <div className="admin-segment" role="tablist" aria-label={t.footerLanguage}>
           {(["ar", "en"] as const).map((item) => (
