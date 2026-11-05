@@ -7,6 +7,7 @@ import { BadgeCheck, CalendarCheck, ImagePlus, Plus, Sparkles } from "lucide-rea
 import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
 import ListingForm, { removeListingImages } from "@/components/listing-form";
 import OwnerPayments from "@/components/owner-payments";
+import SakaniDate from "@/components/sakani-date";
 import {
   DEFAULT_PAYMENT_SETTINGS,
   RENTAL_FEE_COLUMNS,
@@ -75,6 +76,9 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
   const [paySettings, setPaySettings] = useState<PaymentSettings | null>(null);
   const [feesVersion, setFeesVersion] = useState(0);
   const [reportingId, setReportingId] = useState<string | null>(null);
+  // "Rented until": a year from today unless the owner picks another day.
+  const [rentedEnd, setRentedEnd] = useState(() => { const date = new Date(); date.setFullYear(date.getFullYear() + 1); return date.toISOString().slice(0, 10); });
+  const [tomorrow] = useState(() => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10));
   // Bookings on this owner's places (a host without an account can see them, but needs one to answer).
   const [bookings, setBookings] = useState<Array<{ id: string; listing_id: string | null; listing_title: string; guest_first_name: string; move_in: string; months: number; status: string; host_decision: string | null }>>([]);
   const titleOf = useListingTitles(supabase, bookings.map((booking) => booking.listing_id), locale);
@@ -293,7 +297,7 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
     setSubmitting(true);
     setError("");
     setMessage("");
-    const { error: rpcError } = await supabase.rpc("owner_report_rental", { target_listing: listing.id, via_sakani: viaSakani });
+    const { error: rpcError } = await supabase.rpc("owner_report_rental", { target_listing: listing.id, via_sakani: viaSakani, rented_until: rentedEnd || null });
     setSubmitting(false);
     setReportingId(null);
     if (isMissingFunction(rpcError)) {
@@ -306,9 +310,26 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
       setError(t.availabilityError);
       return;
     }
-    setOwnerListings((current) => current.map((item) => item.id === listing.id ? { ...item, status: "paused", updated_at: new Date().toISOString() } : item));
+    setOwnerListings((current) => current.map((item) => item.id === listing.id ? { ...item, status: "rented", rented_until: rentedEnd, updated_at: new Date().toISOString() } : item));
     setMessage(viaSakani ? t.rentedThanks : t.rentedHidden);
     setFeesVersion((version) => version + 1);
+  }
+
+  // The tenant left early: back in the search now.
+  async function releaseListing(listing: OwnerListing) {
+    if (!supabase) return;
+    setSubmitting(true);
+    setError("");
+    setMessage("");
+    const { error: rpcError } = await supabase.rpc("release_listing", { target_listing: listing.id });
+    setSubmitting(false);
+    if (rpcError) {
+      console.error("Could not release listing:", rpcError);
+      setError(rpcError.message.includes("guest_still_living") ? t.guestStillLiving : t.availabilityError);
+      return;
+    }
+    setOwnerListings((current) => current.map((item) => item.id === listing.id ? { ...item, status: "approved", rented_until: null } : item));
+    setMessage(t.releaseDone);
   }
 
   async function confirmAvailable(listing: OwnerListing) {
@@ -465,12 +486,15 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                         <img className="owner-listing-thumb" src={listingImages(listing)[0]} alt="" loading="lazy" />
                       )}
                       <div className="owner-listing-main">
-                        {listing.status === "approved"
+                        {listing.status === "approved" || listing.status === "rented"
                           ? <Link href={listingPath(locale, listing.id)}>{title}</Link>
                           : <span>{title}</span>}
                         <small className="owner-listing-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</small>
                         {listing.status === "rejected" && listing.rejection_reason && (
                           <small className="owner-review-note"><strong>{t.reviewNote}:</strong> {listing.rejection_reason}</small>
+                        )}
+                        {listing.status === "rented" && listing.rented_until && (
+                          <small className="owner-listing-updated">{t.rentedBannerUntil(dateFormat.format(new Date(listing.rented_until)))}</small>
                         )}
                         {(listing.status === "approved" || listing.status === "paused") && (
                           <small className="owner-listing-updated">{t.lastUpdated(dateFormat.format(new Date(listing.updated_at)))}</small>
@@ -488,6 +512,9 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                             <button type="button" className="owner-text-button" disabled={submitting} onClick={() => void confirmAvailable(listing)}>{t.confirmAvailable}</button>
                             <button type="button" className="owner-text-button" disabled={submitting} onClick={() => (paymentsReady ? setReportingId(listing.id) : void setPaused(listing, true))}>{t.pauseListing}</button>
                           </>
+                        )}
+                        {(listing.status === "rented" || listing.status === "reserved") && (
+                          <button type="button" className="owner-text-button" disabled={submitting} onClick={() => void releaseListing(listing)}>{t.releaseListing}</button>
                         )}
                         {availabilityReady && listing.status === "paused" && confirmingDeleteId !== listing.id && (
                           <button type="button" className="owner-text-button" disabled={submitting} onClick={() => void setPaused(listing, false)}>{t.resumeListing}</button>
@@ -509,6 +536,11 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                     {reportingId === listing.id && (
                       <div className="owner-rented-panel" role="group" aria-label={t.rentedQuestion}>
                         <strong>{t.rentedQuestion}</strong>
+                        <label className="owner-field owner-rented-end">
+                          <span>{t.rentedEndLabel}</span>
+                          <SakaniDate value={rentedEnd} min={tomorrow} required onChange={(event) => setRentedEnd(event.target.value)} />
+                          <small className="field-hint">{t.rentedEndHint}</small>
+                        </label>
                         <p>{t.rentedFeeExplain(numberFormat.format((paySettings ?? DEFAULT_PAYMENT_SETTINGS).fee_percent), numberFormat.format((paySettings ?? DEFAULT_PAYMENT_SETTINGS).fee_minimum))}</p>
                         <div className="owner-rented-actions">
                           <button type="button" className="button button-primary" disabled={submitting} onClick={() => void reportRental(listing, true)}>

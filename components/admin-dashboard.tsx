@@ -228,6 +228,14 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     return () => window.clearTimeout(timer);
   }, [search, query]);
 
+  // Places whose tenancy ended come back to the search (the daily job does it too, if pg_cron is on).
+  useEffect(() => {
+    if (!supabase || state !== "ready") return;
+    void supabase.rpc("release_ended_rentals").then(({ error: releaseError }) => {
+      if (releaseError && releaseError.code !== "PGRST202") console.error("Could not release ended rentals:", releaseError);
+    });
+  }, [supabase, state]);
+
   useEffect(() => {
     if (!supabase || state !== "ready") return;
     let mounted = true;
@@ -237,7 +245,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     if (query) request = request.or(SEARCH_COLUMNS.map((column) => `${column}.ilike.*${query}*`).join(","));
     if (ownerFilter) request = request.eq("owner_id", ownerFilter.user_id);
     if (listingIdFilter) request = request.eq("id", listingIdFilter);
-    if (staleOnly && filter === "approved") request = request.lt("updated_at", new Date(Date.now() - STALE_DAYS * DAY_MS).toISOString());
+    if (staleOnly && filter === "approved") request = request.lt("available_since", new Date(Date.now() - STALE_DAYS * DAY_MS).toISOString());
     void request
       .order("created_at", { ascending: false })
       .limit(100)
@@ -398,6 +406,24 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     }
     setListings((current) => current.filter((item) => item.id !== listingId));
     setMessage(t.adminStatusUpdated);
+    refreshCounts();
+  }
+
+  // The tenant left early: put the place back in the search now.
+  async function releaseListing(listingId: string) {
+    if (!supabase) return;
+    setUpdatingId(listingId);
+    setError("");
+    setMessage("");
+    const { error: releaseError } = await supabase.rpc("release_listing", { target_listing: listingId });
+    setUpdatingId(null);
+    if (releaseError) {
+      console.error("Could not release the listing:", releaseError);
+      setError(t.adminUpdateError);
+      return;
+    }
+    setListings((current) => current.filter((item) => item.id !== listingId));
+    setMessage(t.releaseDone);
     refreshCounts();
   }
 
@@ -911,11 +937,19 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                           <span className="admin-card-badges">
                             <span className={`listing-status listing-status-${listing.status}`}>{statusLabel[listing.status]}</span>
                             {listing.verified && <span className="listing-status listing-status-approved"><BadgeCheck size={12} /> {t.adminVerifiedBadge}</span>}
-                            {listing.status === "approved" && loadedAt - new Date(listing.updated_at).getTime() > STALE_DAYS * DAY_MS && (
-                              <span className="listing-status listing-status-stale"><Clock3 size={12} /> {t.adminStaleBadge(numberFormat.format(Math.floor((loadedAt - new Date(listing.updated_at).getTime()) / DAY_MS)))}</span>
+                            {listing.status === "rented" && listing.rented_until && (
+                              <span className="listing-status listing-status-rented"><Clock3 size={12} /> {t.rentedBannerUntil(dateFormat.format(new Date(listing.rented_until)))}</span>
+                            )}
+                            {listing.status === "approved" && listing.available_since && loadedAt > 0 && (
+                              <span className={`listing-status ${loadedAt - new Date(listing.available_since).getTime() > STALE_DAYS * DAY_MS ? "listing-status-stale" : "listing-status-days"}`}>
+                                <Clock3 size={12} /> {t.adminEmptyDays(numberFormat.format(Math.max(0, Math.floor((loadedAt - new Date(listing.available_since).getTime()) / DAY_MS))))}
+                              </span>
                             )}
                           </span>
-                          <time dateTime={listing.created_at}>{dateFormat.format(new Date(listing.created_at))}</time>
+                          <span className="admin-card-dates">
+                            {listing.published_at && loadedAt > 0 && <span>{t.adminListedDays(numberFormat.format(Math.max(0, Math.floor((loadedAt - new Date(listing.published_at).getTime()) / DAY_MS))))}</span>}
+                            <time dateTime={listing.created_at}>{dateFormat.format(new Date(listing.created_at))}</time>
+                          </span>
                         </div>
 
                         <h2>{title}</h2>
@@ -1035,6 +1069,11 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                             </button>
                             {listing.status === "approved" && (
                               <Link className="admin-btn admin-btn-ghost" href={listingPath(locale, listing.id)} target="_blank"><ExternalLink size={14} /> {t.adminViewPublic}</Link>
+                            )}
+                            {(listing.status === "rented" || listing.status === "reserved") && (
+                              <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void releaseListing(listing.id)}>
+                                <CalendarCheck size={14} /> {t.adminRelease}
+                              </button>
                             )}
                             {(listing.status === "approved" || listing.status === "suspended") && (
                               <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void suspendListing(listing.id, listing.status === "approved")}>

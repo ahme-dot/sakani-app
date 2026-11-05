@@ -15,7 +15,7 @@ export function getSupabaseServerClient(): SupabaseClient | null {
   });
 }
 
-/** Loads one approved listing; cached per request so the page and its metadata share one query. */
+/** Loads one published or rented listing (a rented page stays open with "Rented until"); cached per request so the page and its metadata share one query. */
 export const getApprovedListing = cache(async (id: string): Promise<Property | null> => {
   if (!UUID_PATTERN.test(id)) return null;
   const client = getSupabaseServerClient();
@@ -25,7 +25,7 @@ export const getApprovedListing = cache(async (id: string): Promise<Property | n
     .from("properties")
     .select(`${PUBLIC_LISTING_COLUMNS},owner_id`)
     .eq("id", id)
-    .eq("status", "approved")
+    .in("status", ["approved", "rented"])
     .maybeSingle();
 
   if (error) {

@@ -7,7 +7,7 @@ import { useAccount } from "@/lib/account";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
-type Notice = { id: string; kind: string; booking_id: string | null; data: { title?: string; amount?: number }; read_at: string | null; created_at: string };
+type Notice = { id: string; kind: string; booking_id: string | null; data: { title?: string; title_en?: string; amount?: number }; read_at: string | null; created_at: string };
 
 const POLL_MS = 60_000;
 
@@ -69,6 +69,7 @@ export default function NotificationsBell({ locale }: { locale: SiteLocale }) {
     // A host without an account follows bookings on the host page.
     if (account.status !== "signedIn") return `/${locale}/host`;
     if (notice.kind === "team_reply") return `/${locale}/messages`;
+    if (notice.kind === "listing_available") return `/${locale}/host#owner`;
     if (notice.kind === "new_review") return `/${locale}/account#requests`;
     if (notice.kind === "agreement_ready" || notice.kind === "agreement_signed" || notice.kind === "deposit_transferred") return notice.booking_id ? `/${locale}/documents/${notice.booking_id}` : `/${locale}/account`;
     return `/${locale}/account#bookings`;
@@ -100,7 +101,7 @@ export default function NotificationsBell({ locale }: { locale: SiteLocale }) {
               {notices.map((notice) => (
                 <li key={notice.id} className={notice.read_at ? "" : "is-unread"}>
                   <Link href={href(notice)} onClick={() => setOpen(false)}>
-                    <span>{(t.notice[notice.kind as keyof typeof t.notice] ?? t.notice.generic)(notice.data?.title ?? "")}</span>
+                    <span>{(t.notice[notice.kind as keyof typeof t.notice] ?? t.notice.generic)((locale === "en" && notice.data?.title_en) || notice.data?.title || "")}</span>
                     <small>{timeFormat.format(new Date(notice.created_at))}</small>
                   </Link>
                 </li>

@@ -31,7 +31,9 @@ test.describe("success fee", () => {
       const { fee_percent, fee_minimum } = settings.data[0];
       expect(report.data.amount).toBe(Math.max(Number(fee_minimum), Math.round((4000 * Number(fee_percent)) / 100)));
       feeId = String(report.data.fee_id);
-      expect((await api<unknown[]>(`/rest/v1/properties?id=eq.${id}&select=id`)).data).toHaveLength(0); // hidden
+      // Rented: out of the search, but its page still opens (with "Rented until").
+      expect((await api<unknown[]>(`/rest/v1/properties?id=eq.${id}&status=eq.approved&select=id`)).data).toHaveLength(0);
+      expect((await api<Array<{ status: string }>>(`/rest/v1/properties?id=eq.${id}&select=status`)).data[0].status).toBe("rented");
 
       // Reporting again does not create a second fee.
       const again = await rpc("owner_report_rental", { target_listing: id, via_sakani: true }, owner.access_token);

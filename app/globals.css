@@ -13309,3 +13309,18 @@ a.auth-submit, a.auth-submit:hover { color: #fff; }
 .status-chip.is-submitted, .status-chip.is-contacted, .status-chip.is-visit, .status-chip.is-pending, .status-chip.is-new { color: #6b4c0c; }
 /* A link styled as the main button (e.g. "Sign in" after a password reset): white on navy. */
 .auth-form-side a.auth-submit:not(.auth-back), .auth-form-side a.auth-submit:hover { color: #fff; }
+
+/* ==== Rented places (2026-11-05) ==== */
+.site-shell .listing-rented-banner {
+  display: flex; align-items: center; gap: 8px; width: fit-content; margin: -6px 0 18px;
+  padding: 8px 14px; border-radius: 999px; background: #fdf3dc; color: #6b4c0c; font-size: 15px; font-weight: 700;
+}
+.site-shell .listing-rented-box { display: grid; gap: 10px; margin-block: 14px; padding: 16px; border: 1px solid #f1dfb4; border-radius: 14px; background: #fffaf0; }
+.site-shell .listing-rented-box strong { display: flex; align-items: center; gap: 8px; color: #6b4c0c; font-size: 16px; }
+.site-shell .listing-rented-box p { margin: 0; color: #46546b; font-size: 14px; line-height: 1.6; }
+.site-shell .listing-rented-box .button { justify-content: center; }
+.site-shell .listing3-offers-note { margin: 12px 0 0; color: #46546b; font-size: 14px; }
+.listing-status-rented { background: #fdf3dc; color: #6b4c0c; }
+.listing-status-days { background: #eef2f6; color: #3d4a5c; }
+.admin-card-dates { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: #46546b; font-size: 12.5px; }
+.owner-rented-end { display: grid; gap: 6px; max-width: 360px; margin-block: 8px 4px; }

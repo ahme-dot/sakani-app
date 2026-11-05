@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { X } from "lucide-react";
 import { GOVERNORATES, areaSuggestions } from "@/lib/egypt";
-import { AMENITY_FILTERS, EMPTY_FILTERS, countApprovedListings, type AmenityFilter, type ListingFilters } from "@/lib/supabase/listings";
+import { AMENITY_FILTERS, EMPTY_FILTERS, countApprovedListings, type ListingFilters } from "@/lib/supabase/listings";
+import { amenityLabel } from "@/lib/amenities";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import SakaniSelect from "@/components/sakani-select";
 
@@ -24,7 +25,6 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
   const [count, setCount] = useState<number | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
-  const amenityLabels: Record<AmenityFilter, string> = { wifi: t.wifi, air_conditioning: t.airConditioning, security: t.secure };
   const set = (patch: Partial<ListingFilters>) => setDraft((current) => ({ ...current, ...patch }));
 
   // Live "Show N homes" count, debounced while typing prices.
@@ -158,7 +158,7 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
                     checked={draft.amenities.includes(amenity)}
                     onChange={() => set({ amenities: draft.amenities.includes(amenity) ? draft.amenities.filter((item) => item !== amenity) : [...draft.amenities, amenity] })}
                   />
-                  <span>{amenityLabels[amenity]}</span>
+                  <span>{amenityLabel(amenity, locale)}</span>
                 </label>
               ))}
             </div>

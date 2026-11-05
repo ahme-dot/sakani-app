@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Property } from "@/types";
+import { AMENITIES, type AmenityKey } from "@/lib/amenities";
 
 export type MarketplaceListing = {
   id: string;
@@ -15,10 +16,16 @@ export type MarketplaceListing = {
   property_type: Property["property_type"];
   monthly_price: number;
   deposit: number;
-  furnished: boolean;
+  furnished: boolean | null;
   wifi: boolean;
   air_conditioning: boolean;
   security: boolean;
+  /** Added 2026-11-05: null on older places until the owner says. */
+  kitchen?: boolean | null;
+  washing_machine?: boolean | null;
+  fridge?: boolean | null;
+  water_heater?: boolean | null;
+  elevator?: boolean | null;
   available_beds: number;
   total_beds: number;
   walking_distance_minutes: number;
@@ -34,6 +41,11 @@ export type MarketplaceListing = {
   area_sqm?: number | null;
   min_months?: number;
   available_from?: string | null;
+  /** While rented: the day it becomes free again. */
+  rented_until?: string | null;
+  /** First time it was published, and the last time it became free (for the admin). */
+  published_at?: string | null;
+  available_since?: string | null;
   rejection_reason: string | null;
   status: ListingStatus;
   created_at: string;
@@ -47,7 +59,7 @@ export const HIDDEN_STATUSES = ["paused", "reserved", "rented", "suspended"] as 
 
 /** Columns that are safe to show to anyone. Excludes owner_id and review notes. */
 export const PUBLIC_LISTING_COLUMNS =
-  "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,image_url,image_urls,verified,verified_at,is_demo,bedrooms,bathrooms,area_sqm,min_months,available_from,status,created_at,updated_at";
+  "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,image_url,image_urls,verified,verified_at,is_demo,bedrooms,bathrooms,area_sqm,min_months,available_from,status,created_at,updated_at,kitchen,washing_machine,fridge,water_heater,elevator,rented_until,published_at,available_since";
 
 /** Short reference guests quote to the Sakani team, e.g. "SK-3F9A2C". */
 export function listingRef(id: string) {
@@ -69,7 +81,7 @@ export const LISTINGS_PAGE_SIZE = 12;
 
 export type ListingSort = "newest" | "price_asc" | "price_desc";
 
-export const AMENITY_FILTERS = ["wifi", "air_conditioning", "security"] as const;
+export const AMENITY_FILTERS = ["furnished", "wifi", "air_conditioning", "kitchen", "washing_machine", "fridge", "water_heater", "elevator", "security"] as const satisfies readonly AmenityKey[];
 export type AmenityFilter = (typeof AMENITY_FILTERS)[number];
 
 export type ListingFilters = {
@@ -267,10 +279,13 @@ export function toProperty(listing: MarketplaceListing): Property {
     furnished: listing.furnished,
     wifi: listing.wifi,
     private_bathroom: false,
-    washing_machine: false,
+    washing_machine: listing.washing_machine ?? null,
     air_conditioning: listing.air_conditioning,
     parking: false,
-    kitchen: false,
+    kitchen: listing.kitchen ?? null,
+    fridge: listing.fridge ?? null,
+    water_heater: listing.water_heater ?? null,
+    elevator: listing.elevator ?? null,
     security: listing.security,
     available_beds: listing.available_beds,
     total_beds: listing.total_beds,
@@ -281,11 +296,7 @@ export function toProperty(listing: MarketplaceListing): Property {
     whatsapp_number: listing.whatsapp_number ?? "",
     phone_number: listing.whatsapp_number ?? "",
     images: listingImages(listing),
-    amenities: [
-      ...(listing.wifi ? ["Wi-Fi"] : []),
-      ...(listing.air_conditioning ? ["Air Conditioning"] : []),
-      ...(listing.security ? ["Security"] : []),
-    ],
+    amenities: AMENITIES.filter((amenity) => listing[amenity.key] === true).map((amenity) => amenity.en),
     rules: [],
     created_at: listing.created_at || now,
     updated_at: listing.updated_at || listing.created_at || now,
@@ -295,6 +306,10 @@ export function toProperty(listing: MarketplaceListing): Property {
     area_sqm: listing.area_sqm ?? null,
     min_months: listing.min_months ?? 1,
     available_from: listing.available_from ?? null,
+    status: listing.status,
+    rented_until: listing.rented_until ?? null,
+    published_at: listing.published_at ?? null,
+    available_since: listing.available_since ?? null,
     host_id: (listing as { owner_id?: string }).owner_id,
   };
 }

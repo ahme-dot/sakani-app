@@ -11,13 +11,16 @@ export interface Property {
     property_type: "room" | "apartment" | "bed" | "studio";
     monthly_price: number;
     deposit: number;
-    furnished: boolean;
+    furnished: boolean | null;
     wifi: boolean;
     private_bathroom: boolean;
-    washing_machine: boolean;
+    washing_machine: boolean | null;
     air_conditioning: boolean;
     parking: boolean;
-    kitchen: boolean;
+    kitchen: boolean | null;
+    fridge?: boolean | null;
+    water_heater?: boolean | null;
+    elevator?: boolean | null;
     security: boolean;
     available_beds: number;
     total_beds: number;
@@ -42,4 +45,9 @@ export interface Property {
     /** Shortest stay the host accepts, in months. */
     min_months?: number;
     available_from?: string | null;
+    status?: "pending" | "approved" | "rejected" | "paused" | "reserved" | "rented" | "suspended";
+    /** While rented: the day it becomes free again. */
+    rented_until?: string | null;
+    published_at?: string | null;
+    available_since?: string | null;
   }

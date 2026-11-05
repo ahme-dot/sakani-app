@@ -55,7 +55,7 @@ function filterSamples(filters: ListingFilters) {
     (!minPrice || property.monthly_price >= minPrice) &&
     (!maxPrice || property.monthly_price <= maxPrice) &&
     (!filters.verified || property.verification_status === "verified") &&
-    filters.amenities.every((amenity) => property[amenity]),
+    filters.amenities.every((amenity) => property[amenity] === true),
   );
   if (filters.sort === "price_asc") matches.sort((a, b) => a.monthly_price - b.monthly_price);
   if (filters.sort === "price_desc") matches.sort((a, b) => b.monthly_price - a.monthly_price);

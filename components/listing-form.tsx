@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Armchair, ArrowLeft, ArrowRight, BedSingle, Building2, DoorOpen, ImagePlus, Mars, Pencil, ShieldCheck, Snowflake, Venus, Wifi } from "lucide-react";
+import { Armchair, ArrowLeft, ArrowRight, BedSingle, Building2, DoorOpen, ImagePlus, Mars, Pencil, Venus } from "lucide-react";
+import { AMENITIES, AMENITY_KEYS } from "@/lib/amenities";
 import VisitChecklist, { readVisit } from "@/components/visit-checklist";
 import { GOVERNORATES, areaLabel, areaSuggestions, normalizeArea, placeLabel } from "@/lib/egypt";
 import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
@@ -25,11 +26,6 @@ type StepId = (typeof STEPS)[number];
 const STAGE_OF: Record<StepId, number> = { type: 0, location: 0, beds: 0, amenities: 1, photos: 1, text: 1, price: 2, contact: 2, review: 2 };
 const STAGE_START = [0, 3, 6];
 
-const AMENITIES = [
-  ["wifi", Wifi],
-  ["air_conditioning", Snowflake],
-  ["security", ShieldCheck],
-] as const;
 const TYPE_ICONS = { room: DoorOpen, studio: Armchair, apartment: Building2, bed: BedSingle } as const;
 const GENDER_ICONS = { male: Mars, female: Venus } as const;
 
@@ -271,9 +267,8 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
       min_months: Number(formData.get("min_months") || 1),
       available_from: String(formData.get("available_from") ?? "") || null,
       whatsapp_number: String(formData.get("whatsapp_number")).trim(),
-      wifi: formData.has("wifi"),
-      air_conditioning: formData.has("air_conditioning"),
-      security: formData.has("security"),
+      // Every amenity is a clear yes or no once the owner has been through this step.
+      ...Object.fromEntries(AMENITY_KEYS.map((key) => [key, formData.has(key)])),
       image_url: imageUrls[0],
       image_urls: imageUrls,
       // New listings always start pending (database rule); admins publish right after saving.
@@ -449,10 +444,10 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
 
       {screen("amenities", t.stepAmenitiesTitle, t.stepAmenitiesText, (
         <div className="tile-grid">
-          {AMENITIES.map(([name, Icon]) => (
-            <label className="tile" key={name}>
-              <input name={name} type="checkbox" defaultChecked={editing ? editing[name] : saved[name] !== undefined} />
-              <span><Icon size={26} strokeWidth={1.6} /><strong>{name === "wifi" ? t.wifi : name === "air_conditioning" ? t.airConditioning : t.secure}</strong></span>
+          {AMENITIES.map(({ key, icon: Icon, ...label }) => (
+            <label className="tile" key={key}>
+              <input name={key} type="checkbox" defaultChecked={editing ? Boolean(editing[key]) : saved[key] !== undefined} />
+              <span><Icon size={26} strokeWidth={1.6} /><strong>{label[locale]}</strong></span>
             </label>
           ))}
         </div>
@@ -526,7 +521,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
               {reviewRow(t.listingTitle, value("title"), "text")}
               {reviewRow(t.formSectionLocation, placeLabel(locale, value("area"), value("governorate")), "location")}
               {reviewRow(t.formSectionHome, `${value("property_type") ? t[value("property_type") as "room"] : ""} · ${value("gender") ? t[value("gender") as "female"] : ""} · ${value("property_type") === "apartment" || value("property_type") === "studio" ? (value("bedrooms") ? t.bedroomsCount(Number(value("bedrooms"))) : "") : `${t.availableBeds}: ${value("available_beds")}/${value("total_beds")}`}`, "type")}
-              {reviewRow(t.amenitiesTitle, AMENITIES.filter(([name]) => chosen(name)).map(([name]) => (name === "wifi" ? t.wifi : name === "air_conditioning" ? t.airConditioning : t.secure)).join(" · ") || "—", "amenities")}
+              {reviewRow(t.amenitiesTitle, AMENITIES.filter(({ key }) => chosen(key)).map((amenity) => amenity[locale]).join(" · ") || "—", "amenities")}
               {reviewRow(t.formSectionPhotos, numberFormat.format(photos.length), "photos")}
               {reviewRow(t.price, <><strong>{numberFormat.format(Number(value("monthly_price")))}</strong> {t.perMonth} · {t.deposit}: {numberFormat.format(Number(value("deposit")))}</>, "price")}
               {reviewRow(isAdmin ? t.ownerWhatsapp : t.phoneNumber, <span dir="ltr">{value("whatsapp_number")}</span>, "contact")}

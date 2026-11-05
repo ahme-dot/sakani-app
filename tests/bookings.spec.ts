@@ -149,17 +149,21 @@ test.describe("bookings", () => {
       expect(JSON.stringify(row)).not.toContain(guestPhone);
       expect((await api("/rest/v1/rpc/host_decide_booking", { token: host.access_token, method: "POST", body: { target_booking: bookingId, accept: true } })).status).toBeLessThan(300);
 
-      // Only the team confirms the payment; then the booking is confirmed and the listing hidden.
+      // Only the team confirms the payment; the booking is confirmed and the place stays in search until move-in.
       expect((await api("/rest/v1/rpc/admin_confirm_booking_payment", { token: host.access_token, method: "POST", body: { target_booking: bookingId } })).status).toBeGreaterThanOrEqual(400);
       expect((await api("/rest/v1/rpc/admin_confirm_booking_payment", { token: admin, method: "POST", body: { target_booking: bookingId } })).status).toBeLessThan(300);
       expect((await status()).status).toBe("confirmed");
-      const listing = await api<Array<{ status: string }>>(`/rest/v1/properties?select=status&id=eq.${listingId}`, { token: admin });
-      expect(listing.data[0].status).toBe("reserved");
+      const place = async () => (await api<Array<{ status: string; rented_until: string | null }>>(`/rest/v1/properties?select=status,rented_until&id=eq.${listingId}`, { token: admin })).data[0];
+      expect((await place()).status).toBe("approved");
 
       // The guest moves in; the team pays the host and records the transfer.
       expect((await api("/rest/v1/rpc/admin_mark_payout", { token: admin, method: "POST", body: { target_booking: bookingId, transfer_reference: "IP-OUT-1" } })).status).toBeGreaterThanOrEqual(400);
       expect((await api("/rest/v1/rpc/guest_confirm_move_in", { token: admin, method: "POST", body: { target_booking: bookingId } })).status).toBeLessThan(300);
       expect((await status()).status).toBe("moved_in");
+      // Moving in rents the place until the stay ends (6 months after move-in).
+      const end = new Date(`${tomorrow()}T00:00:00Z`);
+      end.setUTCMonth(end.getUTCMonth() + 6);
+      expect(await place()).toEqual({ status: "rented", rented_until: end.toISOString().slice(0, 10) });
       expect((await api("/rest/v1/rpc/admin_mark_payout", { token: admin, method: "POST", body: { target_booking: bookingId, transfer_reference: "IP-OUT-1" } })).status).toBeLessThan(300);
       expect(await status()).toEqual({ status: "completed", payout_amount: 4500 });
     } finally {

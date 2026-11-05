@@ -11,11 +11,11 @@ import {
   ShieldAlert,
   ShieldCheck,
   Star,
+  CalendarX,
   Venus,
   Wallet,
-  Wifi,
-  Wind,
 } from "lucide-react";
+import { AMENITIES } from "@/lib/amenities";
 import AskTeam from "@/components/ask-team";
 import ListingBar from "@/components/listing-bar";
 import BookHome from "@/components/book-home";
@@ -90,11 +90,15 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const teamHref = fees.team_whatsapp ? whatsappLink(fees.team_whatsapp, t.askSakaniMessage(ref, title, pageUrl)) : null;
   const mapQuery = encodeURIComponent(`${listing.area}, ${listing.city}, Egypt`);
 
-  const amenityList = [
-    { icon: Wifi, label: t.wifi, available: listing.wifi },
-    { icon: Wind, label: t.airConditioning, available: listing.air_conditioning },
-    { icon: ShieldCheck, label: t.secure, available: listing.security },
-  ];
+  // What the place has first, then what it doesn't; amenities the owner hasn't answered yet are left out.
+  const amenityList = AMENITIES
+    .map((amenity) => ({ icon: amenity.icon, label: amenity[locale], value: listing[amenity.key] }))
+    .filter((amenity) => amenity.value === true || amenity.value === false)
+    .sort((a, b) => Number(b.value) - Number(a.value))
+    .map(({ value, ...amenity }) => ({ ...amenity, available: value === true }));
+  const amenitiesUnknown = AMENITIES.some((amenity) => listing[amenity.key] == null);
+  const rented = listing.status === "rented";
+  const rentedLabel = rented ? (listing.rented_until ? t.rentedBannerUntil(dateFormat.format(new Date(listing.rented_until))) : t.rentedBanner) : "";
   const genderHighlight = t.highlightGender[listing.gender];
   const highlights = [
     verified
@@ -134,6 +138,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
             <SaveButton locale={locale} listingId={listing.id} title={title} variant="page" />
           </div>
         </div>
+        {rented && <p className="listing-rented-banner" role="status"><CalendarX size={18} aria-hidden="true" /> {rentedLabel}</p>}
 
         <ListingGallery locale={locale} images={listing.images} altFor={listing.images.map((_, index) => t.photoAlt(title, index + 1))} />
 
@@ -217,6 +222,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                   </li>
                 ))}
               </ul>
+              {amenitiesUnknown && <p className="listing3-offers-note">{t.amenitiesUnknown}</p>}
             </section>
 
             <section className="listing3-section" aria-labelledby="listing-map-title">
@@ -258,7 +264,13 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                 </div>
               )}
               {listing.is_demo && <p className="demo-pill-line"><span className="demo-pill">{t.demoBadge}</span></p>}
-              <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} minMonths={listing.min_months ?? 1} availableFrom={listing.available_from ?? null} />
+              {rented ? (
+                <div className="listing-rented-box">
+                  <strong><CalendarX size={18} aria-hidden="true" /> {rentedLabel}</strong>
+                  <p>{t.rentedAsideText}</p>
+                  {similar.length > 0 && <a className="button button-primary" href="#similar-title">{t.rentedSeeSimilar}</a>}
+                </div>
+              ) : <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} minMonths={listing.min_months ?? 1} availableFrom={listing.available_from ?? null} />}
               <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-whatsapp" />
               <p className="listing3-middleman"><ShieldCheck size={16} /> {t.middlemanNote}</p>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>
@@ -299,7 +311,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
         <p className="listing3-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</p>
         <div className="listing2-bar-actions">
           <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-bar-ask" compact />
-          {!listing.is_demo && <a className="button button-primary" href="#book"><CalendarCheck size={17} /> {t.bookNow}</a>}
+          {!listing.is_demo && !rented && <a className="button button-primary" href="#book"><CalendarCheck size={17} /> {t.bookNow}</a>}
         </div>
       </ListingBar>
 

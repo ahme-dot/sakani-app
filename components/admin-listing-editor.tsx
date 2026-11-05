@@ -7,6 +7,7 @@ import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import type { MarketplaceListing } from "@/lib/supabase/listings";
 import SakaniSelect from "@/components/sakani-select";
 import SakaniDate from "@/components/sakani-date";
+import { AMENITIES, AMENITY_KEYS } from "@/lib/amenities";
 
 type AdminListing = Omit<MarketplaceListing, "owner_id">;
 
@@ -58,9 +59,7 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       min_months: Number(formData.get("min_months") || 1),
       available_from: String(formData.get("available_from") ?? "") || null,
       whatsapp_number: String(formData.get("whatsapp_number")).trim(),
-      wifi: formData.has("wifi"),
-      air_conditioning: formData.has("air_conditioning"),
-      security: formData.has("security"),
+      ...Object.fromEntries(AMENITY_KEYS.map((key) => [key, formData.has(key)])),
     };
 
     const { data, error: saveError } = await supabase.from("properties").update(values).eq("id", listing.id).select(columns);
@@ -116,10 +115,10 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       <fieldset className="amenity-fieldset">
         <legend>{t.amenitiesTitle}</legend>
         <div className="choice-row">
-          {([["wifi", t.wifi], ["air_conditioning", t.airConditioning], ["security", t.secure]] as const).map(([name, label]) => (
-            <label className="choice" key={name}>
-              <input name={name} type="checkbox" defaultChecked={listing[name]} />
-              <span>{label}</span>
+          {AMENITIES.map((amenity) => (
+            <label className="choice" key={amenity.key}>
+              <input name={amenity.key} type="checkbox" defaultChecked={Boolean(listing[amenity.key])} />
+              <span>{amenity[locale]}</span>
             </label>
           ))}
         </div>
