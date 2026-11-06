@@ -9,11 +9,9 @@ import ListingForm, { removeListingImages } from "@/components/listing-form";
 import OwnerPayments from "@/components/owner-payments";
 import SakaniDate from "@/components/sakani-date";
 import {
-  DEFAULT_PAYMENT_SETTINGS,
   RENTAL_FEE_COLUMNS,
   fetchPaymentSettings,
   isMissingFunction,
-  successFee,
   type PaymentSettings,
   type RentalFee,
 } from "@/lib/payments";
@@ -84,6 +82,19 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
   const titleOf = useListingTitles(supabase, bookings.map((booking) => booking.listing_id), locale);
   // Returning owners see their listings first; the form opens with "Add another home".
   const [formOpen, setFormOpen] = useState(false);
+  // What a host still needs before their places can be booked (the database checks the same).
+  const [hostContact, setHostContact] = useState<{ phone: string; instapay_address: string } | null>(null);
+
+  useEffect(() => {
+    if (!supabase || !user || user.is_anonymous) return;
+    let mounted = true;
+    void supabase.from("profiles").select("phone,instapay_address").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (mounted) setHostContact((data ?? { phone: "", instapay_address: "" }) as { phone: string; instapay_address: string });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [supabase, user]);
 
   useEffect(() => {
     if (!supabase || !user) return;
@@ -243,6 +254,8 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
   }
 
   function startEditing(listing: OwnerListing) {
+    // properties_guard sends every owner edit back to review, so a live listing leaves the search.
+    if ((listing.status === "approved" || listing.status === "paused") && !window.confirm(t.editPublishedWarn)) return;
     setEditing(listing);
     setMessage("");
     setError("");
@@ -292,12 +305,13 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
     setSubmitting(false);
   }
 
-  async function reportRental(listing: OwnerListing, viaSakani: boolean) {
+  // Rented outside Sakani: an end date, nothing to pay. The host's fee on a booking is taken from the booking.
+  async function reportRental(listing: OwnerListing) {
     if (!supabase) return;
     setSubmitting(true);
     setError("");
     setMessage("");
-    const { error: rpcError } = await supabase.rpc("owner_report_rental", { target_listing: listing.id, via_sakani: viaSakani, rented_until: rentedEnd || null });
+    const { error: rpcError } = await supabase.rpc("owner_report_rental", { target_listing: listing.id, via_sakani: false, rented_until: rentedEnd || null });
     setSubmitting(false);
     setReportingId(null);
     if (isMissingFunction(rpcError)) {
@@ -311,8 +325,7 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
       return;
     }
     setOwnerListings((current) => current.map((item) => item.id === listing.id ? { ...item, status: "rented", rented_until: rentedEnd, updated_at: new Date().toISOString() } : item));
-    setMessage(viaSakani ? t.rentedThanks : t.rentedHidden);
-    setFeesVersion((version) => version + 1);
+    setMessage(t.rentedHidden);
   }
 
   // The tenant left early: back in the search now.
@@ -348,6 +361,12 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
     }
     setSubmitting(false);
   }
+
+  const setupSteps = user?.is_anonymous
+    ? [t.hostSetupAccount, t.hostSetupPhone, t.hostSetupInstapay]
+    : hostContact
+      ? [...(hostContact.phone.trim() ? [] : [t.hostSetupPhone]), ...(hostContact.instapay_address.trim() ? [] : [t.hostSetupInstapay])]
+      : [];
 
   const statusLabel = (status: OwnerListing["status"]) => {
     if (status === "approved") return t.statusApproved;
@@ -415,6 +434,13 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                 </div>
               ))}
 
+              {setupSteps.length > 0 && ownerListings.length > 0 && (
+                <div className="owner-guest-notice">
+                  <p><strong>{t.hostSetupTitle}</strong> {t.hostSetupText} {setupSteps.join(locale === "ar" ? "، " : ", ")}.</p>
+                  <Link className="button button-primary" href={user.is_anonymous ? `/${locale}/account?mode=signup` : `/${locale}/account`}>{user.is_anonymous ? t.ownerGuestCta : t.hostSetupOpen}</Link>
+                </div>
+              )}
+
               {bookings.length > 0 && (
                 <section className="owner-bookings" aria-labelledby="owner-bookings-title">
                   <h4 id="owner-bookings-title"><CalendarCheck size={18} /> {t.hostRequestsTitle} ({numberFormat.format(bookings.length)})</h4>
@@ -455,6 +481,8 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                 </button>
               )}
 
+              {(editing?.status === "approved" || editing?.status === "paused") && <p className="owner-guest-line">{t.editPublishedNote}</p>}
+
               {(formOpen || editing || (!loadingListings && ownerListings.length === 0)) && <ListingForm
                 key={`${editing?.id ?? "new"}-${formVersion}`}
                 locale={locale}
@@ -476,8 +504,8 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                 {availabilityReady && ownerListings.some((listing) => listing.status === "approved") && <p className="owner-listings-hint">{t.confirmReminder}</p>}
                 {loadingListings ? <p>{t.loading}</p> : ownerListings.length === 0 ? <p>{t.noOwnerListings}</p> : ownerListings.map((listing) => {
                   const title = locale === "ar" ? listing.title_ar : listing.title_en;
-                  const canChange = listing.status === "pending" || listing.status === "rejected";
-                  const canDelete = canChange || listing.status === "paused";
+                  const canChange = listing.status === "pending" || listing.status === "rejected" || listing.status === "approved" || listing.status === "paused";
+                  const canDelete = listing.status === "pending" || listing.status === "rejected" || listing.status === "paused";
                   return (
                     <div className="owner-listing-item" key={listing.id}>
                     <div className="owner-listing-row">
@@ -510,7 +538,8 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                         {availabilityReady && listing.status === "approved" && (
                           <>
                             <button type="button" className="owner-text-button" disabled={submitting} onClick={() => void confirmAvailable(listing)}>{t.confirmAvailable}</button>
-                            <button type="button" className="owner-text-button" disabled={submitting} onClick={() => (paymentsReady ? setReportingId(listing.id) : void setPaused(listing, true))}>{t.pauseListing}</button>
+                            <button type="button" className="owner-text-button" disabled={submitting} onClick={() => void setPaused(listing, true)}>{t.pauseOnly}</button>
+                            {paymentsReady && <button type="button" className="owner-text-button" disabled={submitting} onClick={() => setReportingId(listing.id)}>{t.markRented}</button>}
                           </>
                         )}
                         {(listing.status === "rented" || listing.status === "reserved") && (
@@ -534,19 +563,15 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                       </div>
                     </div>
                     {reportingId === listing.id && (
-                      <div className="owner-rented-panel" role="group" aria-label={t.rentedQuestion}>
-                        <strong>{t.rentedQuestion}</strong>
+                      <div className="owner-rented-panel" role="group" aria-label={t.rentedPanelTitle}>
+                        <strong>{t.rentedPanelTitle}</strong>
                         <label className="owner-field owner-rented-end">
                           <span>{t.rentedEndLabel}</span>
                           <SakaniDate value={rentedEnd} min={tomorrow} required onChange={(event) => setRentedEnd(event.target.value)} />
                           <small className="field-hint">{t.rentedEndHint}</small>
                         </label>
-                        <p>{t.rentedFeeExplain(numberFormat.format((paySettings ?? DEFAULT_PAYMENT_SETTINGS).fee_percent), numberFormat.format((paySettings ?? DEFAULT_PAYMENT_SETTINGS).fee_minimum))}</p>
                         <div className="owner-rented-actions">
-                          <button type="button" className="button button-primary" disabled={submitting} onClick={() => void reportRental(listing, true)}>
-                            {t.rentedYes(numberFormat.format(successFee(listing.monthly_price, paySettings ?? DEFAULT_PAYMENT_SETTINGS)))}
-                          </button>
-                          <button type="button" className="button button-outline" disabled={submitting} onClick={() => void reportRental(listing, false)}>{t.rentedNo}</button>
+                          <button type="button" className="button button-primary" disabled={submitting} onClick={() => void reportRental(listing)}>{t.rentedOutsideButton}</button>
                           <button type="button" className="text-button" disabled={submitting} onClick={() => setReportingId(null)}>{t.cancel}</button>
                         </div>
                       </div>

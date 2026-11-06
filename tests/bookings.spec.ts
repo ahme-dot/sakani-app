@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ADMIN_EMAIL, ADMIN_PASSWORD, SUPABASE_KEY, adminToken, api, guestSession, hasAdmin, sampleListing, watchErrors } from "./helpers";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, SUPABASE_KEY, adminToken, api, guestSession, hasAdmin, sampleListing, startsToday, testHostListing, watchErrors } from "./helpers";
 
 // Upfront payment: the guest books and pays straight away (first month + 8%) by InstaPay. Sakani holds the money,
 // refunds within 24 hours on a problem, and pays the host rent − 10% after move-in. The admin account acts as the guest.
@@ -27,15 +27,14 @@ async function logIn(page: Page) {
   await page.locator(".auth-submit").click();
 }
 
-/** A published test listing by an anonymous host; returns its id, the host session and a cleanup. */
-async function hostWithListing(admin: string, title: string, rent: number) {
-  const host = await guestSession();
-  const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
-    token: host.access_token, method: "POST", body: sampleListing(host.user.id, title, { monthly_price: rent }),
-  });
-  const listingId = created.data[0].id;
-  await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "approved" } });
-  return { host, listingId };
+/** A published test listing by the test host; returns its id and the host session. */
+function hostWithListing(admin: string, title: string, rent: number) {
+  return testHostListing(admin, title, { monthly_price: rent });
+}
+
+/** A date the booking form accepts: it starts two days from today. */
+function formMoveIn() {
+  return new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
 async function cleanup(admin: string, listingId: string) {
@@ -87,7 +86,7 @@ test.describe("bookings", () => {
     // Sending without a date says so next to the date, in the page's language.
     await form.locator(".book-submit").click();
     await expect(form.locator(".field-error")).toHaveText("Choose your move-in date.");
-    await form.locator('input[name="move_in"]').fill(tomorrow());
+    await form.locator('input[name="move_in"]').fill(formMoveIn());
     await form.locator('select[name="months"]').selectOption("3");
     await form.locator('input[name="agree"]').check();
     await form.locator(".book-submit").click();
@@ -125,7 +124,8 @@ test.describe("bookings", () => {
         token, method: "POST", body: { target_listing: listingId, move_in_date: moveIn, stay_months: 6, people: 1, guest_note: "E2E" },
       });
       expect((await book(SUPABASE_KEY)).status).toBeGreaterThanOrEqual(400);
-      expect((await book(host.access_token)).status).toBeGreaterThanOrEqual(400);
+      expect((await book((await guestSession()).access_token)).status).toBeGreaterThanOrEqual(400);
+      expect(JSON.stringify((await book(host.access_token)).data)).toContain("own_listing");
       expect((await book(admin, "2020-01-01")).status).toBeGreaterThanOrEqual(400);
 
       const created = await book(admin);
@@ -158,14 +158,20 @@ test.describe("bookings", () => {
 
       // The guest moves in; the team pays the host and records the transfer.
       expect((await api("/rest/v1/rpc/admin_mark_payout", { token: admin, method: "POST", body: { target_booking: bookingId, transfer_reference: "IP-OUT-1" } })).status).toBeGreaterThanOrEqual(400);
+      // Not before the move-in date: this is what releases the host's rent.
+      expect(JSON.stringify((await api("/rest/v1/rpc/guest_confirm_move_in", { token: admin, method: "POST", body: { target_booking: bookingId } })).data)).toContain("move_in_too_early");
+      const moveInDay = await startsToday(admin, bookingId);
       expect((await api("/rest/v1/rpc/guest_confirm_move_in", { token: admin, method: "POST", body: { target_booking: bookingId } })).status).toBeLessThan(300);
       expect((await status()).status).toBe("moved_in");
       // Moving in rents the place until the stay ends (6 months after move-in).
-      const end = new Date(`${tomorrow()}T00:00:00Z`);
+      const end = new Date(`${moveInDay}T00:00:00Z`);
       end.setUTCMonth(end.getUTCMonth() + 6);
       expect(await place()).toEqual({ status: "rented", rented_until: end.toISOString().slice(0, 10) });
       expect((await api("/rest/v1/rpc/admin_mark_payout", { token: admin, method: "POST", body: { target_booking: bookingId, transfer_reference: "IP-OUT-1" } })).status).toBeLessThan(300);
-      expect(await status()).toEqual({ status: "completed", payout_amount: 4500 });
+      // Paying the host doesn't end the stay: it's still running and the place is still rented.
+      expect(await status()).toEqual({ status: "moved_in", payout_amount: 4500 });
+      expect((await place()).status).toBe("rented");
+      expect((await api("/rest/v1/rpc/admin_mark_payout", { token: admin, method: "POST", body: { target_booking: bookingId, transfer_reference: "IP-OUT-2" } })).status).toBeGreaterThanOrEqual(400);
     } finally {
       await cleanup(admin, listingId);
     }
@@ -182,6 +188,8 @@ test.describe("bookings", () => {
       const bookingId = created.data.booking_id;
       await api("/rest/v1/rpc/submit_payment_by_token", { method: "POST", body: { token: created.data.pay_token, pay_method: "instapay", pay_reference: "IP-REF-1", pay_phone: "01112223334" } });
       await api("/rest/v1/rpc/host_decide_booking", { token: host.access_token, method: "POST", body: { target_booking: bookingId, accept: false } });
+      // The refund starts once the team confirms the money arrived.
+      await api("/rest/v1/rpc/admin_confirm_booking_payment", { token: admin, method: "POST", body: { target_booking: bookingId } });
 
       const row = (await api<Array<{ status: string; refund_due_at: string }>>(`/rest/v1/listing_requests?select=status,refund_due_at&id=eq.${bookingId}`, { token: admin })).data[0];
       expect(row.status).toBe("refund_pending");
@@ -199,13 +207,7 @@ test.describe("bookings", () => {
   });
 
   test("a room with two free beds is rented only when both are taken", async () => {
-    const host = await guestSession();
-    const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
-      token: host.access_token, method: "POST",
-      body: sampleListing(host.user.id, "Two beds", { property_type: "room", available_beds: 2, total_beds: 2 }),
-    });
-    const listingId = created.data[0].id;
-    await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "approved" } });
+    const { host, listingId } = await testHostListing(admin, "Two beds", { property_type: "room", available_beds: 2, total_beds: 2 });
     const place = async () => (await api<Array<{ status: string }>>(`/rest/v1/properties?select=status&id=eq.${listingId}`, { token: admin })).data[0].status;
     const moveIn = async (reference: string) => {
       const booked = await api<{ booking_id: string; pay_token: string }>("/rest/v1/rpc/guest_create_booking", {
@@ -216,6 +218,7 @@ test.describe("bookings", () => {
       await api("/rest/v1/rpc/submit_payment_by_token", { method: "POST", body: { token: booked.data.pay_token, pay_method: "instapay", pay_reference: reference, pay_phone: "01112223334" } });
       await api("/rest/v1/rpc/host_decide_booking", { token: host.access_token, method: "POST", body: { ...target, accept: true } });
       await api("/rest/v1/rpc/admin_confirm_booking_payment", { token: admin, method: "POST", body: target });
+      await startsToday(admin, booked.data.booking_id);
       expect((await api("/rest/v1/rpc/guest_confirm_move_in", { token: admin, method: "POST", body: target })).status).toBeLessThan(300);
     };
     try {

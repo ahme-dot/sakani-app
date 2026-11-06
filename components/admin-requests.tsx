@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CalendarCheck, CheckCircle2, ExternalLink, FileText, Headset, LoaderCircle, Phone, RotateCcw, Timer, Wallet, X } from "lucide-react";
-import { isMissingFunction } from "@/lib/payments";
+import { cairoDay } from "@/lib/finance";
+import { isMissingFunction, refundableAmount } from "@/lib/payments";
 import { useListingTitles } from "@/lib/listing-titles";
 import { listingPath, whatsappLink } from "@/lib/site";
 import { fetchPrivateContacts, listingRef } from "@/lib/supabase/listings";
@@ -14,6 +15,10 @@ import SakaniSelect from "@/components/sakani-select";
 type BookingStatus = "pending_payment" | "payment_review" | "confirmed" | "moved_in" | "completed" | "cancellation_requested" | "refund_pending" | "refunded" | "cancelled";
 type CancellationInfo = { id: string; booking_id: string; requesting_party: string; scenario: string; reason: string; status: string; refundable_amount: number | null };
 export const CANCELLATION_SCENARIOS = ["host_cancels", "guest_before_contract", "guest_after_contract", "property_unavailable", "inaccurate_listing", "platform_failure", "mutual"] as const;
+/** The cases where the guest isn't at fault: the whole amount goes back, with the cancellation policy on or off. */
+const FAULT_CASES = ["host_cancels", "property_unavailable", "inaccurate_listing", "platform_failure"] as const;
+/** Database functions whose note is a free-text reason, not a transfer number. */
+const NOTE_ACTIONS = ["admin_full_refund", "admin_confirm_moved_in", "admin_override_contract"];
 type Booking = {
   id: string;
   listing_id: string | null;
@@ -39,6 +44,8 @@ type Booking = {
   refund_due_at: string | null;
   refund_reference: string | null;
   payout_reference: string | null;
+  paid_out_at: string | null;
+  refund_amount: number | null;
   deposit_amount: number;
   guest_fee_percent: number | null;
   host_fee_percent: number | null;
@@ -46,13 +53,13 @@ type Booking = {
   created_at: string;
 };
 type DepositInfo = { booking_id: string; status: string; amount: number; transfer_reference: string; acknowledged_at: string | null };
-type FeeInfo = { id: string; status: string; reference: string | null; payer_phone: string | null; method?: string | null };
+type FeeInfo = { id: string; status: string; amount: number; received_amount: number | null; reference: string | null; payer_phone: string | null; method?: string | null };
 type HostInfo = { id: string; full_name: string; instapay_address: string };
 
 // Most urgent first: money to check, money to return, hosts to pay.
 const TABS: BookingStatus[] = ["payment_review", "cancellation_requested", "refund_pending", "moved_in", "confirmed", "pending_payment", "completed", "refunded", "cancelled"];
 const BOOKING_COLUMNS =
-  "id,listing_id,listing_title,name,contact,note,status,move_in,months,guests,guest_id,host_id,fee_id,host_decision,rent_amount,guest_fee,host_fee,total_amount,payout_amount,paid_at,problem_note,refund_due_at,refund_reference,payout_reference,deposit_amount,guest_fee_percent,host_fee_percent,contract_signed_at,created_at";
+  "id,listing_id,listing_title,name,contact,note,status,move_in,months,guests,guest_id,host_id,fee_id,host_decision,rent_amount,guest_fee,host_fee,total_amount,payout_amount,paid_at,problem_note,refund_due_at,refund_reference,payout_reference,paid_out_at,refund_amount,deposit_amount,guest_fee_percent,host_fee_percent,contract_signed_at,created_at";
 
 type Props = {
   locale: SiteLocale;
@@ -83,6 +90,10 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
   const [cancellations, setCancellations] = useState<Record<string, CancellationInfo>>({});
   const [scenarios, setScenarios] = useState<Record<string, string>>({});
   const [depositNotes, setDepositNotes] = useState<Record<string, string>>({});
+  // Reasons and amounts typed for a booking's steps, keyed by step and booking id.
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [policyActive, setPolicyActive] = useState(false);
+  const [today] = useState(() => cairoDay());
   const [tab, setTab] = useState<BookingStatus>(initialTab ?? "payment_review");
   const tabChosen = useRef(Boolean(initialTab));
   const [version, setVersion] = useState(0);
@@ -137,14 +148,16 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
       const hostIds = [...new Set(rows.map((row) => row.host_id).filter((id): id is string => Boolean(id)))];
       const listingIds = [...new Set(rows.map((row) => row.listing_id).filter((id): id is string => Boolean(id)))];
       const bookingIds = rows.map((row) => row.id);
-      const [feeRows, hostRows, numbers, depositRows, cancellationRows] = await Promise.all([
-        feeIds.length ? supabase.from("rental_fees").select("id,status,reference,payer_phone,method").in("id", feeIds) : Promise.resolve({ data: [] }),
+      const [feeRows, hostRows, numbers, depositRows, cancellationRows, settingsRow] = await Promise.all([
+        feeIds.length ? supabase.from("rental_fees").select("id,status,amount,received_amount,reference,payer_phone,method").in("id", feeIds) : Promise.resolve({ data: [] }),
         hostIds.length ? supabase.from("profiles").select("id,full_name,instapay_address").in("id", hostIds) : Promise.resolve({ data: [] }),
         fetchPrivateContacts(supabase, listingIds),
         bookingIds.length ? supabase.from("deposit_transfers").select("booking_id,status,amount,transfer_reference,acknowledged_at").in("booking_id", bookingIds) : Promise.resolve({ data: [] }),
         bookingIds.length ? supabase.from("cancellation_requests").select("id,booking_id,requesting_party,scenario,reason,status,refundable_amount").in("booking_id", bookingIds).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
+        supabase.from("app_settings").select("cancellation_policy_active").eq("id", 1).maybeSingle(),
       ]);
       if (!mounted) return;
+      setPolicyActive(Boolean((settingsRow.data as { cancellation_policy_active?: boolean } | null)?.cancellation_policy_active));
       setFees(Object.fromEntries(((feeRows.data ?? []) as FeeInfo[]).map((fee) => [fee.id, fee])));
       setHosts(Object.fromEntries(((hostRows.data ?? []) as HostInfo[]).map((host) => [host.id, host])));
       setHostNumbers(numbers);
@@ -195,7 +208,12 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
       console.error(`Could not run ${fn}:`, runError);
       setErrorFor(booking.id);
       setError(
-        runError.message.includes("invalid_reference") || runError.message.includes("invalid_note") ? t.referenceRequired
+        runError.message.includes("invalid_note") && fn === "admin_decide_cancellation" ? t.cancelRejectNeedsReason
+          : runError.message.includes("invalid_note") && NOTE_ACTIONS.includes(fn) ? t.adminActionNeedsNote
+          : runError.message.includes("invalid_amount") || runError.message.includes("amount_matches") ? t.adminAmountInvalid
+          : runError.message.includes("move_in_too_early") ? t.adminMoveInTooEarly
+          : runError.message.includes("payment_not_confirmed") ? t.adminPaymentNotConfirmed
+          : runError.message.includes("invalid_reference") || runError.message.includes("invalid_note") ? t.referenceRequired
           : runError.message.includes("contract_not_signed") ? t.depositNeedsContract
             : runError.message.includes("policy_not_active") ? t.policyNotActive
               : runError.message.includes("rule_not_set") ? t.ruleNotSet
@@ -209,6 +227,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
     // The numbers typed for this booking were used; empty the boxes for the next step.
     setDepositNotes((notes) => ({ ...notes, [booking.id]: "" }));
     setReferences((refs) => ({ ...refs, [booking.id]: "" }));
+    setDrafts((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.endsWith(booking.id))));
     setVersion((value) => value + 1);
     onChanged();
   }
@@ -219,6 +238,8 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
   const visible = bookings.filter((booking) => booking.status === tab);
   const egp = (amount: number | null) => `${numberFormat.format(amount ?? 0)} ${t.currency}`;
   const hoursLeft = (due: string) => Math.ceil((new Date(due).getTime() - now) / 3_600_000);
+  const draft = (step: string, id: string) => drafts[`${step}:${id}`] ?? "";
+  const setDraft = (step: string, id: string, value: string) => setDrafts((current) => ({ ...current, [`${step}:${id}`]: value }));
 
   return (
     <div className="admin-requests">
@@ -249,6 +270,11 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
             const scenario = scenarios[booking.id] ?? cancellation?.scenario ?? "";
             const depositNote = depositNotes[booking.id] ?? "";
             const paidAndConfirmed = booking.status === "confirmed" || booking.status === "moved_in" || booking.status === "completed";
+            // The host is paid once, after move-in. A stay can end before the team has paid.
+            const payoutDue = (booking.status === "moved_in" || booking.status === "completed") && !booking.paid_out_at;
+            const moneyArrived = fee?.status === "paid" || (fee?.received_amount ?? 0) > 0;
+            const canFullRefund = !policyActive && moneyArrived && (booking.status === "payment_review" || booking.status === "confirmed" || booking.status === "moved_in" || booking.status === "cancellation_requested");
+            const fullRefundCase = draft("case", booking.id) || (FAULT_CASES as readonly string[]).find((item) => item === cancellation?.scenario) || FAULT_CASES[0];
             return (
               <article className={`admin-fee admin-request${left !== null && left <= 6 ? " is-urgent" : ""}`} key={booking.id}>
                 <div className="admin-fee-main">
@@ -283,6 +309,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
                   )}
                   <div><dt>{t.requestOwner}</dt><dd>{host?.full_name || t.ownerGuest} · <span dir="ltr">{hostNumber ?? "…"}</span> · {t.hostDecisionAdmin[booking.host_decision]}</dd></div>
                   {fee?.reference && <div><dt>{t.payInstapay}</dt><dd dir="ltr">{fee.reference}{fee.payer_phone ? ` · ${fee.payer_phone}` : ""}</dd></div>}
+                  {fee?.received_amount != null && <div><dt>{t.adminAmountReceived}</dt><dd>{t.adminAmountReceivedLine(egp(fee.received_amount))}</dd></div>}
                   {booking.note && <div><dt>{t.requestNote}</dt><dd>{booking.note}</dd></div>}
                   {booking.problem_note && <div><dt>{t.problemLabel}</dt><dd>{booking.problem_note}</dd></div>}
                   {cancellation && (
@@ -294,7 +321,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
                       </dd>
                     </div>
                   )}
-                  {booking.status === "moved_in" && <div><dt>{t.instapayLabel}</dt><dd dir="ltr">{host?.instapay_address || t.instapayMissingAdmin}</dd></div>}
+                  {payoutDue && <div><dt>{t.instapayLabel}</dt><dd dir="ltr">{host?.instapay_address || t.instapayMissingAdmin}</dd></div>}
                   {booking.refund_reference && <div><dt>{t.refundRefLabel}</dt><dd dir="ltr">{booking.refund_reference}</dd></div>}
                   {booking.payout_reference && <div><dt>{t.payoutRefLabel}</dt><dd dir="ltr">{booking.payout_reference}</dd></div>}
                 </dl>
@@ -317,6 +344,16 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
                           <RotateCcw size={15} /> {t.markDue}
                         </button>
                       )}
+                      {booking.host_decision === "declined" && fee?.status === "submitted" && <small className="field-hint">{t.adminDeclinedWaiting}</small>}
+                      {fee?.status === "submitted" && (
+                        <span className="admin-reference admin-step">
+                          <strong className="admin-step-title">{t.adminAmountDiffersTitle}</strong>
+                          <input type="number" min={1} inputMode="numeric" value={draft("received", booking.id)} onChange={(event) => setDraft("received", booking.id, event.target.value)} placeholder={t.adminAmountReceived} aria-label={t.adminAmountReceived} dir="ltr" />
+                          <button className="admin-btn admin-btn-danger-outline" type="button" disabled={busy} onClick={() => void run(booking, "admin_amount_differs", { target_booking: booking.id, received: Number(draft("received", booking.id)) || null, team_note: null }, t.adminAmountDiffersDone)}>
+                            <Wallet size={15} /> {t.adminAmountDiffersButton}
+                          </button>
+                        </span>
+                      )}
                       {booking.host_decision === "pending" && (
                         <>
                           <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void run(booking, "admin_set_host_decision", { target_booking: booking.id, accept: true }, t.adminStatusUpdated)}><CheckCircle2 size={15} /> {t.hostAcceptedAdmin}</button>
@@ -324,6 +361,37 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
                         </>
                       )}
                     </>
+                  )}
+
+                  {booking.status === "confirmed" && booking.move_in && booking.move_in <= today && (
+                    <span className="admin-reference admin-step">
+                      <strong className="admin-step-title">{t.adminMovedInTitle}</strong>
+                      <input value={draft("moved", booking.id)} onChange={(event) => setDraft("moved", booking.id, event.target.value)} placeholder={t.adminMovedInNote} aria-label={t.adminMovedInNote} maxLength={500} dir="auto" />
+                      <button className="admin-btn admin-btn-primary" type="button" disabled={busy} onClick={() => void run(booking, "admin_confirm_moved_in", { target_booking: booking.id, move_note: draft("moved", booking.id) }, t.adminStatusUpdated)}>
+                        <CheckCircle2 size={15} /> {t.adminMovedInButton}
+                      </button>
+                    </span>
+                  )}
+
+                  {(booking.status === "confirmed" || booking.status === "moved_in") && !booking.contract_signed_at && (
+                    <span className="admin-reference admin-step">
+                      <strong className="admin-step-title">{t.adminContractTitle}</strong>
+                      <input value={draft("contract", booking.id)} onChange={(event) => setDraft("contract", booking.id, event.target.value)} placeholder={t.adminContractNote} aria-label={t.adminContractNote} maxLength={500} dir="auto" />
+                      <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void run(booking, "admin_override_contract", { target_booking: booking.id, override_note: draft("contract", booking.id) }, t.adminStatusUpdated)}>
+                        <FileText size={15} /> {t.adminContractButton}
+                      </button>
+                    </span>
+                  )}
+
+                  {booking.status === "cancelled" && (fee?.status === "waived" || fee?.status === "due") && (
+                    <span className="admin-reference admin-step">
+                      <strong className="admin-step-title">{t.adminLateTitle}</strong>
+                      <input type="number" min={1} inputMode="numeric" value={draft("late", booking.id)} onChange={(event) => setDraft("late", booking.id, event.target.value)} placeholder={t.adminAmountReceived} aria-label={t.adminAmountReceived} dir="ltr" />
+                      <input value={draft("lateref", booking.id)} onChange={(event) => setDraft("lateref", booking.id, event.target.value)} placeholder={t.adminLateReference} aria-label={t.adminLateReference} maxLength={64} dir="ltr" />
+                      <button className="admin-btn admin-btn-primary" type="button" disabled={busy} onClick={() => void run(booking, "admin_late_transfer", { target_booking: booking.id, received: Number(draft("late", booking.id)) || null, transfer_reference: draft("lateref", booking.id) }, t.adminLateDone)}>
+                        <RotateCcw size={15} /> {t.adminLateButton}
+                      </button>
+                    </span>
                   )}
 
                   {booking.deposit_amount > 0 && paidAndConfirmed && (!deposit ? booking.contract_signed_at : deposit.status === "transferred" || deposit.status === "acknowledged" || deposit.status === "refund_pending" || deposit.status === "disputed") && (
@@ -359,15 +427,36 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
                       <button className="admin-btn admin-btn-primary" type="button" disabled={busy} onClick={() => void run(booking, "admin_decide_cancellation", { target_request: cancellation.id, approve: true, chosen_scenario: scenario, note: "" }, t.cancelApproved)}>
                         <CheckCircle2 size={15} /> {t.cancelApprove}
                       </button>
-                      <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void run(booking, "admin_decide_cancellation", { target_request: cancellation.id, approve: false, chosen_scenario: scenario, note: "" }, t.adminStatusUpdated)}>
+                      <input value={draft("reject", booking.id)} onChange={(event) => setDraft("reject", booking.id, event.target.value)} placeholder={t.cancelRejectReason} aria-label={t.cancelRejectReason} maxLength={1000} dir="auto" />
+                      <button className="admin-btn admin-btn-ghost" type="button" disabled={busy} onClick={() => void run(booking, "admin_decide_cancellation", { target_request: cancellation.id, approve: false, chosen_scenario: scenario, note: draft("reject", booking.id) }, t.adminStatusUpdated)}>
                         <X size={15} /> {t.cancelReject}
+                      </button>
+                    </span>
+                  )}
+
+                  {canFullRefund && (
+                    <span className="admin-reference admin-step">
+                      <strong className="admin-step-title">{t.adminFullRefundTitle}</strong>
+                      <SakaniSelect value={fullRefundCase} onChange={(event) => setDraft("case", booking.id, event.target.value)} aria-label={t.cancelScenarioLabel}>
+                        {FAULT_CASES.map((item) => <option key={item} value={item}>{t.cancelScenarios[item]}</option>)}
+                      </SakaniSelect>
+                      <input value={draft("fault", booking.id)} onChange={(event) => setDraft("fault", booking.id, event.target.value)} placeholder={t.adminFullRefundNote} aria-label={t.adminFullRefundNote} maxLength={1000} dir="auto" />
+                      <button
+                        className="admin-btn admin-btn-danger-outline"
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          if (window.confirm(t.adminFullRefundConfirm)) void run(booking, "admin_full_refund", { target_booking: booking.id, fault_case: fullRefundCase, fault_note: draft("fault", booking.id) }, t.adminFullRefundDone);
+                        }}
+                      >
+                        <RotateCcw size={15} /> {t.adminFullRefundButton}
                       </button>
                     </span>
                   )}
 
                   {booking.status === "refund_pending" && fee?.method === "card" && (
                     <span className="admin-reference admin-step">
-                      <strong className="admin-step-title">{t.adminStepRefund(egp(booking.total_amount))}</strong>
+                      <strong className="admin-step-title">{t.adminStepRefund(egp(refundableAmount(booking)))}</strong>
                       <small className="field-hint">{t.refundCardHint}</small>
                       <button className="admin-btn admin-btn-primary" type="button" disabled={busy} onClick={() => void refundToCard(booking)}>
                         <RotateCcw size={15} /> {t.refundToCard}
@@ -375,9 +464,9 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
                     </span>
                   )}
 
-                  {((booking.status === "refund_pending" && fee?.method !== "card") || booking.status === "moved_in") && (
+                  {((booking.status === "refund_pending" && fee?.method !== "card") || payoutDue) && (
                     <span className="admin-reference admin-step">
-                      <strong className="admin-step-title">{booking.status === "refund_pending" ? t.adminStepRefund(egp(booking.total_amount)) : t.adminStepPayout(egp(booking.payout_amount))}</strong>
+                      <strong className="admin-step-title">{booking.status === "refund_pending" ? t.adminStepRefund(egp(refundableAmount(booking))) : t.adminStepPayout(egp(booking.payout_amount))}</strong>
                       <input
                         value={reference}
                         onChange={(event) => setReferences({ ...references, [booking.id]: event.target.value })}

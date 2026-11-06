@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN_EMAIL, ADMIN_PASSWORD, SUPABASE_KEY, adminToken, api, guestSession, hasAdmin, sampleListing } from "./helpers";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, SUPABASE_KEY, adminToken, api, guestSession, hasAdmin, sampleListing, testHost } from "./helpers";
 
 // Database rules, checked straight against Supabase (no browser).
 test.describe("database rules", () => {
@@ -108,13 +108,14 @@ test.describe("security fixes", () => {
     await api(`/rest/v1/profiles?id=eq.${me}`, { token: admin, method: "PATCH", body: { role: "guest", phone: saved?.phone || "01000000009" } });
     const listings: string[] = [];
     try {
-      const host = await guestSession();
+      const owner = await guestSession();
+      const host = await testHost();
       for (let i = 0; i < 3; i += 1) {
         const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
-          token: host.access_token, method: "POST", body: sampleListing(host.user.id, `Unpaid limit ${i}`, { property_type: "studio" }),
+          token: owner.access_token, method: "POST", body: sampleListing(owner.user.id, `Unpaid limit ${i}`, { property_type: "studio" }),
         });
         listings.push(created.data[0].id);
-        await api(`/rest/v1/properties?id=eq.${created.data[0].id}`, { token: admin, method: "PATCH", body: { status: "approved" } });
+        await api(`/rest/v1/properties?id=eq.${created.data[0].id}`, { token: admin, method: "PATCH", body: { status: "approved", owner_id: host.user.id } });
       }
       const book = (listing: string) => api("/rest/v1/rpc/guest_create_booking", {
         token: admin, method: "POST", body: { target_listing: listing, move_in_date: new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10), stay_months: 1, people: 1, guest_note: "E2E" },

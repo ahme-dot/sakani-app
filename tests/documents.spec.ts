@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN_EMAIL, ADMIN_PASSWORD, adminToken, api, guestSession, hasAdmin, sampleListing, watchErrors } from "./helpers";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, adminToken, api, guestSession, hasAdmin, testHostListing, watchErrors } from "./helpers";
 
 // Phase 2: documents and the rental agreement. The deposit can be sent only after both sides accept the agreement.
 const VERSION = "2026-11-draft-1";
@@ -30,13 +30,8 @@ test.describe("documents and the rental agreement", () => {
     test.skip(ready.status === 404, "contracts migration not installed yet");
     const errors = watchErrors(page);
 
-    const host = await guestSession();
-    const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
-      token: host.access_token, method: "POST", body: sampleListing(host.user.id, "Contract", { monthly_price: 10_000, deposit: 10_000 }),
-    });
-    const listingId = created.data[0].id;
+    const { host, listingId } = await testHostListing(admin, "Contract", { monthly_price: 10_000, deposit: 10_000 });
     try {
-      await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "approved" } });
       const booking = (await api<{ booking_id: string; pay_token: string; total: number }>("/rest/v1/rpc/guest_create_booking", {
         token: admin, method: "POST", body: { target_listing: listingId, move_in_date: tomorrow(), stay_months: 12, people: 1, guest_note: "" },
       })).data;

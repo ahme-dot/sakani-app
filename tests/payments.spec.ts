@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { SUPABASE_KEY, adminToken, api, guestSession, hasAdmin, sampleListing } from "./helpers";
 
-// Success fee rules, checked straight against Supabase. Skipped until the payments migration is installed.
+// Older fees, charged by the team: new ones are taken from the booking, but the rules for paying these stay.
 test.describe("success fee", () => {
-  test("owner reports a rental, pays by transfer, admin confirms", async () => {
+  test("the team charges a fee, the owner pays by transfer, the team confirms", async () => {
     test.skip(!hasAdmin, "needs admin login to publish the test listing");
     const settings = await api<Array<{ fee_percent: number; fee_minimum: number }>>("/rest/v1/app_settings?select=fee_percent,fee_minimum&id=eq.1");
     test.skip(settings.status >= 400, "payments migration not installed yet");
@@ -19,25 +19,28 @@ test.describe("success fee", () => {
     let feeId = "";
     try {
       // Not published yet: cannot report a rental.
-      expect((await rpc("owner_report_rental", { target_listing: id, via_sakani: true }, owner.access_token)).status).toBeGreaterThanOrEqual(400);
+      expect((await rpc("owner_report_rental", { target_listing: id, via_sakani: false }, owner.access_token)).status).toBeGreaterThanOrEqual(400);
       await api(`/rest/v1/properties?id=eq.${id}`, { token: admin, method: "PATCH", body: { status: "approved" } });
 
       // Someone else cannot report it; a visitor cannot either.
-      expect((await rpc("owner_report_rental", { target_listing: id, via_sakani: true }, stranger.access_token)).status).toBeGreaterThanOrEqual(400);
-      expect((await rpc("owner_report_rental", { target_listing: id, via_sakani: true }, SUPABASE_KEY)).status).toBeGreaterThanOrEqual(400);
+      expect((await rpc("owner_report_rental", { target_listing: id, via_sakani: false }, stranger.access_token)).status).toBeGreaterThanOrEqual(400);
+      expect((await rpc("owner_report_rental", { target_listing: id, via_sakani: false }, SUPABASE_KEY)).status).toBeGreaterThanOrEqual(400);
 
-      const report = await rpc("owner_report_rental", { target_listing: id, via_sakani: true }, owner.access_token);
+      const report = await rpc("owner_report_rental", { target_listing: id, via_sakani: false }, owner.access_token);
       expect(report.status).toBe(200);
-      const { fee_percent, fee_minimum } = settings.data[0];
-      expect(report.data.amount).toBe(Math.max(Number(fee_minimum), Math.round((4000 * Number(fee_percent)) / 100)));
-      feeId = String(report.data.fee_id);
+      expect(report.data.fee_id).toBeUndefined();
       // Rented: out of the search, but its page still opens (with "Rented until").
       expect((await api<unknown[]>(`/rest/v1/properties?id=eq.${id}&status=eq.approved&select=id`)).data).toHaveLength(0);
       expect((await api<Array<{ status: string }>>(`/rest/v1/properties?id=eq.${id}&select=status`)).data[0].status).toBe("rented");
 
-      // Reporting again does not create a second fee.
-      const again = await rpc("owner_report_rental", { target_listing: id, via_sakani: true }, owner.access_token);
-      expect(again.data.fee_id).toBe(feeId);
+      // Only the team can charge a fee.
+      expect((await rpc("admin_charge_fee", { target_listing: id }, owner.access_token)).status).toBeGreaterThanOrEqual(400);
+      const charged = await api<string>("/rest/v1/rpc/admin_charge_fee", { token: admin, method: "POST", body: { target_listing: id } });
+      expect(charged.status).toBe(200);
+      feeId = String(charged.data);
+      const shown = await api<Array<{ amount: number }>>(`/rest/v1/rental_fees?id=eq.${feeId}&select=amount`, { token: owner.access_token });
+      const { fee_percent, fee_minimum } = settings.data[0];
+      expect(shown.data[0].amount).toBe(Math.max(Number(fee_minimum), Math.round((4000 * Number(fee_percent)) / 100)));
 
       // Only the owner sees the fee; the owner cannot mark it paid directly.
       expect((await api<unknown[]>(`/rest/v1/rental_fees?id=eq.${feeId}&select=id`, { token: stranger.access_token })).data).toHaveLength(0);

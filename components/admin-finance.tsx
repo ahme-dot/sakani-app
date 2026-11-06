@@ -19,11 +19,14 @@ type Summary = {
   refund_requests: number;
   refunded_value: number;
   completed_bookings: number;
+  running_stays?: number;
+  payouts_sent?: number;
+  payouts_due?: number;
   cancelled_bookings: number;
   all_bookings: number;
 };
 
-const CSV_COLUMNS = "id,created_at,status,listing_title,move_in,months,rent_amount,guest_fee,host_fee,deposit_amount,total_amount,payout_amount,guest_fee_percent,host_fee_percent,paid_at,contract_signed_at,refunded_at,refund_reference,paid_out_at,payout_reference";
+const CSV_COLUMNS = "id,created_at,status,listing_title,move_in,months,rent_amount,guest_fee,host_fee,deposit_amount,total_amount,payout_amount,guest_fee_percent,host_fee_percent,paid_at,contract_signed_at,refunded_at,refund_amount,refund_reference,paid_out_at,payout_reference";
 
 function isoDay(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -99,6 +102,9 @@ export default function AdminFinance({ locale, supabase }: { locale: SiteLocale;
     { label: t.financePendingPayments, value: numberFormat.format(summary.pending_payments) },
     { label: t.financeRefundRequests, value: numberFormat.format(summary.refund_requests) },
     { label: t.financeRefunded, value: egp(summary.refunded_value) },
+    { label: t.financePayoutsSent, value: egp(summary.payouts_sent ?? 0) },
+    { label: t.financePayoutsDue, value: egp(summary.payouts_due ?? 0) },
+    { label: t.financeRunningStays, value: numberFormat.format(summary.running_stays ?? 0) },
     { label: t.financeCompleted, value: numberFormat.format(summary.completed_bookings) },
     { label: t.financeCancelled, value: numberFormat.format(summary.cancelled_bookings) },
   ] : [];

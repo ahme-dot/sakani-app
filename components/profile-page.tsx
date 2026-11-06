@@ -33,8 +33,9 @@ import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { PHONE_PATTERN, type AccountRole, type Profile } from "@/lib/account";
 import { GOVERNORATES, governorateLabel } from "@/lib/egypt";
 import { DOCUMENT_VERSION } from "@/lib/documents";
+import { cairoDay } from "@/lib/finance";
 import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
-import { RENTAL_FEE_COLUMNS, type RentalFee } from "@/lib/payments";
+import { RENTAL_FEE_COLUMNS, refundableAmount, type RentalFee } from "@/lib/payments";
 import { useListingTitles } from "@/lib/listing-titles";
 import { LANGUAGE_OPTIONS } from "@/lib/profiles";
 import { useSavedListings } from "@/lib/saved";
@@ -77,6 +78,8 @@ type GuestBooking = {
   guests: number;
   status: BookingStatus;
   total_amount: number | null;
+  refund_amount: number | null;
+  deposit_amount: number;
   fee_id: string | null;
   refund_due_at: string | null;
   refund_reference: string | null;
@@ -102,13 +105,21 @@ type HostBooking = {
   deposit_amount: number;
   deposit_status: "transferred" | "acknowledged" | "refund_pending" | "refunded" | "disputed" | null;
   created_at: string;
+  /** Until when the host can answer a paid booking. */
+  decide_by: string | null;
+  contract_signed_at: string | null;
+  refund_amount: number | null;
 };
+
+type GuestFee = { id: string; pay_token: string; amount: number; received_amount: number | null };
+type DepositStatus = "transferred" | "acknowledged" | "refund_pending" | "refunded" | "disputed";
+type Handover = { area: string | null; governorate: string | null; host_first_name: string | null; contact: string | null };
 
 type HostListing = { id: string; title_ar: string; title_en: string; status: string; monthly_price: number; image_url: string };
 
 const AVATAR_BUCKET = "sakani-avatars";
 const PROFILE_COLUMNS = "id,role,full_name,phone,avatar_url,bio,governorate,gender,occupation,languages,instapay_address,id_verified,created_at";
-const BOOKING_COLUMNS = "id,listing_id,listing_title,move_in,months,guests,status,total_amount,fee_id,refund_due_at,refund_reference,contract_signed_at,host_decision,created_at";
+const BOOKING_COLUMNS = "id,listing_id,listing_title,move_in,months,guests,status,total_amount,refund_amount,deposit_amount,fee_id,refund_due_at,refund_reference,contract_signed_at,host_decision,created_at";
 
 /** The signed-in account: about me, then bookings and saved places (guests) or booking requests, payouts and places (hosts). */
 export default function ProfilePage({ locale, supabase, user, profile: initialProfile, notice, onSignOut }: Props) {
@@ -131,7 +142,15 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
   const [listings, setListings] = useState<HostListing[] | null>(null);
   const [hostBookings, setHostBookings] = useState<HostBooking[] | null>(null);
   const [bookings, setBookings] = useState<GuestBooking[] | null>(null);
-  const [payTokens, setPayTokens] = useState<Record<string, string>>({});
+  const [guestFees, setGuestFees] = useState<Record<string, GuestFee>>({});
+  // Bookings where I've accepted the agreement, and the other side hasn't yet.
+  const [accepted, setAccepted] = useState<Set<string>>(new Set());
+  const [rejections, setRejections] = useState<Record<string, string>>({});
+  const [guestDeposits, setGuestDeposits] = useState<Record<string, DepositStatus>>({});
+  const [handovers, setHandovers] = useState<Record<string, Handover>>({});
+  // Requests sent from this page, to say so next to the booking.
+  const [reported, setReported] = useState<Set<string>>(new Set());
+  const [today] = useState(() => cairoDay());
   const [fees, setFees] = useState<RentalFee[] | null>(null);
   const [saved, setSaved] = useState<Property[] | null>(null);
   const [problemFor, setProblemFor] = useState<string | null>(null);
@@ -168,38 +187,50 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
     };
   }, [initialProfile, supabase, user.id, version]);
 
-  // Each role loads its own sections.
+  // Both lists load whatever the role is, so a booking doesn't vanish when someone switches.
   useEffect(() => {
     let active = true;
-    if (role === "host") {
-      void Promise.all([
-        supabase.from("properties").select("id,title_ar,title_en,status,monthly_price,image_url").eq("owner_id", user.id).eq("is_demo", false).order("created_at", { ascending: false }).limit(50),
-        supabase.rpc("host_bookings"),
-        supabase.from("rental_fees").select(RENTAL_FEE_COLUMNS).eq("owner_id", user.id).eq("payer", "owner").order("created_at", { ascending: false }),
-      ]).then(([homes, requests, ownerFees]) => {
-        if (!active) return;
-        if (homes.error) console.error("Could not load the host's places:", homes.error);
-        setListings((homes.data ?? []) as HostListing[]);
-        setHostBookings(requests.error ? [] : ((requests.data ?? []) as HostBooking[]));
-        setFees((ownerFees.data ?? []) as unknown as RentalFee[]);
+    void Promise.all([
+      supabase.from("properties").select("id,title_ar,title_en,status,monthly_price,image_url").eq("owner_id", user.id).eq("is_demo", false).order("created_at", { ascending: false }).limit(50),
+      supabase.rpc("host_bookings"),
+      supabase.from("rental_fees").select(RENTAL_FEE_COLUMNS).eq("owner_id", user.id).eq("payer", "owner").order("created_at", { ascending: false }),
+    ]).then(([homes, requests, ownerFees]) => {
+      if (!active) return;
+      if (homes.error) console.error("Could not load the host's places:", homes.error);
+      setListings((homes.data ?? []) as HostListing[]);
+      setHostBookings(requests.error ? [] : ((requests.data ?? []) as HostBooking[]));
+      setFees((ownerFees.data ?? []) as unknown as RentalFee[]);
+    });
+    void Promise.all([
+      supabase.from("listing_requests").select(BOOKING_COLUMNS).eq("guest_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("rental_fees").select("id,pay_token,amount,received_amount").eq("guest_id", user.id).eq("payer", "student"),
+      supabase.from("reviews").select("booking_id").eq("guest_id", user.id),
+      supabase.from("contract_acceptances").select("booking_id").eq("user_id", user.id).eq("document", "rental_agreement"),
+      supabase.from("cancellation_requests").select("booking_id,admin_note").eq("status", "rejected").order("created_at"),
+      supabase.from("deposit_transfers").select("booking_id,status"),
+    ]).then(([myBookings, feeRows, guestReviews, acceptances, rejected, deposits]) => {
+      if (!active) return;
+      setAccepted(new Set(((acceptances.data ?? []) as Array<{ booking_id: string }>).map((row) => row.booking_id)));
+      setRejections(Object.fromEntries(((rejected.data ?? []) as Array<{ booking_id: string; admin_note: string | null }>).map((row) => [row.booking_id, row.admin_note ?? ""])));
+      setGuestDeposits(Object.fromEntries(((deposits.data ?? []) as Array<{ booking_id: string; status: DepositStatus }>).map((row) => [row.booking_id, row.status])));
+      setReviewed(new Set(((guestReviews.data ?? []) as Array<{ booking_id: string }>).map((review) => review.booking_id)));
+      if (myBookings.error) console.error("Could not load bookings:", myBookings.error);
+      const rows = (myBookings.data ?? []) as unknown as GuestBooking[];
+      setBookings(rows);
+      setGuestFees(Object.fromEntries(((feeRows.data ?? []) as GuestFee[]).map((fee) => [fee.id, fee])));
+      // Who to call for the keys, once a booking is confirmed.
+      const confirmed = rows.filter((booking) => booking.status === "confirmed" || booking.status === "moved_in");
+      void Promise.all(confirmed.map(async (booking) => {
+        const { data } = await supabase.rpc("booking_handover", { target_booking: booking.id });
+        return [booking.id, data as Handover | null] as const;
+      })).then((details) => {
+        if (active) setHandovers(Object.fromEntries(details.filter((row): row is readonly [string, Handover] => Boolean(row[1]))));
       });
-    } else {
-      void Promise.all([
-        supabase.from("listing_requests").select(BOOKING_COLUMNS).eq("guest_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("rental_fees").select("id,pay_token").eq("guest_id", user.id).eq("payer", "student"),
-        supabase.from("reviews").select("booking_id").eq("guest_id", user.id),
-      ]).then(([guestBookings, guestFees, guestReviews]) => {
-        if (!active) return;
-        setReviewed(new Set(((guestReviews.data ?? []) as Array<{ booking_id: string }>).map((review) => review.booking_id)));
-        if (guestBookings.error) console.error("Could not load bookings:", guestBookings.error);
-        setBookings((guestBookings.data ?? []) as GuestBooking[]);
-        setPayTokens(Object.fromEntries(((guestFees.data ?? []) as Array<{ id: string; pay_token: string }>).map((fee) => [fee.id, fee.pay_token])));
-      });
-    }
+    });
     return () => {
       active = false;
     };
-  }, [role, supabase, user.id, version]);
+  }, [supabase, user.id, version]);
 
   useEffect(() => {
     if (role !== "guest") return;
@@ -339,7 +370,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
     setBusy(false);
     if (actionError) {
       console.error(`Could not run ${fn}:`, actionError);
-      setError(t.formError);
+      setError(t.bookingActionError);
       return false;
     }
     setVersion((value) => value + 1);
@@ -357,6 +388,215 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
     { done: Boolean(profile.phone), icon: Phone, label: t.checkPhone },
     { done: Boolean(profile.id_verified), icon: BadgeCheck, label: t.idVerified },
   ];
+
+  const hostRequests = (
+    <section className="profile-section" id="requests" aria-labelledby="host-requests-title">
+      <h2 id="host-requests-title"><CalendarCheck size={20} /> {t.hostRequestsTitle}</h2>
+      {hostBookings === null ? loading : hostBookings.length === 0 ? (
+        <p className="profile-empty">{t.hostRequestsEmpty}</p>
+      ) : (
+        <ul className="profile-list profile-bookings">
+          {hostBookings.map((booking) => (
+            <li key={booking.id}>
+              <div>
+                <strong>{titleOf(booking.listing_id, booking.listing_title)}</strong>
+                <span>{booking.guest_first_name && booking.guest_first_name !== "Guest" ? booking.guest_first_name : t.noName} · {stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
+                <small>{t.hostPayoutLine(egp(booking.rent_amount), egp(booking.host_fee), egp(booking.payout_amount))}</small>
+                {booking.deposit_amount > 0 && (
+                  <small>{t.depositLineHost(egp(booking.deposit_amount), booking.deposit_status ? t.depositStatus[booking.deposit_status] : t.depositNotSent)}</small>
+                )}
+                {(booking.status === "refund_pending" || booking.status === "refunded") && booking.refund_amount !== null && <small>{t.refundAmountHost(egp(booking.refund_amount))}</small>}
+                {booking.decide_by && <small className="profile-refund">{t.hostDeadline(timeFormat.format(new Date(booking.decide_by)))}</small>}
+                <small className="profile-next-step">{t.nextStepHost[booking.status]}</small>
+              </div>
+              <span className={`status-chip is-${booking.status}`}>{t.bookingStatus[booking.status]}</span>
+              {booking.host_decision === "pending" && (booking.status === "pending_payment" || booking.status === "payment_review") ? (
+                <span className="profile-row-actions">
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      // Accepting a booking records the host's acceptance of the platform agreement.
+                      void bookingAction("accept_document", { target_booking: null, doc: "host_platform", doc_version: DOCUMENT_VERSION }).then((ok) => ok && bookingAction("host_decide_booking", { target_booking: booking.id, accept: true }));
+                    }}
+                  >
+                    {t.hostAccept}
+                  </button>
+                  <button
+                    className="text-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      if (window.confirm(t.hostDeclineConfirm)) void bookingAction("host_decide_booking", { target_booking: booking.id, accept: false });
+                    }}
+                  >
+                    {t.hostDecline}
+                  </button>
+                </span>
+              ) : (
+                <small className="profile-decision">{t.hostDecision[booking.host_decision]}</small>
+              )}
+              {booking.host_decision === "pending" && (booking.status === "pending_payment" || booking.status === "payment_review") && (
+                <small className="profile-decision">{t.hostAgreeNote} <Link href={`/${locale}/agreements/host`} target="_blank">{t.hostAgreeLink}</Link></small>
+              )}
+              {(booking.status === "confirmed" || booking.status === "moved_in" || booking.status === "completed") && (
+                <Link className="text-button" href={`/${locale}/documents/${booking.id}?doc=rental_agreement`}>{t.contractLink}</Link>
+              )}
+              {(booking.status === "confirmed" || booking.status === "moved_in") && !booking.contract_signed_at && accepted.has(booking.id) && (
+                <small className="profile-next-step">{t.contractWaitingOther}</small>
+              )}
+              <Link className="text-button" href={`/${locale}/documents/${booking.id}`}>{t.documentsLink}</Link>
+              {booking.deposit_status === "transferred" && (
+                <button className="button button-primary" type="button" disabled={busy} onClick={() => void bookingAction("host_acknowledge_deposit", { target_booking: booking.id })}>{t.depositAcknowledge}</button>
+              )}
+              {(booking.status === "payment_review" || booking.status === "confirmed" || booking.status === "moved_in") && problemFor !== booking.id && (
+                <button className="text-button" type="button" onClick={() => setProblemFor(booking.id)}>{t.hostCancelButton}</button>
+              )}
+              {problemFor === booking.id && (
+                <form
+                  className="profile-problem"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const reason = String(new FormData(event.currentTarget).get("note") ?? "");
+                    void bookingAction("request_cancellation", { target_booking: booking.id, cancel_scenario: "host_cancels", cancel_reason: reason }).then((ok) => {
+                      if (!ok) return;
+                      setProblemFor(null);
+                      setReported((done) => new Set(done).add(booking.id));
+                    });
+                  }}
+                >
+                  <label className="owner-field"><span>{t.cancelReasonLabel}</span><textarea name="note" rows={2} minLength={5} maxLength={1000} required /></label>
+                  <p className="field-hint">{t.cancelPolicyNote}</p>
+                  <span className="profile-row-actions">
+                    <button className="button button-primary" type="submit" disabled={busy}>{t.cancelSubmit}</button>
+                    <button className="text-button" type="button" onClick={() => setProblemFor(null)}>{t.cancel}</button>
+                  </span>
+                </form>
+              )}
+              {reported.has(booking.id) && <small className="profile-next-step" role="status">{t.problemSentNote}</small>}
+              <Link className="text-button" href={`/${locale}/messages?booking=${booking.id}`}><Headset size={14} /> {t.chatAboutBooking}</Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
+  const guestBookings = (
+    <section className="profile-section" id="bookings" aria-labelledby="bookings-title">
+      <h2 id="bookings-title"><CalendarCheck size={20} /> {t.profileBookings}</h2>
+      {bookings === null ? loading : bookings.length === 0 ? (
+        <p className="profile-empty">{t.profileNoBookings} <Link href={`/${locale}#homes`}>{t.heroAction}</Link></p>
+      ) : (
+        <ul className="profile-list profile-bookings">
+          {bookings.map((booking) => {
+            const fee = booking.fee_id ? guestFees[booking.fee_id] : undefined;
+            const token = fee?.pay_token;
+            const handover = handovers[booking.id];
+            const canMoveIn = Boolean(booking.move_in) && booking.move_in! <= today;
+            const deposit = guestDeposits[booking.id];
+            const stayStarted = booking.status === "confirmed" || booking.status === "moved_in" || booking.status === "completed";
+            const canReport = booking.status === "payment_review" || booking.status === "confirmed" || booking.status === "moved_in";
+            return (
+              <li key={booking.id}>
+                <div>
+                  <strong>{booking.listing_id ? <Link href={`/${locale}/listings/${booking.listing_id}`}>{titleOf(booking.listing_id, booking.listing_title)}</Link> : booking.listing_title}</strong>
+                  <span>{stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
+                  {booking.total_amount !== null && <small>{t.bookingPaidAmount(egp(booking.total_amount))}</small>}
+                  {(booking.status === "refund_pending" || booking.status === "refunded") && <small>{t.refundAmountLine(egp(refundableAmount(booking)))}</small>}
+                  {booking.status === "refund_pending" && booking.refund_due_at && <small className="profile-refund">{t.refundBy(timeFormat.format(new Date(booking.refund_due_at)))}</small>}
+                  {booking.status === "refunded" && booking.refund_reference && <small>{t.refundDone(booking.refund_reference)}</small>}
+                  {booking.status === "pending_payment" && (fee?.received_amount ?? 0) > 0 && <small className="profile-refund">{t.amountDiffersGuest(egp(fee?.received_amount), egp(fee?.amount))}</small>}
+                  {rejections[booking.id] && (stayStarted || booking.status === "payment_review") && <small>{t.cancelRejectedLine(rejections[booking.id])}</small>}
+                  {booking.deposit_amount > 0 && stayStarted && <small>{t.depositGuestLine(t.depositGuestStatus[deposit ?? "held"])}</small>}
+                  {handover?.contact && (
+                    <small>
+                      {t.handoverTitle}: {[handover.area, handover.governorate ? governorateLabel(locale, handover.governorate) : null, handover.host_first_name ?? t.roleHost].filter(Boolean).join(" · ")} · <bdi dir="ltr">{handover.contact}</bdi>
+                    </small>
+                  )}
+                  <small className="profile-next-step">{t.nextStepGuest[booking.status]}</small>
+                </div>
+                <span className={`status-chip is-${booking.status}`}>{t.bookingStatus[booking.status]}</span>
+                <BookingTimeline locale={locale} status={booking.status} hostDecision={booking.host_decision} contractSigned={Boolean(booking.contract_signed_at)} />
+                <span className="profile-row-actions">
+                  {(booking.status === "moved_in" || booking.status === "completed") && !reviewed.has(booking.id) && reviewFor !== booking.id && (
+                    <button className="button button-primary" type="button" onClick={() => setReviewFor(booking.id)}><Star size={15} /> {t.reviewButton}</button>
+                  )}
+                  {booking.status === "pending_payment" && token && (
+                    <Link className="button button-primary profile-pay" href={`/${locale}/pay/${token}`}><CreditCard size={15} /> {t.profilePay}</Link>
+                  )}
+                  {booking.status === "pending_payment" && (
+                    <button className="text-button" type="button" disabled={busy} onClick={() => void bookingAction("guest_cancel_booking", { target_booking: booking.id })}>{t.bookingCancel}</button>
+                  )}
+                  {(booking.status === "confirmed" || booking.status === "moved_in") && !booking.contract_signed_at && !accepted.has(booking.id) && (
+                    <Link className="button button-primary" href={`/${locale}/documents/${booking.id}?doc=rental_agreement`}>{t.signContract}</Link>
+                  )}
+                  {(booking.status === "confirmed" || booking.status === "moved_in") && !booking.contract_signed_at && accepted.has(booking.id) && (
+                    <small className="profile-next-step">{t.contractWaitingOther}</small>
+                  )}
+                  {/* One step at a time: the contract first, then "I moved in". */}
+                  {booking.status === "confirmed" && booking.contract_signed_at && canMoveIn && (
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        if (window.confirm(t.movedInConfirm)) void bookingAction("guest_confirm_move_in", { target_booking: booking.id });
+                      }}
+                    >
+                      {t.movedInButton}
+                    </button>
+                  )}
+                  {booking.status === "confirmed" && booking.contract_signed_at && !canMoveIn && booking.move_in && <small className="profile-next-step">{t.moveInTooEarly(dateFormat.format(new Date(booking.move_in)))}</small>}
+                  {booking.status === "confirmed" && !booking.contract_signed_at && !accepted.has(booking.id) && <small className="profile-next-step">{t.moveInAfterContract}</small>}
+                  <Link className="text-button" href={`/${locale}/documents/${booking.id}`}>{t.documentsLink}</Link>
+                  {canReport && problemFor !== booking.id && (
+                    <button className="text-button" type="button" onClick={() => setProblemFor(booking.id)}>{t.reportProblem}</button>
+                  )}
+                  <Link className="text-button" href={`/${locale}/messages?booking=${booking.id}`}><Headset size={14} /> {t.chatAboutBooking}</Link>
+                </span>
+                {reported.has(booking.id) && <small className="profile-next-step" role="status">{t.problemSentNote}</small>}
+                {reviewFor === booking.id && (
+                  <ReviewForm
+                    locale={locale}
+                    supabase={supabase}
+                    bookingId={booking.id}
+                    onDone={() => {
+                      setReviewed((done) => new Set(done).add(booking.id));
+                      setReviewFor(null);
+                      setMessage(t.reviewThanks);
+                    }}
+                  />
+                )}
+                {problemFor === booking.id && (
+                  <form
+                    className="profile-problem"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const note = String(new FormData(event.currentTarget).get("note") ?? "");
+                      void bookingAction("guest_report_problem", { target_booking: booking.id, note }).then((ok) => {
+                        if (!ok) return;
+                        setProblemFor(null);
+                        setReported((done) => new Set(done).add(booking.id));
+                      });
+                    }}
+                  >
+                    <label className="owner-field"><span>{t.problemLabel}</span><textarea name="note" rows={2} minLength={5} maxLength={1000} required /></label>
+                    <p className="field-hint">{t.refundPromise}</p>
+                    <span className="profile-row-actions">
+                      <button className="button button-primary" type="submit" disabled={busy}>{t.problemSubmit}</button>
+                      <button className="text-button" type="button" onClick={() => setProblemFor(null)}>{t.cancel}</button>
+                    </span>
+                  </form>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
 
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
@@ -478,77 +718,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
 
         {role === "host" ? (
           <>
-            <section className="profile-section" id="requests" aria-labelledby="host-requests-title">
-              <h2 id="host-requests-title"><CalendarCheck size={20} /> {t.hostRequestsTitle}</h2>
-              {hostBookings === null ? loading : hostBookings.length === 0 ? (
-                <p className="profile-empty">{t.hostRequestsEmpty}</p>
-              ) : (
-                <ul className="profile-list">
-                  {hostBookings.map((booking) => (
-                    <li key={booking.id}>
-                      <div>
-                        <strong>{titleOf(booking.listing_id, booking.listing_title)}</strong>
-                        <span>{booking.guest_first_name && booking.guest_first_name !== "Guest" ? booking.guest_first_name : t.noName} · {stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
-                        <small>{t.hostPayoutLine(egp(booking.rent_amount), egp(booking.host_fee), egp(booking.payout_amount))}</small>
-                        {booking.deposit_amount > 0 && (
-                          <small>{t.depositLineHost(egp(booking.deposit_amount), booking.deposit_status ? t.depositStatus[booking.deposit_status] : t.depositNotSent)}</small>
-                        )}
-                      </div>
-                      <span className={`status-chip is-${booking.status}`}>{t.bookingStatus[booking.status]}</span>
-                      {booking.host_decision === "pending" && (booking.status === "pending_payment" || booking.status === "payment_review") ? (
-                        <span className="profile-row-actions">
-                          <button
-                            className="button button-primary"
-                            type="button"
-                            disabled={busy}
-                            onClick={() => {
-                              // Accepting a booking records the host's acceptance of the platform agreement.
-                              void bookingAction("accept_document", { target_booking: null, doc: "host_platform", doc_version: DOCUMENT_VERSION }).then((ok) => ok && bookingAction("host_decide_booking", { target_booking: booking.id, accept: true }));
-                            }}
-                          >
-                            {t.hostAccept}
-                          </button>
-                          <button className="text-button" type="button" disabled={busy} onClick={() => void bookingAction("host_decide_booking", { target_booking: booking.id, accept: false })}>{t.hostDecline}</button>
-                        </span>
-                      ) : (
-                        <small className="profile-decision">{t.hostDecision[booking.host_decision]}</small>
-                      )}
-                      {booking.host_decision === "pending" && (booking.status === "pending_payment" || booking.status === "payment_review") && (
-                        <small className="profile-decision">{t.hostAgreeNote} <Link href={`/${locale}/agreements/host`} target="_blank">{t.hostAgreeLink}</Link></small>
-                      )}
-                      {(booking.status === "confirmed" || booking.status === "moved_in" || booking.status === "completed") && (
-                        <Link className="text-button" href={`/${locale}/documents/${booking.id}?doc=rental_agreement`}>{t.contractLink}</Link>
-                      )}
-                      <Link className="text-button" href={`/${locale}/documents/${booking.id}`}>{t.documentsLink}</Link>
-                      {booking.deposit_status === "transferred" && (
-                        <button className="button button-primary" type="button" disabled={busy} onClick={() => void bookingAction("host_acknowledge_deposit", { target_booking: booking.id })}>{t.depositAcknowledge}</button>
-                      )}
-                      {(booking.status === "payment_review" || booking.status === "confirmed" || booking.status === "moved_in") && problemFor !== booking.id && (
-                        <button className="text-button" type="button" onClick={() => setProblemFor(booking.id)}>{t.hostCancelButton}</button>
-                      )}
-                      {problemFor === booking.id && (
-                        <form
-                          className="profile-problem"
-                          onSubmit={(event) => {
-                            event.preventDefault();
-                            const reason = String(new FormData(event.currentTarget).get("note") ?? "");
-                            void bookingAction("request_cancellation", { target_booking: booking.id, cancel_scenario: "host_cancels", cancel_reason: reason }).then((ok) => ok && setProblemFor(null));
-                          }}
-                        >
-                          <label className="owner-field"><span>{t.cancelReasonLabel}</span><textarea name="note" rows={2} minLength={5} maxLength={1000} required /></label>
-                          <p className="field-hint">{t.cancelPolicyNote}</p>
-                          <span className="profile-row-actions">
-                            <button className="button button-primary" type="submit" disabled={busy}>{t.cancelSubmit}</button>
-                            <button className="text-button" type="button" onClick={() => setProblemFor(null)}>{t.cancel}</button>
-                          </span>
-                        </form>
-                      )}
-                      <Link className="text-button" href={`/${locale}/messages?booking=${booking.id}`}><Headset size={14} /> {t.chatAboutBooking}</Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+            {hostRequests}
 
             {hostBookings && <HostEarnings locale={locale} bookings={hostBookings} />}
 
@@ -562,7 +732,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                         <strong>{egp(booking.payout_amount)}</strong>
                         <span>{titleOf(booking.listing_id, booking.listing_title)}</span>
                       </div>
-                      <span className={`status-chip is-${booking.status === "completed" ? "paid" : "due"}`}>{booking.status === "completed" ? t.payoutSent : t.payoutDue}</span>
+                      <span className={`status-chip is-${booking.paid_out_at ? "paid" : "due"}`}>{booking.paid_out_at ? t.payoutSent : t.payoutDue}</span>
                       {booking.paid_out_at && <small>{dateFormat.format(new Date(booking.paid_out_at))}</small>}
                     </li>
                   ))}
@@ -613,88 +783,13 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                 </ul>
               </section>
             )}
+
+            {/* Bookings made as a guest stay here after switching to host. */}
+            {Boolean(bookings?.length) && <><p className="field-hint">{t.bookingOtherRole}</p>{guestBookings}</>}
           </>
         ) : (
           <>
-            <section className="profile-section" id="bookings" aria-labelledby="bookings-title">
-              <h2 id="bookings-title"><CalendarCheck size={20} /> {t.profileBookings}</h2>
-              {bookings === null ? loading : bookings.length === 0 ? (
-                <p className="profile-empty">{t.profileNoBookings} <Link href={`/${locale}#homes`}>{t.heroAction}</Link></p>
-              ) : (
-                <ul className="profile-list profile-bookings">
-                  {bookings.map((booking) => {
-                    const token = booking.fee_id ? payTokens[booking.fee_id] : undefined;
-                    const canReport = booking.status === "payment_review" || booking.status === "confirmed" || booking.status === "moved_in";
-                    return (
-                      <li key={booking.id}>
-                        <div>
-                          <strong>{booking.listing_id ? <Link href={`/${locale}/listings/${booking.listing_id}`}>{titleOf(booking.listing_id, booking.listing_title)}</Link> : booking.listing_title}</strong>
-                          <span>{stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
-                          {booking.total_amount !== null && <small>{t.bookingPaidAmount(egp(booking.total_amount))}</small>}
-                          {booking.status === "refund_pending" && booking.refund_due_at && <small className="profile-refund">{t.refundBy(timeFormat.format(new Date(booking.refund_due_at)))}</small>}
-                          {booking.status === "refunded" && booking.refund_reference && <small>{t.refundDone(booking.refund_reference)}</small>}
-                        </div>
-                        <span className={`status-chip is-${booking.status}`}>{t.bookingStatus[booking.status]}</span>
-                        <BookingTimeline locale={locale} status={booking.status} hostDecision={booking.host_decision} contractSigned={Boolean(booking.contract_signed_at)} />
-                        <span className="profile-row-actions">
-                          {(booking.status === "moved_in" || booking.status === "completed") && !reviewed.has(booking.id) && reviewFor !== booking.id && (
-                            <button className="button button-primary" type="button" onClick={() => setReviewFor(booking.id)}><Star size={15} /> {t.reviewButton}</button>
-                          )}
-                          {booking.status === "pending_payment" && token && (
-                            <Link className="button button-primary profile-pay" href={`/${locale}/pay/${token}`}><CreditCard size={15} /> {t.profilePay}</Link>
-                          )}
-                          {booking.status === "pending_payment" && (
-                            <button className="text-button" type="button" disabled={busy} onClick={() => void bookingAction("guest_cancel_booking", { target_booking: booking.id })}>{t.bookingCancel}</button>
-                          )}
-                          {(booking.status === "confirmed" || booking.status === "moved_in") && !booking.contract_signed_at && (
-                            <Link className="button button-primary" href={`/${locale}/documents/${booking.id}?doc=rental_agreement`}>{t.signContract}</Link>
-                          )}
-                          {/* One step at a time: the contract first, then "I moved in". */}
-                          {booking.status === "confirmed" && booking.contract_signed_at && (
-                            <button className="button button-primary" type="button" disabled={busy} onClick={() => void bookingAction("guest_confirm_move_in", { target_booking: booking.id })}>{t.movedInButton}</button>
-                          )}
-                          {booking.status === "confirmed" && !booking.contract_signed_at && <small className="profile-next-step">{t.moveInAfterContract}</small>}
-                          <Link className="text-button" href={`/${locale}/documents/${booking.id}`}>{t.documentsLink}</Link>
-                          {canReport && problemFor !== booking.id && (
-                            <button className="text-button" type="button" onClick={() => setProblemFor(booking.id)}>{t.reportProblem}</button>
-                          )}
-                          <Link className="text-button" href={`/${locale}/messages?booking=${booking.id}`}><Headset size={14} /> {t.chatAboutBooking}</Link>
-                        </span>
-                        {reviewFor === booking.id && (
-                          <ReviewForm
-                            locale={locale}
-                            supabase={supabase}
-                            bookingId={booking.id}
-                            onDone={() => {
-                              setReviewed((done) => new Set(done).add(booking.id));
-                              setReviewFor(null);
-                              setMessage(t.reviewThanks);
-                            }}
-                          />
-                        )}
-                        {problemFor === booking.id && (
-                          <form
-                            className="profile-problem"
-                            onSubmit={(event) => {
-                              event.preventDefault();
-                              const note = String(new FormData(event.currentTarget).get("note") ?? "");
-                              void bookingAction("guest_report_problem", { target_booking: booking.id, note }).then((ok) => ok && setProblemFor(null));
-                            }}
-                          >
-                            <label className="owner-field"><span>{t.problemLabel}</span><textarea name="note" rows={2} minLength={5} maxLength={1000} required /></label>
-                            <p className="field-hint">{t.refundPromise}</p>
-                            <span className="profile-row-actions">
-                              <button className="button button-primary" type="submit" disabled={busy}>{t.problemSubmit}</button>
-                              <button className="text-button" type="button" onClick={() => setProblemFor(null)}>{t.cancel}</button>
-                            </span>
-                          </form>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
+            {guestBookings}
             <section className="profile-section" aria-labelledby="saved-title">
               <h2 id="saved-title"><Heart size={20} /> {t.menuSaved}</h2>
               {saved === null ? loading : saved.length === 0 ? (
@@ -705,6 +800,9 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                 </div>
               )}
             </section>
+
+            {/* Requests on places stay here after switching to guest. */}
+            {Boolean(hostBookings?.length) && <><p className="field-hint">{t.bookingOtherRole}</p>{hostRequests}</>}
           </>
         )}
       </main>

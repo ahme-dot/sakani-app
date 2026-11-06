@@ -5,7 +5,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { CalendarCheck, CreditCard, LoaderCircle, LogIn, ShieldCheck } from "lucide-react";
 import { useAccount } from "@/lib/account";
 import { DOCUMENT_VERSION } from "@/lib/documents";
-import { bookingAmounts } from "@/lib/finance";
+import { bookingAmounts, cairoDay } from "@/lib/finance";
 import { ratesFrom, type PaymentSettings } from "@/lib/payments";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
@@ -25,20 +25,23 @@ type Props = {
   minMonths?: number;
   /** The first day the place is free (YYYY-MM-DD), if the host set one. */
   availableFrom?: string | null;
+  /** Rooms and beds: how many people fit. Left out for a flat or studio, which is rented whole. */
+  freeBeds?: number;
+  /** False until the host has an account with a phone and an InstaPay address: the place can't be booked yet. */
+  hostReady?: boolean;
 };
 
 type Created = { booking_id: string; pay_token: string; total: number; rent: number; fee: number; deposit: number };
 
-/** Today in Egypt as YYYY-MM-DD (the earliest move-in date). */
-function today() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(new Date());
-}
+/** A booking needs time to be paid, answered and signed, so the calendar starts this many days from today. */
+const LEAD_DAYS = 2;
+const MAX_PEOPLE = 6;
 
 /**
  * A signed-in guest books and pays straight away (first month + Sakani fee, by InstaPay).
  * Sakani holds the money: it is refunded within 24 hours if anything goes wrong, and the host is paid after move-in.
  */
-export default function BookHome({ locale, listingId, monthlyPrice, deposit, fees, isDemo = false, minMonths = 1, availableFrom = null }: Props) {
+export default function BookHome({ locale, listingId, monthlyPrice, deposit, fees, isDemo = false, minMonths = 1, availableFrom = null, freeBeds, hostReady = true }: Props) {
   const t = SITE_COPY[locale];
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const account = useAccount(supabase);
@@ -47,8 +50,10 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
   const [error, setError] = useState("");
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
   const amounts = bookingAmounts({ rent: monthlyPrice, deposit }, ratesFrom(fees));
-  // The earliest move-in: today, or the day the place is free.
-  const earliest = availableFrom && availableFrom > today() ? availableFrom : today();
+  // The earliest move-in: two days from today, or the day the place is free.
+  const firstDay = cairoDay(LEAD_DAYS);
+  const earliest = availableFrom && availableFrom > firstDay ? availableFrom : firstDay;
+  const peopleChoices = Array.from({ length: Math.max(Math.min(freeBeds ?? MAX_PEOPLE, MAX_PEOPLE), 1) }, (_, index) => index + 1);
   const earliestLabel = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" }).format(new Date(earliest));
   const dateError = error === t.bookMoveInRequired || error === t.bookMoveInPast || error === t.notAvailableYet(earliestLabel);
   const next = encodeURIComponent(`/${locale}/listings/${listingId}#book`);
@@ -63,7 +68,7 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
     const field = (name: string) => event.currentTarget.elements.namedItem(name) as HTMLElement | null;
     // Say exactly what's missing and take the guest to it (the error box alone can sit under the phone's bottom bar).
     if (!moveIn || moveIn < earliest) {
-      setError(!moveIn ? t.bookMoveInRequired : moveIn < today() ? t.bookMoveInPast : t.notAvailableYet(earliestLabel));
+      setError(!moveIn ? t.bookMoveInRequired : moveIn < cairoDay() ? t.bookMoveInPast : t.notAvailableYet(earliestLabel));
       field("move_in")?.focus();
       return;
     }
@@ -92,6 +97,8 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
       setError(
         message.includes("phone_required") ? t.bookPhoneRequired
           : message.includes("stay_too_short") ? t.minStay(t.monthsCount(minMonths))
+          : message.includes("host_needs_account") ? t.hostNotReady
+          : message.includes("too_many_people") ? t.bookTooManyPeople
           : message.includes("dates_taken") ? t.bookDatesTaken
           : message.includes("too_many_unpaid") ? t.bookTooManyUnpaid
           : message.includes("not_available_yet") ? t.notAvailableYet(earliestLabel)
@@ -131,6 +138,8 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
       <h2 className="book-home-title"><CalendarCheck size={18} /> {t.bookTitle}</h2>
       {isDemo ? (
         <p className="book-home-demo">{t.demoNotBookable}</p>
+      ) : !hostReady ? (
+        <p className="book-home-demo">{t.hostNotReady}</p>
       ) : account.status === "loading" ? (
         <p className="book-home-loading"><LoaderCircle className="spinner" size={18} /> {t.loading}</p>
       ) : account.status === "signedOut" ? (
@@ -159,7 +168,7 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
           <label className="owner-field">
             <span>{t.bookGuests}</span>
             <SakaniSelect name="guests" defaultValue="1">
-              {[1, 2, 3, 4, 5, 6].map((count) => <option key={count} value={count}>{numberFormat.format(count)}</option>)}
+              {peopleChoices.map((count) => <option key={count} value={count}>{numberFormat.format(count)}</option>)}
             </SakaniSelect>
           </label>
           <label className="owner-field"><span>{t.requestNote}</span><textarea name="note" rows={2} maxLength={1000} placeholder={t.bookNotePlaceholder} /></label>

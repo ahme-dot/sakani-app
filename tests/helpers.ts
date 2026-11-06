@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 
@@ -40,9 +40,9 @@ export function totpCode(secret: string, time = Date.now()) {
 export const TEST_TAG = "[E2E TEST]";
 export const LOCALES = ["ar", "en"] as const;
 
-type ApiOptions = { token?: string; method?: string; body?: unknown };
+type ApiOptions = { token?: string; method?: string; body?: unknown; prefer?: string };
 
-export async function api<T = unknown>(path: string, { token, method = "GET", body }: ApiOptions = {}) {
+export async function api<T = unknown>(path: string, { token, method = "GET", body, prefer = "return=representation" }: ApiOptions = {}) {
   // Updates and deletes return only the id unless asked otherwise: some columns (the owner's number)
   // are private, and asking for the whole row back would be refused.
   if ((method === "PATCH" || method === "DELETE") && path.startsWith("/rest/v1/") && !path.includes("select=")) {
@@ -54,7 +54,7 @@ export async function api<T = unknown>(path: string, { token, method = "GET", bo
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${token ?? SUPABASE_KEY}`,
       "Content-Type": "application/json",
-      Prefer: "return=representation",
+      Prefer: prefer,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -85,6 +85,60 @@ export async function guestSession() {
   // Said plainly, so a sign-up limit isn't mistaken for a bug in the code under test.
   if (!data?.user) throw new Error(`Could not create a test account (HTTP ${status}): Supabase's sign-up limit or captcha.`);
   return data;
+}
+
+type TestHost = { access_token: string; user: { id: string } };
+let testHostSession: Promise<TestHost> | null = null;
+
+/**
+ * One fixed host account for the whole suite: only a real account with a phone and an InstaPay address can take
+ * bookings. The email is the admin's address with a plus tag and the password is a hash of the admin's, so there is
+ * no new secret. It signs up once, the first time. If the project asks for email confirmation, confirm that one
+ * message in the admin's inbox.
+ */
+export function testHost() {
+  testHostSession ??= (async () => {
+    const [local, domain] = ADMIN_EMAIL.split("@");
+    const credentials = {
+      email: `${local}+sakani-test-host@${domain}`,
+      password: createHash("sha256").update(`sakani-test-host:${ADMIN_PASSWORD}`).digest("hex"),
+    };
+    const signIn = () => api<TestHost>("/auth/v1/token?grant_type=password", { method: "POST", body: credentials });
+    let session = await signIn();
+    if (!session.data?.access_token) {
+      await api("/auth/v1/signup", { method: "POST", body: credentials });
+      session = await signIn();
+    }
+    if (!session.data?.access_token) throw new Error(`Could not sign in the test host (HTTP ${session.status}): sign-up limit, or its email isn't confirmed yet.`);
+    await api(`/rest/v1/profiles?id=eq.${session.data.user.id}`, {
+      token: session.data.access_token, method: "PATCH",
+      body: { role: "host", full_name: "E2E Host", phone: "01000000077", instapay_address: "sakani-e2e@instapay" },
+    });
+    return session.data;
+  })();
+  return testHostSession;
+}
+
+/**
+ * A published listing that can be booked. An anonymous session creates it (each has its own limit of 5 listings a
+ * day, which the fixed host would soon reach), and the admin moves it to the test host.
+ */
+export async function testHostListing(admin: string, title: string, extra: Record<string, unknown> = {}) {
+  const host = await testHost();
+  const owner = await guestSession();
+  const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
+    token: owner.access_token, method: "POST", body: sampleListing(owner.user.id, title, extra),
+  });
+  const listingId = created.data[0].id;
+  await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "approved", owner_id: host.user.id } });
+  return { host, listingId };
+}
+
+/** Guests can confirm moving in only from the move-in date, so a test stay starts today. */
+export async function startsToday(admin: string, bookingId: string) {
+  const today = new Date().toISOString().slice(0, 10);
+  await api(`/rest/v1/listing_requests?id=eq.${bookingId}`, { token: admin, method: "PATCH", body: { move_in: today } });
+  return today;
 }
 
 export function sampleListing(ownerId: string, title: string, extra: Record<string, unknown> = {}) {

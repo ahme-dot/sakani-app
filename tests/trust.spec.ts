@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_TOTP_SECRET, SUPABASE_KEY, adminToken, api, guestSession, hasAdmin, sampleListing } from "./helpers";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_TOTP_SECRET, SUPABASE_KEY, adminToken, api, hasAdmin, startsToday, testHostListing } from "./helpers";
 
 // Reviews after a stay, no double bookings, admin roles and error reports.
 // The admin account books as a guest (with a phone number), then gets its profile back.
@@ -24,13 +24,8 @@ test.describe("reviews and availability", () => {
   });
 
   async function listing(title: string, extra: Record<string, unknown> = {}) {
-    const host = await guestSession();
-    const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
-      token: host.access_token, method: "POST", body: sampleListing(host.user.id, title, extra),
-    });
-    const id = created.data[0].id;
-    await api(`/rest/v1/properties?id=eq.${id}`, { token: admin, method: "PATCH", body: { status: "approved" } });
-    return { host, id };
+    const { host, listingId } = await testHostListing(admin, title, extra);
+    return { host, id: listingId };
   }
 
   async function cleanup(listingId: string) {
@@ -85,6 +80,7 @@ test.describe("reviews and availability", () => {
       await api("/rest/v1/rpc/submit_payment_by_token", { method: "POST", body: { token: created.data.pay_token, pay_method: "instapay", pay_reference: "IP-RV-1", pay_phone: "01112223334" } });
       await api("/rest/v1/rpc/host_decide_booking", { token: host.access_token, method: "POST", body: { target_booking: bookingId, accept: true } });
       await api("/rest/v1/rpc/admin_confirm_booking_payment", { token: admin, method: "POST", body: { target_booking: bookingId } });
+      await startsToday(admin, bookingId);
       await api("/rest/v1/rpc/guest_confirm_move_in", { token: admin, method: "POST", body: { target_booking: bookingId } });
 
       // The host and visitors can't review someone else's stay; 6 stars is refused.

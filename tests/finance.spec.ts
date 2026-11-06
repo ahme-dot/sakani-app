@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { basisPoints, bookingAmounts, commissionFor } from "../lib/finance";
-import { adminToken, api, guestSession, hasAdmin, sampleListing } from "./helpers";
+import { adminToken, api, guestSession, hasAdmin, testHostListing } from "./helpers";
 
 // The money rules (MASTER PROJECT PROMPT, section 18). Commissions are on the first month's rent only;
 // the deposit never earns commission; the code and the database use the same integer formula.
@@ -78,14 +78,9 @@ test.describe("bookings, payments and deposits", () => {
     if (saved) await api(`/rest/v1/profiles?id=eq.${adminId}`, { token: admin, method: "PATCH", body: saved });
   });
 
-  /** A published listing by an anonymous host; booked by the admin acting as a guest. */
+  /** A published listing by the test host; booked by the admin acting as a guest. */
   async function book(rent: number, deposit: number, months = 6) {
-    const host = await guestSession();
-    const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
-      token: host.access_token, method: "POST", body: sampleListing(host.user.id, "Finance", { monthly_price: rent, deposit }),
-    });
-    const listingId = created.data[0].id;
-    await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "approved" } });
+    const { host, listingId } = await testHostListing(admin, "Finance", { monthly_price: rent, deposit });
     const booking = await api<{ booking_id: string; pay_token: string; total: number; fee: number; deposit: number }>("/rest/v1/rpc/guest_create_booking", {
       token: admin, method: "POST", body: { target_listing: listingId, move_in_date: tomorrow(), stay_months: months, people: 1, guest_note: "" },
     });
@@ -143,6 +138,9 @@ test.describe("bookings, payments and deposits", () => {
       const fee = (await api<Array<{ id: string }>>(`/rest/v1/rental_fees?select=id&request_id=eq.${booking.booking_id}`, { token: admin })).data[0];
       await api("/rest/v1/rpc/admin_decide_fee", { token: admin, method: "POST", body: { target_fee: fee.id, decision: "due" } });
       expect((await row(booking.booking_id)).status).toBe("pending_payment");
+      // The guest gets a fresh 24 hours, so the hourly job doesn't cancel it at once.
+      const clock = await api<Array<{ pay_by: string }>>(`/rest/v1/listing_requests?select=pay_by&id=eq.${booking.booking_id}`, { token: admin });
+      expect(new Date(clock.data[0].pay_by).getTime() - Date.now()).toBeGreaterThan(23 * 3_600_000);
     } finally {
       await cleanup(booking.listingId);
     }

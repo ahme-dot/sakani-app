@@ -43,6 +43,10 @@ test.describe("rented places", () => {
       expect((await api<unknown[]>(`/rest/v1/properties?id=eq.${id}&status=eq.approved&select=id`, { token: SUPABASE_KEY })).data).toHaveLength(0);
       expect((await api<Array<{ status: string }>>(`/rest/v1/properties?id=eq.${id}&select=status`, { token: SUPABASE_KEY })).data[0].status).toBe("rented");
 
+      // Reporting a rental costs nothing: the old success fee is gone, even on the old "via Sakani" path.
+      expect((await rpc("owner_report_rental", { target_listing: id, via_sakani: true, rented_until: day(10) }, owner.access_token)).status).toBe(200);
+      expect((await api<unknown[]>(`/rest/v1/rental_fees?listing_id=eq.${id}&select=id`, { token: admin })).data).toHaveLength(0);
+
       // Its page opens for visitors with "Rented until" and no booking form.
       await page.goto(`/en/listings/${id}`);
       await expect(page.locator(".listing-rented-banner")).toContainText("Rented until");

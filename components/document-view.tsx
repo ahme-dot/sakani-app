@@ -6,11 +6,14 @@ import { ArrowLeft, ArrowRight, CheckCircle2, FileText, LoaderCircle, LogIn, Pri
 import { useAccount } from "@/lib/account";
 import { BOOKING_DOCUMENTS, DOCUMENT_VERSION, acceptedAt, bookingRef, documentReady, type BookingDocument, type DocumentData } from "@/lib/documents";
 import { governorateLabel, placeLabel } from "@/lib/egypt";
+import { refundableAmount } from "@/lib/payments";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DOCUMENTS_COPY } from "@/messages/documents";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 type Props = { locale: SiteLocale; bookingId: string; doc: BookingDocument | null };
+/** Fields added to booking_document_data by 20261111000000. */
+type MoneyDetails = { booking: { refund_amount?: number | null }; payment: { card_fee?: number; paid_amount?: number | null } | null };
 
 /** A booking's documents: the list, or one printable document (save as PDF from the print dialog). */
 export default function DocumentView({ locale, bookingId, doc }: Props) {
@@ -78,6 +81,9 @@ export default function DocumentView({ locale, bookingId, doc }: Props) {
   if (!data) return <p className="profile-loading"><LoaderCircle className="spinner" size={18} /> {t.loading}</p>;
 
   const { booking, listing } = data;
+  const { refund_amount: refundAmount } = (data as DocumentData & MoneyDetails).booking;
+  const payment = (data as DocumentData & MoneyDetails).payment;
+  const cardFee = payment?.card_fee ?? 0;
   const ref = bookingRef(booking.id);
   const title = listing ? (locale === "ar" ? listing.title_ar : listing.title_en) : booking.listing_title;
   const place = listing ? placeLabel(locale, listing.area, listing.governorate) : "";
@@ -127,14 +133,24 @@ export default function DocumentView({ locale, bookingId, doc }: Props) {
     switch (doc) {
       case "payment_receipt":
       case "booking_confirmation":
-        return [[d.firstMonthRent, egp(booking.rent_amount)], [d.guestFee, egp(booking.guest_fee)], [d.deposit, egp(booking.deposit_amount)], [d.totalPaid, egp(booking.total_amount)]];
+        return [
+          [d.firstMonthRent, egp(booking.rent_amount)],
+          [d.guestFee, egp(booking.guest_fee)],
+          [d.deposit, egp(booking.deposit_amount)],
+          [d.totalPaid, egp(booking.total_amount)],
+          ...(cardFee > 0 ? ([[t.receiptCardFee, egp(cardFee)], [t.totalChargedLabel, egp(payment?.paid_amount ?? (booking.total_amount ?? 0) + cardFee)]] as Array<[string, string]>) : []),
+        ];
       case "rental_agreement":
         return [[d.firstMonthRent, egp(booking.rent_amount)], [d.deposit, egp(booking.deposit_amount)]];
       case "deposit_receipt":
         return [[d.deposit, egp(data.deposit?.amount)]];
       case "refund_receipt":
+        return [[d.totalPaid, egp(payment?.paid_amount ?? booking.total_amount)], [t.refundAmountLabel, egp(refundableAmount({ refund_amount: refundAmount, total_amount: booking.total_amount }))]];
       case "cancellation_request":
-        return [[d.totalPaid, egp(booking.total_amount)]];
+        return [
+          [d.totalPaid, egp(payment?.paid_amount ?? booking.total_amount)],
+          ...(refundAmount != null ? ([[t.refundToGoLabel, egp(refundAmount)]] as Array<[string, string]>) : []),
+        ];
     }
   })();
 
@@ -206,7 +222,7 @@ export default function DocumentView({ locale, bookingId, doc }: Props) {
       {(doc === "payment_receipt" || doc === "booking_confirmation") && data.payment && (
         <section className="document-section">
           <dl className="document-grid">
-            <div><dt>{d.paymentMethod}</dt><dd>{d.instapay}</dd></div>
+            <div><dt>{d.paymentMethod}</dt><dd>{data.payment.method === "card" ? t.payMethodCard : data.payment.method === "vodafone_cash" ? t.payMethodVodafone : d.instapay}</dd></div>
             <div><dt>{d.transactionRef}</dt><dd dir="ltr">{data.payment.reference ?? "—"}</dd></div>
             <div><dt>{d.paymentStatus}</dt><dd>{d.statusLabels[data.payment.status] ?? data.payment.status}</dd></div>
             <div><dt>{d.paymentDate}</dt><dd>{day(data.payment.decided_at)}</dd></div>

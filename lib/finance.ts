@@ -65,3 +65,20 @@ export function bookingAmounts({ rent, deposit }: { rent: number; deposit: numbe
     platformCommission: guestCommission + hostCommission,
   };
 }
+
+/** Today in Egypt as YYYY-MM-DD, or that many days from it. Move-in dates are Egyptian calendar days. */
+export function cairoDay(offset = 0) {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(new Date());
+  const date = new Date(`${today}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + offset);
+  return date.toISOString().slice(0, 10);
+}
+
+/** The day a stay ends, as YYYY-MM-DD. Like public.stay_end in the database: 31 January + 1 month is the end of February. */
+export function stayEnd(moveIn: string, months: number | null) {
+  const start = new Date(`${moveIn}T00:00:00Z`);
+  const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + (months ?? 1), 1));
+  const lastDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 0)).getUTCDate();
+  end.setUTCDate(Math.min(start.getUTCDate(), lastDay));
+  return end.toISOString().slice(0, 10);
+}

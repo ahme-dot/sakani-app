@@ -75,15 +75,20 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const ref = listingRef(listing.id);
   const pageUrl = `${SITE_URL}${listingPath(locale, listing.id)}`;
   const serverClient = getSupabaseServerClient();
-  const [similar, settings, host, reviews, booked] = serverClient
+  // Asked only where it can matter. If the check itself fails, the booking step still refuses.
+  const hostCheck = serverClient && !listing.is_demo
+    ? Promise.resolve(serverClient.rpc("listing_host_ready", { target_listing: listing.id })).then(({ data, error }) => (error ? true : data !== false))
+    : Promise.resolve(true);
+  const [similar, settings, host, reviews, booked, hostReady] = serverClient
     ? await Promise.all([
         fetchSimilarListings(serverClient, listing),
         fetchPaymentSettings(serverClient),
         listing.host_id && !listing.is_demo ? fetchPublicProfile(serverClient, listing.host_id) : Promise.resolve(null),
         fetchListingReviews(serverClient, listing.id),
         fetchBookedRanges(serverClient, listing.id),
+        hostCheck,
       ])
-    : [[], null, null, [], []];
+    : [[], null, null, [], [], true];
   const average = reviews.length ? Math.round((reviews.reduce((total, review) => total + review.rating, 0) / reviews.length) * 10) / 10 : 0;
   const fees = settings ?? DEFAULT_PAYMENT_SETTINGS;
   // Guests reach the Sakani team, never the host directly; the team checks with the host first.
@@ -275,7 +280,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                   <p>{t.rentedAsideText}</p>
                   {similar.length > 0 && <a className="button button-primary" href="#similar-title">{t.rentedSeeSimilar}</a>}
                 </div>
-              ) : <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} minMonths={listing.min_months ?? 1} availableFrom={listing.available_from ?? null} />}
+              ) : <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} minMonths={listing.min_months ?? 1} availableFrom={listing.available_from ?? null} freeBeds={wholePlace ? undefined : listing.available_beds} hostReady={hostReady} />}
               <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-whatsapp" />
               <p className="listing3-middleman"><ShieldCheck size={16} /> {t.middlemanNote}</p>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>
@@ -316,7 +321,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
         <p className="listing3-price"><strong>{numberFormat.format(listing.monthly_price)}</strong> {t.perMonth}</p>
         <div className="listing2-bar-actions">
           <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-bar-ask" compact />
-          {!listing.is_demo && !rented && <a className="button button-primary" href="#book"><CalendarCheck size={17} /> {t.bookNow}</a>}
+          {!listing.is_demo && !rented && hostReady && <a className="button button-primary" href="#book"><CalendarCheck size={17} /> {t.bookNow}</a>}
         </div>
       </ListingBar>
 

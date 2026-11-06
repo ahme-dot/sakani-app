@@ -53,6 +53,8 @@ export type RentalFee = {
   created_at: string;
   submitted_at: string | null;
   decided_at: string | null;
+  /** What really arrived, when the team recorded a different amount. */
+  received_amount?: number | null;
 };
 
 export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
@@ -95,6 +97,11 @@ export function cardFee(amount: number, percent: number, fixed: number) {
   if (!(amount > 0)) return 0;
   // Rounded to 6 places first so float noise (e.g. 286.25000000000003) never adds a pound.
   return Math.ceil(Math.round((amount * percent / 100 + fixed) * 1e6) / 1e6);
+}
+
+/** The amount a booking gives back: what the team worked out, or the whole payment on older rows. */
+export function refundableAmount(booking: { refund_amount?: number | null; total_amount: number | null }) {
+  return booking.refund_amount ?? booking.total_amount ?? 0;
 }
 
 /** The host commission on one month's rent (lib/finance.ts; the same formula as the database). */

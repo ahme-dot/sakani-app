@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { SUPABASE_KEY, adminToken, api, guestSession, hasAdmin, sampleListing } from "./helpers";
+import { SUPABASE_KEY, adminToken, api, guestSession, hasAdmin, testHostListing } from "./helpers";
 
 // Phases 3–8: cancellation policy, listing details, notifications, tickets, finance summary, legal pages, sandbox, suspension.
 
@@ -25,12 +25,7 @@ test.describe("platform", () => {
   });
 
   async function confirmedBooking(rent: number, deposit: number, extra: Record<string, unknown> = {}) {
-    const host = await guestSession();
-    const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
-      token: host.access_token, method: "POST", body: sampleListing(host.user.id, "Platform", { monthly_price: rent, deposit, ...extra }),
-    });
-    const listingId = created.data[0].id;
-    await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "approved" } });
+    const { host, listingId } = await testHostListing(admin, "Platform", { monthly_price: rent, deposit, ...extra });
     const booking = (await api<{ booking_id: string; pay_token: string }>("/rest/v1/rpc/guest_create_booking", {
       token: admin, method: "POST", body: { target_listing: listingId, move_in_date: tomorrow(), stay_months: 6, people: 1, guest_note: "" },
     })).data;
@@ -97,13 +92,8 @@ test.describe("platform", () => {
   test("a stay shorter than the minimum is refused; listing details are public", async () => {
     const ready = await api("/rest/v1/cancellation_rules?select=scenario&limit=1", { token: admin });
     test.skip(ready.status >= 400, "platform migration not installed yet");
-    const host = await guestSession();
-    const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
-      token: host.access_token, method: "POST", body: sampleListing(host.user.id, "Long stay", { min_months: 6, bedrooms: 2, bathrooms: 1, area_sqm: 90 }),
-    });
-    const listingId = created.data[0].id;
+    const { host, listingId } = await testHostListing(admin, "Long stay", { min_months: 6, bedrooms: 2, bathrooms: 1, area_sqm: 90 });
     try {
-      await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "approved" } });
       const short = await api("/rest/v1/rpc/guest_create_booking", { token: admin, method: "POST", body: { target_listing: listingId, move_in_date: tomorrow(), stay_months: 3, people: 1, guest_note: "" } });
       expect(JSON.stringify(short.data)).toContain("stay_too_short");
       const visible = await api<Array<{ bedrooms: number; min_months: number }>>(`/rest/v1/properties?select=bedrooms,min_months&id=eq.${listingId}`);
