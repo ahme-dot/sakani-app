@@ -18,15 +18,15 @@ npm run build
 npm run start
 ```
 
-The site includes Arabic and English marketplace pages, responsive navigation and filters, an email-free listing submission portal, and a password-protected admin review dashboard.
+The site includes Arabic and English marketplace pages, search and filters, guest and host accounts, booking and payment, chat with the Sakani team, and a password-protected admin dashboard.
 
 ## Connect Supabase
 
-The site uses Supabase for email-free owner submissions, image uploads, private owner dashboards, and public listings that only appear after admin approval. Configure it as follows:
+The site uses Supabase for accounts, listings that only appear after admin approval, image uploads, bookings and chat. Configure it as follows:
 
 1. Create or open your Supabase project.
-2. In Supabase Authentication settings, enable **Anonymous Sign-Ins**. Owners use an anonymous session to submit and check their listings; they do not provide an email or receive an email. Because anonymous sessions are tied to the user's browser/device, clearing browser data or switching devices means they may not be able to return to that session. Configure Supabase CAPTCHA and sensible auth limits before public launch to reduce anonymous sign-up abuse.
-3. In the Supabase SQL Editor, run these files in order:
+2. In Supabase Authentication settings, enable **Anonymous Sign-Ins**. Hosts can add a listing with an anonymous session, but must create a host account to take bookings. Because anonymous sessions are tied to the user's browser/device, clearing browser data or switching devices means they may not be able to return to that session. Configure Supabase CAPTCHA and sensible auth limits before public launch to reduce anonymous sign-up abuse.
+3. In the Supabase SQL Editor, run every file in [`supabase/migrations/`](./supabase/migrations) in filename order. The list below explains the earlier ones; the newer files cover security, rented places and card payments:
    1. [`supabase/migrations/20261018000000_sakani_marketplace.sql`](./supabase/migrations/20261018000000_sakani_marketplace.sql)
    2. [`supabase/migrations/20261018010000_sakani_admin_users.sql`](./supabase/migrations/20261018010000_sakani_admin_users.sql)
    3. [`supabase/migrations/20261020000000_sakani_publishing.sql`](./supabase/migrations/20261020000000_sakani_publishing.sql) — multiple photos, the "verified" flag, review notes, owner edits, and a limit of 5 new listings per owner per day.
@@ -51,7 +51,7 @@ The site uses Supabase for email-free owner submissions, image uploads, private 
    22. [`supabase/migrations/20261106000000_sakani_reviews_availability_roles.sql`](./supabase/migrations/20261106000000_sakani_reviews_availability_roles.sql) — guest reviews after moving in, no double bookings (and booked dates on the listing), admin roles ("full" or "reviewer", who can't touch money or policies), and error reports from visitors' browsers.
 
 See also [docs/deployment.md](./docs/deployment.md), [docs/payments.md](./docs/payments.md) and [docs/legal-and-operations.md](./docs/legal-and-operations.md).
-4. Create an administrator in Supabase Authentication with an email and password. This email is only for the administrator; listing submitters do not need one.
+4. Create an administrator in Supabase Authentication with an email and password. This account is only for the administrator.
 5. In the Supabase SQL Editor, add that Auth user's ID to the admin allowlist by running this query after replacing the placeholder with the exact administrator email:
 
    ```sql
@@ -64,12 +64,12 @@ See also [docs/deployment.md](./docs/deployment.md), [docs/payments.md](./docs/p
 
    Confirm that exactly one row was inserted. Only accounts in `public.admin_users` can review listings. The table has no public insert policy, so add or remove administrators through the Supabase SQL Editor.
 6. Copy `env.example` to `.env.local` and fill in the project URL and the **publishable/anon** key from the Supabase API settings. These public credentials are safe to expose with the included row-level security policies. Never put a Supabase service-role key in a `NEXT_PUBLIC_` variable or the browser.
-7. In Supabase Authentication URL Configuration, set the Site URL to your development URL (for example, `http://localhost:3000`) and add the exact production URL when deploying. Email redirects are not needed for email-free owner submissions.
+7. In Supabase Authentication URL Configuration, set the Site URL to your development URL (for example, `http://localhost:3000`) and add the exact production URL when deploying. Account confirmation and password-reset emails link back to these addresses.
 8. Allow password-reset redirects in Supabase Authentication URL Configuration. For local development, add `http://localhost:3000/**`; for local-network phone testing, add the computer's current LAN URL ending in `:3000/**`. Add the permanent HTTPS domain when deploying. The reset page must be reachable on the same device that opens the email.
 9. Restart the app after changing `.env.local`. For a production build, configure these variables in the hosting provider before building.
 10. Visit `/en/sign-in` or `/ar/sign-in` to sign in as the administrator, then review pending listings at `/en/admin` or `/ar/admin`. Use the Auth user's email/password, not necessarily the password you use to sign in to the Supabase dashboard. If the Auth user has no password or you forgot it, use **Forgot your password?** and follow the emailed link to set one. Approving publishes a listing; rejecting keeps it off the public feed. Owners can only read their own submission statuses.
 
-Until Supabase is configured, the home page explicitly labels its built-in property cards as sample listings; owner submissions show setup instructions instead.
+Until Supabase is configured, the home page labels its built-in property cards as sample listings, and the account and host forms say the service isn't available.
 
 ## Reviewing listings
 
@@ -96,7 +96,7 @@ On GitHub, `.github/workflows/ci.yml` checks every push (lint, types, a producti
 
 1. Push this repository to GitHub.
 2. At [vercel.com](https://vercel.com), sign in with GitHub, choose **Add New → Project**, and import the repository. Vercel detects Next.js automatically.
-3. Under **Environment Variables**, add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SITE_URL` (your final address, for example `https://sakani.vercel.app` or your own domain). Optionally add `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+3. Under **Environment Variables**, add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SITE_URL` (your final address, for example `https://sakani.vercel.app` or your own domain). Optionally add `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. Card payments need the server keys listed in [docs/deployment.md](./docs/deployment.md).
 4. Click **Deploy**. Later pushes to `main` redeploy automatically.
 5. In Supabase **Authentication → URL Configuration**, set the **Site URL** to the live address and add `https://your-domain/**` to **Redirect URLs**.
 6. In [Google Search Console](https://search.google.com/search-console), add the site and submit `https://your-domain/sitemap.xml`.
@@ -117,17 +117,17 @@ For local testing, run the app on a computer and open its LAN address (for examp
 
 People sign up as a **guest** (looking for a place) or a **host** (has a place), and can switch on their profile page (`/account`). Guests see their bookings, fees and saved places there; hosts see their places and fees.
 
-Guests and hosts never talk to each other directly: each one chats with the **Sakani team** (`/messages`), and the team talks to the other side. Payments are **InstaPay only**.
+Guests and hosts never talk to each other directly: each one chats with the **Sakani team** (`/messages`), and the team talks to the other side. Payments are by **InstaPay**, checked by hand, unless card mode (Paymob) is switched on in Admin → Policies. See [docs/payments.md](./docs/payments.md).
 
 **How a booking works**
-1. A guest (with an account and a phone number) presses **Book now**, chooses a move-in date and stay, and pays straight away: the **first month's rent + 8%** Sakani fee, through the booking's private pay link.
-2. The host sees the request in their account and taps **Available — accept** or **Not available**; the team can also record the host's answer in **Admin → Bookings**.
-3. In **Admin → Bookings → Transfer to check**, compare the transfer with your InstaPay history and choose **Payment received**. Once the host has accepted, the booking is **Confirmed** and the listing is hidden. Send the guest the details in the chat.
+1. A guest (with an account and a phone number) presses **Book now**, chooses a move-in date and stay, and pays straight away: the **first month's rent + 8%** Sakani fee **+ the security deposit**, through the booking's private pay link.
+2. The host, who must have an account to take bookings, sees the request and taps **Available — accept** or **Not available**; the team can also record the host's answer in **Admin → Bookings**.
+3. In **Admin → Bookings → Transfer to check**, compare the transfer with your InstaPay history and choose **Payment received**. Once the host has accepted, the booking is **Confirmed**. The listing stays in search with those dates closed, and shows as rented from the move-in date. Send the guest the details in the chat. Once both sides accept the contract, send the host the deposit.
 4. On move-in day the guest taps **I've moved in**. The booking moves to **Pay the host**: send the host the rent minus 10% to the InstaPay address in their profile, enter the transaction number and choose **Paid the host**.
-5. **Refunds within 24 hours:** if the host declines or doesn't answer within 24 hours of the payment, or the guest reports a problem (before moving in, or within 48 hours of the move-in date), the booking moves to **Refund due** with a countdown. Send the full amount back by InstaPay, enter the transaction number and choose **Refunded**.
+5. **Refunds within 24 hours:** if the host declines or doesn't answer within 24 hours of the payment being confirmed, or the guest reports a problem (before moving in, or within 48 hours of the move-in date), the booking moves to **Refund due** with a countdown. Send the full amount back by InstaPay, enter the transaction number and choose **Refunded**.
 
 Unpaid bookings are cancelled after 24 hours. In **Admin → Payments** set your InstaPay address, account name, the team WhatsApp number and the two fee percentages (guest 8%, host 10% of one month's rent).
 
 **Demo listings:** **Admin → Demo** adds 2,000 demo listings (labelled "Demo", not bookable) to preview the site, and removes them all with one button. Remove them before launch.
 
-Holding guests' money until move-in makes Sakani responsible for it: have the Terms reviewed by a lawyer and register the business before launch.
+Holding guests' rent until move-in makes Sakani responsible for it: have the Terms reviewed by a lawyer and register the business before launch.
