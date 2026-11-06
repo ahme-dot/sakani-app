@@ -4,12 +4,16 @@ import { forwardRef, useCallback, useEffect, useId, useLayoutEffect, useImperati
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "type">;
+type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
+  /** Taken periods (as fetchBookedRanges returns them): closed on the calendar. `ends` is the day the place is free again. */
+  booked?: ReadonlyArray<{ starts: string; ends: string }>;
+};
 type Place = { above: number; below: number; start: number; rtl: boolean; top?: number; up?: boolean };
 
 const WORDS = {
-  ar: { choose: "اختار التاريخ", prev: "الشهر اللي فات", next: "الشهر الجاي", clear: "امسح", today: "النهارده", calendar: "اختار يوم" },
-  en: { choose: "Choose a date", prev: "Previous month", next: "Next month", clear: "Clear", today: "Today", calendar: "Choose a day" },
+  // Weekday headers, Saturday first. Written out because Arabic has no short form: the browser gives the full name.
+  ar: { choose: "اختار التاريخ", prev: "الشهر اللي فات", next: "الشهر الجاي", clear: "امسح", today: "النهارده", calendar: "اختار يوم", days: ["سبت", "حد", "اتنين", "تلات", "أربع", "خميس", "جمعة"] },
+  en: { choose: "Choose a date", prev: "Previous month", next: "Next month", clear: "Clear", today: "Today", calendar: "Choose a day", days: ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"] },
 };
 
 /** "YYYY-MM-DD" ⇄ a UTC day number, so time zones never shift the chosen day. */
@@ -25,11 +29,12 @@ function usesMouse() {
  * A date field. Phones keep their own date picker. On a computer the browser's box (which writes the
  * date in the browser's order, e.g. 11/26/2026) is swapped for the date in words in the page language
  * ("Thursday, 26 November 2026") and a Sakani calendar: weeks start on Saturday, days outside min/max
- * are closed, arrows move by day, Page Up/Down by month, Enter chooses, Escape closes. The real date
- * input stays in the form, so its name, value, required and min/max checks work as before.
+ * and `booked` periods are closed, arrows move by day, Page Up/Down by month, Enter chooses, Escape closes.
+ * The real date input stays in the form, so its name, value, required and min/max checks work as before.
+ * A phone's own picker can't close single days, so `booked` applies to the calendar only.
  */
 const SakaniDate = forwardRef<HTMLInputElement, Props>(function SakaniDate(props, forwarded) {
-  const { className, style, ...rest } = props;
+  const { className, style, booked, ...rest } = props;
   const ref = useRef<HTMLInputElement>(null);
   const displayRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -71,7 +76,8 @@ const SakaniDate = forwardRef<HTMLInputElement, Props>(function SakaniDate(props
   const words = WORDS[lang];
   const min = typeof props.min === "string" ? toDay(props.min) : NaN;
   const max = typeof props.max === "string" ? toDay(props.max) : NaN;
-  const allowed = (day: number) => !(day < min) && !(day > max);
+  const isBooked = (day: number) => booked?.some((range) => day >= toDay(range.starts) && day < toDay(range.ends)) ?? false;
+  const allowed = (day: number) => !(day < min) && !(day > max) && !isBooked(day);
   const chosen = toDay(value);
   const text = Number.isNaN(chosen) ? "" : new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(chosen * 864e5);
 
@@ -88,6 +94,7 @@ const SakaniDate = forwardRef<HTMLInputElement, Props>(function SakaniDate(props
     let start = Number.isNaN(chosen) ? todayDay() : chosen;
     if (start < min) start = min;
     if (start > max) start = max;
+    while (isBooked(start)) start += 1;
     setFocusDay(start);
     setPlace({ above: rect.top - 6, below: rect.bottom + 6, start: rtl ? window.innerWidth - rect.right : rect.left, rtl });
     setOpen(true);
@@ -151,7 +158,11 @@ const SakaniDate = forwardRef<HTMLInputElement, Props>(function SakaniDate(props
     const rtl = place?.rtl;
     const moves: Record<string, number> = { ArrowLeft: rtl ? 1 : -1, ArrowRight: rtl ? -1 : 1, ArrowUp: -7, ArrowDown: 7 };
     let next = focusDay;
-    if (event.key in moves) next = focusDay + moves[event.key];
+    if (event.key in moves) {
+      // Step over a booked stretch rather than stop at its edge.
+      next = focusDay + moves[event.key];
+      while (isBooked(next)) next += moves[event.key];
+    }
     else if (event.key === "PageUp") next = shiftMonth(focusDay, -1);
     else if (event.key === "PageDown") next = shiftMonth(focusDay, 1);
     else if (event.key === "Home") next = focusDay - ((new Date(focusDay * 864e5).getUTCDay() + 1) % 7);
@@ -173,7 +184,7 @@ const SakaniDate = forwardRef<HTMLInputElement, Props>(function SakaniDate(props
   const gridStart = first - ((new Date(first * 864e5).getUTCDay() + 1) % 7);
   const days = Array.from({ length: 42 }, (_, index) => gridStart + index);
   const month = focus.getUTCMonth();
-  const weekday = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" });
   const dayLabel = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   const title = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(first * 864e5);
   const prevMonthEnd = first - 1;
@@ -238,7 +249,7 @@ const SakaniDate = forwardRef<HTMLInputElement, Props>(function SakaniDate(props
           </div>
           <div className="sakani-calendar-grid" role="grid" aria-label={title} onKeyDown={onGridKey}>
             <div role="row" className="sakani-calendar-week">
-              {days.slice(0, 7).map((day) => <span role="columnheader" key={day}>{weekday.format(day * 864e5)}</span>)}
+              {days.slice(0, 7).map((day, index) => <span role="columnheader" key={day} aria-label={weekday.format(day * 864e5)}>{words.days[index]}</span>)}
             </div>
             {[0, 1, 2, 3, 4, 5].map((week) => (
               <div role="row" className="sakani-calendar-week" key={week}>

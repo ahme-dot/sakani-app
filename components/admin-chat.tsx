@@ -121,8 +121,8 @@ export default function AdminChat({ locale, supabase, openUserId = null, openBoo
               <strong>{person?.full_name || t.noName}</strong>
               {person && <span className={`role-chip is-${person.role}`}>{person.role === "host" ? t.roleHost : t.roleGuest}</span>}
             </header>
-            {current && <SupportTickets key={current.user_id} locale={locale} supabase={supabase} userId={current.user_id} asTeam />}
             <SupportChat key={selected} locale={locale} supabase={supabase} threadId={selected} asTeam context={context} onContextClear={() => setContext(null)} />
+            {current && <SupportTickets key={current.user_id} locale={locale} supabase={supabase} userId={current.user_id} asTeam />}
           </>
         ) : (
           <p className="chat-empty"><MessagesSquare size={20} /> {t.chatPickThread}</p>

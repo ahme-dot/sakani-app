@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Cairo, Inter } from "next/font/google";
 import "./globals.css";
+import "./forms.css";
 import type { ReactNode } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import ErrorReporter from "@/components/error-reporter";

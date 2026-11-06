@@ -129,6 +129,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectMissing, setRejectMissing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const [listingStats, setListingStats] = useState<Record<string, ListingStats>>({});
@@ -820,7 +821,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
         ) : view === "identity" ? (
           <AdminIdentity locale={locale} supabase={supabase!} />
         ) : view === "audit" ? (
-          <AdminAudit locale={locale} supabase={supabase!} />
+          <AdminAudit locale={locale} supabase={supabase!} people={directory} />
         ) : view === "demo" ? (
           <AdminDemo locale={locale} supabase={supabase!} onChanged={refreshCounts} />
         ) : view === "payments" ? (
@@ -1005,12 +1006,20 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                             className="admin-inline-panel"
                             onSubmit={(event) => {
                               event.preventDefault();
-                              void updateListing(listing.id, { status: "rejected", rejection_reason: rejectReason.trim() || null });
+                              // The host sees this under the listing; without it they can't know what to fix.
+                              const reason = rejectReason.trim();
+                              if (reason.length < 3) {
+                                setRejectMissing(true);
+                                event.currentTarget.querySelector("textarea")?.focus();
+                                return;
+                              }
+                              void updateListing(listing.id, { status: "rejected", rejection_reason: reason });
                             }}
                           >
                             <label className="owner-field">
                               <span>{t.adminRejectReason}</span>
-                              <textarea rows={2} maxLength={500} value={rejectReason} placeholder={t.adminRejectReasonPlaceholder} onChange={(event) => setRejectReason(event.target.value)} autoFocus />
+                              <textarea rows={2} maxLength={500} value={rejectReason} placeholder={t.adminRejectReasonPlaceholder} aria-invalid={rejectMissing || undefined} onChange={(event) => { setRejectReason(event.target.value); setRejectMissing(false); }} autoFocus />
+                              {rejectMissing && <small className="field-error" role="alert">{t.adminRejectReasonRequired}</small>}
                             </label>
                             <div className="admin-card-actions">
                               <button className="admin-btn admin-btn-danger" type="submit" disabled={busy}>{busy ? t.sending : t.adminConfirmReject}</button>
@@ -1047,7 +1056,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
                               </button>
                             )}
                             {listing.status !== "rejected" && (
-                              <button className="admin-btn admin-btn-danger-outline" type="button" disabled={busy} onClick={() => { setRejectingId(listing.id); setRejectReason(""); }}>
+                              <button className="admin-btn admin-btn-danger-outline" type="button" disabled={busy} onClick={() => { setRejectingId(listing.id); setRejectReason(""); setRejectMissing(false); }}>
                                 {listing.status === "pending" ? t.adminReject : t.adminUnpublish}
                               </button>
                             )}

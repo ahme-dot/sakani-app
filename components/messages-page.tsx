@@ -22,6 +22,8 @@ export default function MessagesPage({ locale, listingId, bookingId }: { locale:
   const [context, setContext] = useState<ChatContext | null>(null);
   const [listingTitles, setListingTitles] = useState<Record<string, string>>({});
   const [chatVersion, setChatVersion] = useState(0);
+  // The booking this visit is about. Unlike the chat's context it stays after a message is sent, for a ticket opened later.
+  const [ticketBooking, setTicketBooking] = useState<string | null>(null);
   const signedInId = account.status === "signedIn" ? account.user.id : null;
 
   useEffect(() => {
@@ -47,7 +49,9 @@ export default function MessagesPage({ locale, listingId, bookingId }: { locale:
     let active = true;
     if (bookingId && UUID_PATTERN.test(bookingId)) {
       void supabase.from("listing_requests").select("listing_id,listing_title").eq("id", bookingId).maybeSingle().then(({ data }) => {
-        if (active && data) setContext({ bookingId, listingId: data.listing_id as string | null, label: data.listing_title as string });
+        if (!active || !data) return;
+        setContext({ bookingId, listingId: data.listing_id as string | null, label: data.listing_title as string });
+        setTicketBooking(bookingId);
       });
     } else if (listingId && UUID_PATTERN.test(listingId)) {
       void supabase.from("properties").select("title_ar,title_en").eq("id", listingId).maybeSingle().then(({ data }) => {
@@ -96,8 +100,8 @@ export default function MessagesPage({ locale, listingId, bookingId }: { locale:
           <p className="owner-feedback owner-feedback-error" role="alert">{t.chatLoadError}</p>
         ) : threadId && supabase ? (
           <>
-            {signedInId && <SupportTickets locale={locale} supabase={supabase} userId={signedInId} bookingId={context?.bookingId ?? null} onCreated={() => setChatVersion((value) => value + 1)} />}
             <SupportChat key={chatVersion} locale={locale} supabase={supabase} threadId={threadId} context={context} onContextClear={() => setContext(null)} listingTitles={listingTitles} />
+            {signedInId && <SupportTickets locale={locale} supabase={supabase} userId={signedInId} bookingId={ticketBooking} onCreated={() => setChatVersion((value) => value + 1)} />}
           </>
         ) : (
           <p className="profile-loading"><LoaderCircle className="spinner" size={18} /> {t.loading}</p>

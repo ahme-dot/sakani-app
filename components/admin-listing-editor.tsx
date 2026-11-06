@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { numberField, onDigitsInput, outOfRange } from "@/lib/digits";
 import { GOVERNORATES, areaLabel, normalizeArea } from "@/lib/egypt";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import type { MarketplaceListing } from "@/lib/supabase/listings";
@@ -29,6 +30,14 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const badNumber = Array.from(event.currentTarget.querySelectorAll<HTMLInputElement>("input[data-min]")).find(outOfRange);
+    if (badNumber) {
+      const label = badNumber.closest("label")?.querySelector("span")?.textContent ?? "";
+      badNumber.setAttribute("aria-invalid", "true");
+      badNumber.focus();
+      setError(t.formNumberRange(label, Number(badNumber.dataset.min).toLocaleString("en-US"), Number(badNumber.dataset.max).toLocaleString("en-US")));
+      return;
+    }
     if (Number(formData.get("available_beds")) > Number(formData.get("total_beds"))) {
       setError(t.bedsError);
       return;
@@ -75,7 +84,17 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
   }
 
   return (
-    <form className="owner-form admin-edit-form" onSubmit={save}>
+    <form
+      className="owner-form admin-edit-form"
+      onSubmit={save}
+      onInput={(event) => {
+        // A corrected number loses its mark and the message straight away.
+        if ((event.target as HTMLElement).getAttribute("aria-invalid")) {
+          (event.target as HTMLElement).removeAttribute("aria-invalid");
+          setError("");
+        }
+      }}
+    >
       <div>
         <h2>{t.adminEditTitle}</h2>
         <p className="field-hint">{t.adminEditHint}</p>
@@ -97,21 +116,21 @@ export default function AdminListingEditor({ locale, supabase, listing, columns,
       </div>
       <div className="owner-form-grid owner-form-grid-three">
         <label className="owner-field"><span>{t.propertyType}</span><SakaniSelect name="property_type" required defaultValue={listing.property_type}><option value="room">{t.room}</option><option value="studio">{t.studio}</option><option value="apartment">{t.apartment}</option><option value="bed">{t.bed}</option></SakaniSelect></label>
-        <label className="owner-field"><span>{t.price}</span><input name="monthly_price" type="number" min="1" max="1000000" required defaultValue={listing.monthly_price} /></label>
-        <label className="owner-field"><span>{t.deposit}</span><input name="deposit" type="number" min="0" max="1000000" required defaultValue={listing.deposit} /></label>
+        <label className="owner-field"><span>{t.price}</span><input name="monthly_price" {...numberField(1, 1000000)} required defaultValue={listing.monthly_price} /></label>
+        <label className="owner-field"><span>{t.deposit}</span><input name="deposit" {...numberField(0, 1000000)} required defaultValue={listing.deposit} /></label>
       </div>
       <div className="owner-form-grid owner-form-grid-three">
-        <label className="owner-field"><span>{t.availableBeds}</span><input name="available_beds" type="number" min="1" max="100" required defaultValue={listing.available_beds} /></label>
-        <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" type="number" min="1" max="100" required defaultValue={listing.total_beds} /></label>
+        <label className="owner-field"><span>{t.availableBeds}</span><input name="available_beds" {...numberField(1, 100)} required defaultValue={listing.available_beds} /></label>
+        <label className="owner-field"><span>{t.totalBeds}</span><input name="total_beds" {...numberField(1, 100)} required defaultValue={listing.total_beds} /></label>
       </div>
       <div className="owner-form-grid owner-form-grid-three">
-        <label className="owner-field"><span>{t.bedroomsLabel}</span><input name="bedrooms" type="number" min="0" max="20" defaultValue={listing.bedrooms ?? ""} /></label>
-        <label className="owner-field"><span>{t.bathroomsLabel}</span><input name="bathrooms" type="number" min="0" max="20" defaultValue={listing.bathrooms ?? ""} /></label>
-        <label className="owner-field"><span>{t.areaSqmLabel}</span><input name="area_sqm" type="number" min="5" max="2000" defaultValue={listing.area_sqm ?? ""} /></label>
-        <label className="owner-field"><span>{t.minMonthsLabel}</span><input name="min_months" type="number" min="1" max="24" required defaultValue={listing.min_months ?? 1} /></label>
+        <label className="owner-field"><span>{t.bedroomsLabel}</span><input name="bedrooms" {...numberField(0, 20)} defaultValue={listing.bedrooms ?? ""} /></label>
+        <label className="owner-field"><span>{t.bathroomsLabel}</span><input name="bathrooms" {...numberField(0, 20)} defaultValue={listing.bathrooms ?? ""} /></label>
+        <label className="owner-field"><span>{t.areaSqmLabel}</span><input name="area_sqm" {...numberField(5, 2000)} defaultValue={listing.area_sqm ?? ""} /></label>
+        <label className="owner-field"><span>{t.minMonthsLabel}</span><input name="min_months" {...numberField(1, 24)} required defaultValue={listing.min_months ?? 1} /></label>
         <label className="owner-field"><span>{t.availableFromLabel}</span><SakaniDate name="available_from" dir="ltr" defaultValue={listing.available_from ?? ""} /></label>
       </div>
-      <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" pattern="[0-9+ \(\)\-]{8,20}" required dir="ltr" defaultValue={listing.whatsapp_number} /></label>
+      <label className="owner-field"><span>{t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" pattern="[0-9+ \(\)\-]{8,20}" required dir="ltr" defaultValue={listing.whatsapp_number} onInput={onDigitsInput} /></label>
       <fieldset className="amenity-fieldset">
         <legend>{t.amenitiesTitle}</legend>
         <div className="choice-row">

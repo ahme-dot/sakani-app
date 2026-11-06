@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { LoaderCircle, MailCheck, ShieldCheck, UserPlus } from "lucide-react";
+import Captcha, { captchaActive } from "@/components/captcha";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import SakaniSelect from "@/components/sakani-select";
 
@@ -21,7 +22,7 @@ type TeamMember = {
  * a throwaway client with no persisted session signs the new account up with a random password.
  * The new admin then sets their own password with "Forgot your password?".
  */
-async function createAccount(email: string, redirectTo: string) {
+async function createAccount(email: string, redirectTo: string, captchaToken: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) return new Error("Supabase is not configured");
@@ -30,7 +31,7 @@ async function createAccount(email: string, redirectTo: string) {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "sakani-admin-invite" },
   });
   const randomPassword = `${crypto.randomUUID()}${crypto.randomUUID()}`;
-  const { error } = await isolated.auth.signUp({ email, password: randomPassword, options: { emailRedirectTo: redirectTo } });
+  const { error } = await isolated.auth.signUp({ email, password: randomPassword, options: { emailRedirectTo: redirectTo, ...(captchaToken ? { captchaToken } : {}) } });
   return error;
 }
 
@@ -44,6 +45,8 @@ export default function AdminTeam({ locale, supabase, currentUserId }: { locale:
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaReset, setCaptchaReset] = useState(0);
   const dateFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" });
 
   useEffect(() => {
@@ -80,7 +83,14 @@ export default function AdminTeam({ locale, supabase, currentUserId }: { locale:
     let invited = false;
 
     if (!addError && result === "not_found") {
-      const signUpError = await createAccount(target, `${window.location.origin}/${locale}/sign-in`);
+      // Only a brand-new account goes through sign-up, so only that needs the security check.
+      if (captchaActive() && !captchaToken) {
+        setError(t.captchaRequired);
+        setBusy(false);
+        return;
+      }
+      const signUpError = await createAccount(target, `${window.location.origin}/${locale}/sign-in`, captchaToken);
+      setCaptchaReset((value) => value + 1); // A token works once.
       if (signUpError) {
         console.error("Could not create the new admin's account:", signUpError);
         setError(t.teamInviteError);
@@ -147,6 +157,7 @@ export default function AdminTeam({ locale, supabase, currentUserId }: { locale:
           {busy ? t.sending : t.teamAddButton}
         </button>
       </form>
+      <Captcha locale={locale} onToken={setCaptchaToken} resetKey={captchaReset} />
       <p className="field-hint admin-team-hint">{t.teamAddHint}</p>
 
       {message && <p className="owner-feedback owner-feedback-success" role="status">{message}</p>}

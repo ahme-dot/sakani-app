@@ -108,13 +108,12 @@ export default function AdminUsers({
         <section className="admin-empty-state"><UsersRound size={26} /><p>{t.usersEmpty}</p></section>
       ) : (
         <div className="admin-table-wrap">
-          <table className="admin-table">
+          <table className="admin-table admin-table-stack">
             <thead>
               <tr>
                 <th scope="col">{t.usersColUser}</th>
                 <th scope="col">{t.usersColType}</th>
                 <th scope="col">{t.usersColJoined}</th>
-                <th scope="col">{t.usersColLastSeen}</th>
                 <th scope="col">{t.usersColListings}</th>
                 <th scope="col"><span className="visually-hidden">{t.usersViewListings}</span></th>
               </tr>
@@ -129,11 +128,11 @@ export default function AdminUsers({
                       </span>
                       <span>
                         <strong>{user.is_guest ? t.usersAnonOwner : user.full_name || t.noName}</strong>
-                        {user.email && <a href={`mailto:${user.email}`} dir="ltr"><Mail size={12} /> {user.email}</a>}
+                        {user.email && <a href={`mailto:${user.email}`} dir="ltr" title={user.email}><Mail size={12} /> <span className="admin-user-email">{user.email}</span></a>}
                       </span>
                     </div>
                   </td>
-                  <td>
+                  <td data-label={t.usersColType}>
                     <span className={`user-type user-type-${user.is_admin ? "admin" : user.is_guest ? "guest" : "account"}`}>
                       {user.is_admin && <ShieldCheck size={12} />}
                       {user.is_admin ? t.userTypeAdmin : user.is_guest ? t.userTypeGuest : t.userTypeAccount}
@@ -142,9 +141,11 @@ export default function AdminUsers({
                       <span className={`role-chip is-${profiles[user.user_id].role}`}>{profiles[user.user_id].role === "host" ? t.roleHost : t.roleGuest}</span>
                     )}
                   </td>
-                  <td>{dateFormat.format(new Date(user.joined_at))}</td>
-                  <td>{user.last_sign_in_at ? dateFormat.format(new Date(user.last_sign_in_at)) : "–"}</td>
-                  <td>
+                  <td data-label={t.usersColJoined}>
+                    {dateFormat.format(new Date(user.joined_at))}
+                    <small className="admin-user-seen">{t.usersColLastSeen}: {user.last_sign_in_at ? dateFormat.format(new Date(user.last_sign_in_at)) : "–"}</small>
+                  </td>
+                  <td data-label={t.usersColListings}>
                     <div className="listing-count-chips">
                       {user.listings_total === 0 ? <span className="is-zero">0</span> : (
                         <>

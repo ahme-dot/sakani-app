@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { CheckCircle2, LoaderCircle, Mail, MessageSquareText } from "lucide-react";
+import { latinDigits } from "@/lib/digits";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -16,6 +17,7 @@ export default function ContactForm({ locale }: { locale: SiteLocale }) {
   const [message, setMessage] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState("");
+  const [badField, setBadField] = useState<"contact" | "message" | null>(null);
 
   const topics: Array<{ value: Topic; label: string }> = [
     { value: "student", label: t.contactTopicStudent },
@@ -25,14 +27,20 @@ export default function ContactForm({ locale }: { locale: SiteLocale }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const fields = event.currentTarget.elements;
     if (contact.trim().length < 5) {
       setError(t.contactNeedReply);
+      setBadField("contact");
+      (fields.namedItem("contact") as HTMLElement | null)?.focus();
       return;
     }
     if (message.trim().length < 10) {
       setError(t.contactNeedMessage);
+      setBadField("message");
+      (fields.namedItem("message") as HTMLElement | null)?.focus();
       return;
     }
+    setBadField(null);
     if (!supabase) {
       setError(t.contactError);
       return;
@@ -92,12 +100,12 @@ export default function ContactForm({ locale }: { locale: SiteLocale }) {
               </label>
               <label className="owner-field">
                 <span>{t.contactReply}</span>
-                <input name="contact" autoComplete="email" maxLength={120} dir="ltr" placeholder={t.contactReplyPlaceholder} value={contact} onChange={(event) => { setContact(event.target.value); setError(""); }} required />
+                <input name="contact" autoComplete="email" maxLength={120} dir="ltr" placeholder={t.contactReplyPlaceholder} value={contact} aria-invalid={badField === "contact" || undefined} onChange={(event) => { setContact(latinDigits(event.target.value)); setError(""); setBadField(null); }} required />
               </label>
             </div>
             <label className="owner-field">
               <span>{t.contactMessage}</span>
-              <textarea name="message" rows={5} maxLength={2000} value={message} onChange={(event) => { setMessage(event.target.value); setError(""); }} required />
+              <textarea name="message" rows={5} maxLength={2000} value={message} aria-invalid={badField === "message" || undefined} onChange={(event) => { setMessage(event.target.value); setError(""); setBadField(null); }} required />
             </label>
             {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
             <button className="button button-primary contact2-submit" type="submit" disabled={state === "sending"}>

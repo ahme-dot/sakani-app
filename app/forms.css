@@ -1,0 +1,203 @@
+/* Forms and admin tables: usability pass. Loaded right after globals.css. */
+
+/* A field with a problem, everywhere (.site-shell only covered inputs). */
+.owner-field input[aria-invalid="true"],
+.owner-field textarea[aria-invalid="true"],
+.owner-field select[aria-invalid="true"],
+.site-shell .owner-field textarea[aria-invalid="true"],
+.site-shell .owner-field select[aria-invalid="true"],
+.site-shell .contact2-form input[aria-invalid="true"],
+.site-shell .contact2-form textarea[aria-invalid="true"] {
+  border-color: #b42318;
+  box-shadow: 0 0 0 3px rgb(180 35 24 / 12%);
+}
+
+.tile-grid[aria-invalid="true"] {
+  border-radius: 14px;
+  outline: 2px solid #b42318;
+  outline-offset: 4px;
+}
+
+.photo-drop:has(input[aria-invalid="true"]),
+.site-shell .photo-drop:has(input[aria-invalid="true"]) {
+  border-color: #b42318;
+}
+
+.admin-shell .field-error {
+  display: block;
+  margin-top: 6px;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Listing form: the guest line is said on the first screen, not on all nine. */
+.site-shell .owner-guest-line:has(~ .listing-steps:not([data-step-index="0"])) {
+  display: none;
+}
+
+.listing-photos-lost {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff7e8;
+  color: #6b4a0b;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.listing-photos-lost button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #14213d;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Pay page. */
+.pay-invalid-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.pay-onward {
+  justify-self: start;
+  width: fit-content;
+  margin-top: 12px;
+}
+
+/* Calendar: room for the weekday names. */
+.sakani-calendar {
+  width: 336px;
+  max-width: calc(100vw - 16px);
+}
+
+.sakani-calendar-week span {
+  padding: 8px 0 10px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+/* Phone: the reply box stays on the first screen, under a shorter message list. */
+@media (max-width: 640px) {
+  .messages-page .chat-list {
+    height: min(44svh, 400px);
+  }
+}
+
+/* Tickets sit under the chat; a long list scrolls in place in the admin view. */
+.admin-chat-pane .tickets {
+  margin-top: 12px;
+}
+
+.admin-chat-pane .tickets-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.tickets-preview {
+  display: block;
+  flex-basis: 100%;
+  overflow: hidden;
+  color: #526072;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Admin tables that fit their column, and become cards when it gets narrow. */
+.admin-table-wrap:has(.admin-table-stack) {
+  container: admin-table / inline-size;
+}
+
+.admin-shell .admin-table.admin-table-stack {
+  min-width: 0;
+}
+
+.admin-users .admin-table td {
+  padding-inline: 12px;
+}
+
+.admin-users .admin-user-cell a {
+  display: flex;
+  min-width: 0;
+  overflow-wrap: normal;
+}
+
+.admin-user-email {
+  overflow: hidden;
+  max-width: 190px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-users .admin-user-seen {
+  display: block;
+  margin-top: 2px;
+  color: #526072;
+  white-space: nowrap;
+}
+
+.admin-users .admin-card-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+@container admin-table (max-width: 620px) {
+  .admin-shell .admin-table.admin-table-stack thead {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+  }
+
+  .admin-table-stack,
+  .admin-table-stack tbody,
+  .admin-table-stack tr,
+  .admin-table-stack td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-table-stack tr {
+    padding-block: 8px;
+    border-bottom: 1px solid #e3e7ec;
+  }
+
+  .admin-table-stack tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .admin-shell .admin-table-stack td,
+  .admin-audit .admin-table-stack td.admin-audit-time {
+    padding: 4px 14px;
+    border: 0;
+    white-space: normal;
+  }
+
+  .admin-table-stack td[data-label]::before {
+    display: block;
+    color: #526072;
+    content: attr(data-label);
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+
+  .admin-user-email {
+    max-width: 62vw;
+  }
+}
