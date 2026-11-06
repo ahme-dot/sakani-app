@@ -70,6 +70,7 @@ export default function NotificationsBell({ locale }: { locale: SiteLocale }) {
     if (account.status !== "signedIn") return `/${locale}/host`;
     if (notice.kind === "team_reply") return `/${locale}/messages`;
     if (notice.kind === "listing_available") return `/${locale}/host#owner`;
+    if (notice.kind === "payout_changed") return `/${locale}/account`;
     if (notice.kind === "new_review") return `/${locale}/account#requests`;
     if (notice.kind === "agreement_ready" || notice.kind === "agreement_signed" || notice.kind === "deposit_transferred") return notice.booking_id ? `/${locale}/documents/${notice.booking_id}` : `/${locale}/account`;
     return `/${locale}/account#bookings`;

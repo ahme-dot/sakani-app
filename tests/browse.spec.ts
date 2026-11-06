@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { watchErrors } from "./helpers";
+import { api, watchErrors } from "./helpers";
 
 // Airbnb-style browsing: categories, Filters window, header search, old links, phone tabs and search sheet.
 test("a category filters the homes and is kept in the address", async ({ page }) => {
@@ -159,4 +159,11 @@ test("no student-only, university, furnished or mixed wording on the main pages"
       expect(text, `${path} mentions "${word}"`).not.toContain(word);
     }
   }
+});
+
+test("demo places stay out of the sitemap", async ({ request }) => {
+  const demo = await api<Array<{ id: string }>>("/rest/v1/properties?select=id&is_demo=eq.true&status=eq.approved&limit=1");
+  test.skip(!demo.data?.length, "no demo places");
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  expect(sitemap).not.toContain(demo.data[0].id);
 });

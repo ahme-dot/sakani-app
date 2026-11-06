@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { BadgeCheck, CalendarCheck, ImagePlus, Plus, Sparkles } from "lucide-react";
-import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
+import Captcha, { captchaActive } from "@/components/captcha";
 import ListingForm, { removeListingImages } from "@/components/listing-form";
 import OwnerPayments from "@/components/owner-payments";
 import SakaniDate from "@/components/sakani-date";
@@ -204,7 +204,7 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
 
   async function startEmailFreeSession() {
     if (!supabase) return;
-    if (CAPTCHA_SITE_KEY && !captchaToken) {
+    if (captchaActive() && !captchaToken) {
       setError(t.captchaRequired);
       return;
     }

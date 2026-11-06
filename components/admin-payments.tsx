@@ -148,7 +148,7 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
                 </div>
                 {fee.reference && (
                   <dl className="admin-fee-ref">
-                    <div><dt>{fee.method === "vodafone_cash" ? t.payVodafoneOld : t.payInstapay}</dt><dd dir="ltr">{fee.reference}</dd></div>
+                    <div><dt>{fee.method === "card" ? t.payCard : fee.method === "vodafone_cash" ? t.payVodafoneOld : t.payInstapay}</dt><dd dir="ltr">{fee.reference}</dd></div>
                     {fee.payer_phone && <div><dt>{t.feePaidFrom}</dt><dd dir="ltr">{fee.payer_phone}</dd></div>}
                   </dl>
                 )}

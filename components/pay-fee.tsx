@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { CheckCircle2, Clock3, FlaskConical, LoaderCircle, Wallet } from "lucide-react";
-import { paymentProvider } from "@/lib/payment-providers";
+import { CheckCircle2, Clock3, CreditCard, FlaskConical, LoaderCircle, ShieldCheck, Wallet } from "lucide-react";
+import { paymentProvider, startCardCheckout } from "@/lib/payment-providers";
 import { CopyValue } from "@/components/owner-payments";
 import { fetchPaymentSettings, type FeeStatus, type PaymentMethod, type PaymentSettings } from "@/lib/payments";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -25,7 +25,16 @@ type Fee = {
   submitted_at: string | null;
   decided_at: string | null;
   admin_note: string | null;
+  /** The card fee: worked out now while the fee is due, or what was paid. Missing before the card migration. */
+  card_fee?: number | null;
 };
+
+/** How the guest came back from the card page: "ok", "fail" or "check" (couldn't tell yet). */
+function cardReturnState() {
+  if (typeof window === "undefined") return "";
+  const state = new URLSearchParams(window.location.search).get("card") ?? "";
+  return ["ok", "fail", "check"].includes(state) ? state : "";
+}
 
 const TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -40,6 +49,8 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
   const [version, setVersion] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [cardState] = useState(cardReturnState);
+  const [checks, setChecks] = useState(0);
 
   const tokenValid = Boolean(supabase) && TOKEN_PATTERN.test(token);
   const titleOf = useListingTitles(supabase, [fee && fee !== "invalid" ? fee.listing_id : null], locale);
@@ -62,6 +73,30 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
       mounted = false;
     };
   }, [supabase, token, tokenValid, version]);
+
+  // Back from the card page: the payment is confirmed by Paymob's message to the server, usually within
+  // seconds. Look again every 3 seconds for up to a minute.
+  const waitingForCard = (cardState === "ok" || cardState === "check") && fee !== null && fee !== "invalid" && fee.status === "due" && checks < 20;
+  useEffect(() => {
+    if (!waitingForCard) return;
+    const timer = window.setTimeout(() => {
+      setChecks((value) => value + 1);
+      setVersion((value) => value + 1);
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [waitingForCard, checks]);
+
+  async function payByCard() {
+    setBusy(true);
+    setError("");
+    const { url, error: cardError } = await startCardCheckout(token, locale);
+    if (url) {
+      window.location.assign(url);
+      return;
+    }
+    setBusy(false);
+    setError(cardError === "fee_not_due" ? t.cardNotDue : cardError === "too_many_attempts" ? t.cardTooMany : t.cardStartError);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -151,6 +186,30 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
             <button className="button button-outline" type="button" disabled={busy} onClick={() => void simulate(false)}>{t.sandboxFail}</button>
           </div>
           {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
+        </div>
+      )}
+
+      {fee.status === "due" && provider.card && (
+        <div className="pay-card">
+          {waitingForCard ? (
+            <p className="pay-state" role="status"><LoaderCircle className="spinner" size={18} /> {t.cardConfirming}</p>
+          ) : (
+            <>
+              {cardState === "fail" && <p className="owner-feedback owner-feedback-error" role="alert">{t.cardFailed}</p>}
+              {(cardState === "ok" || cardState === "check") && <p className="owner-feedback" role="status">{t.cardSlow}</p>}
+              <dl className="book-total pay-breakdown">
+                <div><dt>{t.cardAmount}</dt><dd>{numberFormat.format(fee.amount)} {t.currency}</dd></div>
+                <div><dt>{t.cardFeeLabel(numberFormat.format(settings?.card_fee_percent ?? 0), numberFormat.format(settings?.card_fee_fixed ?? 0))}</dt><dd>{numberFormat.format(fee.card_fee ?? 0)} {t.currency}</dd></div>
+                <div className="is-total"><dt>{t.cardTotal}</dt><dd>{numberFormat.format(fee.amount + (fee.card_fee ?? 0))} {t.currency}</dd></div>
+              </dl>
+              <button className="button button-primary pay-card-button" type="button" disabled={busy} onClick={() => void payByCard()}>
+                {busy ? <LoaderCircle className="spinner" size={18} /> : <CreditCard size={18} />} {busy ? t.cardOpening : t.payByCard}
+              </button>
+              <p className="pay-card-brands" aria-label={t.cardBrandsLabel}><span>Visa</span><span>Mastercard</span><span>Meeza</span></p>
+              <p className="field-hint pay-card-safe"><ShieldCheck size={15} /> {t.cardSafeNote}</p>
+              {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
+            </>
+          )}
         </div>
       )}
 

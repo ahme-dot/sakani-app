@@ -47,8 +47,10 @@ export default function UserMenu({ locale, switchHref }: { locale: SiteLocale; s
   useEffect(() => {
     if (!supabase || !signedInId) return;
     let active = true;
-    void supabase.rpc("is_admin").then(({ data }) => {
-      if (active) setIsAdmin(data === true);
+    // Team membership, not is_admin(): before the two-step code the session doesn't count as admin yet, but
+    // the link should still show (the admin page then asks for the code). It's only a link; the data stays locked.
+    void supabase.from("admin_users").select("user_id").eq("user_id", signedInId).maybeSingle().then(({ data }) => {
+      if (active) setIsAdmin(Boolean(data));
     });
     return () => {
       active = false;

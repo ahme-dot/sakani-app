@@ -29,7 +29,23 @@ All amounts come from one formula: `lib/finance.ts` (code) and `public.commissio
 
 Admin → Policies → Payment mode → **Sandbox**. The payment page then shows "Simulate a successful / failed payment" (`sandbox_settle_payment`), so the whole flow can be tested without money. The database refuses it unless sandbox mode is on. Switch back to **InstaPay** before real users arrive.
 
-## Adding an approved payment gateway
+## Card payments (Paymob)
+
+Admin → Policies → Payment mode → **Card (Paymob)**. It can't be switched on until the server has the keys (see `env.example`).
+
+1. The pay page shows the amount, the card fee (`card_fee_percent` % + `card_fee_fixed` EGP, set in Policies, paid by the guest) and the total.
+2. **Pay by card** → `POST /api/pay/checkout` → `gateway_begin` (database: fixes the fee, records an attempt in `payment_attempts`) → a Paymob payment intention → the guest goes to Paymob's checkout. The card is typed on Paymob's page, never on Sakani.
+3. Paymob calls `POST /api/paymob/webhook` (server to server) and sends the guest back through `GET /api/paymob/return`. Both are HMAC-signed; nothing is trusted before the signature checks out. Then `gateway_mark_paid` marks the fee paid **only for the exact amount**, once per transaction. The booking follows on its own (`booking_refresh`): waiting for the host, then confirmed.
+4. Refunds: Admin → Bookings → **Refund to the card** → `POST /api/admin/refund` (full admins with the two-step code only) → Paymob refund → `gateway_mark_refunded`. A full refund (host declined or didn't answer) includes the card fee; an approved cancellation refunds what the policy allows. Card payments can't be marked refunded by hand.
+5. Host payouts and deposit returns stay manual (bank or wallet transfer), as before.
+
+The `gateway_*` functions can only be called with the service-role key (`SUPABASE_SERVICE_ROLE_KEY`), which only the server routes use.
+
+Edge cases the database handles: a second paid checkout for the same fee is flagged in the fee's note for a manual refund in the Paymob dashboard; a payment that arrives after the booking expired moves the booking to "refund pending"; a wrong amount is noted and not marked paid.
+
+**Before going live:** ask Paymob (1) whether a card fee may be shown and charged to the customer, (2) whether refunds return Paymob's fee, and (3) how long refunds are allowed after a payment (deposits are returned by hand, so this matters only for booking refunds).
+
+## Adding another payment gateway
 
 `lib/payment-providers.ts` is the place to add one (e.g. Paymob, Fawry, or a bank). A gateway provider must:
 

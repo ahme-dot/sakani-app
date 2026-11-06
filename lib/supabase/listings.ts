@@ -168,14 +168,17 @@ export function filtersToParams(filters: ListingFilters) {
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Other approved listings in the same governorate, for "More places in…" on a listing page. */
-export async function fetchSimilarListings(client: SupabaseClient, listing: Pick<Property, "id" | "city" | "gender">, limit = 3) {
-  const { data, error } = await client
+export async function fetchSimilarListings(client: SupabaseClient, listing: Pick<Property, "id" | "city" | "gender" | "is_demo">, limit = 3) {
+  let query = client
     .from("properties")
     .select(PUBLIC_LISTING_COLUMNS)
     .eq("status", "approved")
     .eq("governorate", listing.city)
     .eq("gender", listing.gender)
-    .neq("id", listing.id)
+    .neq("id", listing.id);
+  // A real place never suggests demo places (demo pages may suggest each other).
+  if (!listing.is_demo) query = query.eq("is_demo", false);
+  const { data, error } = await query
     .order("verified", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -242,6 +245,8 @@ export async function fetchApprovedListings(
     .select(PUBLIC_LISTING_COLUMNS, { count: "exact" })
     .eq("status", "approved"), filters);
 
+  // Real places always come before demo places.
+  query = query.order("is_demo", { ascending: true });
   if (filters.sort === "price_asc") query = query.order("monthly_price", { ascending: true });
   else if (filters.sort === "price_desc") query = query.order("monthly_price", { ascending: false });
   query = query.order("created_at", { ascending: false });

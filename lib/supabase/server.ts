@@ -43,6 +43,7 @@ export async function getApprovedListingIds(): Promise<Array<{ id: string; updat
     .from("properties")
     .select("id,updated_at")
     .eq("status", "approved")
+    .eq("is_demo", false)
     .order("created_at", { ascending: false })
     .limit(5000);
 

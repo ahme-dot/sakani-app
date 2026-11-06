@@ -46,7 +46,7 @@ type Booking = {
   created_at: string;
 };
 type DepositInfo = { booking_id: string; status: string; amount: number; transfer_reference: string; acknowledged_at: string | null };
-type FeeInfo = { id: string; status: string; reference: string | null; payer_phone: string | null };
+type FeeInfo = { id: string; status: string; reference: string | null; payer_phone: string | null; method?: string | null };
 type HostInfo = { id: string; full_name: string; instapay_address: string };
 
 // Most urgent first: money to check, money to return, hosts to pay.
@@ -138,7 +138,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
       const listingIds = [...new Set(rows.map((row) => row.listing_id).filter((id): id is string => Boolean(id)))];
       const bookingIds = rows.map((row) => row.id);
       const [feeRows, hostRows, numbers, depositRows, cancellationRows] = await Promise.all([
-        feeIds.length ? supabase.from("rental_fees").select("id,status,reference,payer_phone").in("id", feeIds) : Promise.resolve({ data: [] }),
+        feeIds.length ? supabase.from("rental_fees").select("id,status,reference,payer_phone,method").in("id", feeIds) : Promise.resolve({ data: [] }),
         hostIds.length ? supabase.from("profiles").select("id,full_name,instapay_address").in("id", hostIds) : Promise.resolve({ data: [] }),
         fetchPrivateContacts(supabase, listingIds),
         bookingIds.length ? supabase.from("deposit_transfers").select("booking_id,status,amount,transfer_reference,acknowledged_at").in("booking_id", bookingIds) : Promise.resolve({ data: [] }),
@@ -159,6 +159,31 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
     };
   }, [supabase, version]);
 
+  // Card payments are refunded through the server (Paymob), never marked refunded by hand.
+  async function refundToCard(booking: Booking) {
+    setBusyId(booking.id);
+    setError("");
+    setErrorFor(null);
+    setMessage("");
+    const { data: session } = await supabase.auth.getSession();
+    const response = await fetch("/api/admin/refund", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.session?.access_token ?? ""}` },
+      body: JSON.stringify({ booking_id: booking.id }),
+    }).catch(() => null);
+    const data = (await response?.json().catch(() => ({}))) as { error?: string; refund_id?: string } | undefined;
+    setBusyId(null);
+    if (!response?.ok) {
+      setErrorFor(booking.id);
+      setError(data?.error === "refunded_not_recorded" ? t.refundNotRecorded(data.refund_id ?? "") : data?.error === "card_not_ready" ? t.paymentModeNotReady : t.refundCardFailed);
+      if (data?.error === "refunded_not_recorded") setVersion((value) => value + 1);
+      return;
+    }
+    setMessage(t.refundCardDone);
+    setVersion((value) => value + 1);
+    onChanged();
+  }
+
   async function run(booking: Booking, fn: string, args: Record<string, unknown>, done: string) {
     setBusyId(booking.id);
     setError("");
@@ -175,6 +200,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
             : runError.message.includes("policy_not_active") ? t.policyNotActive
               : runError.message.includes("rule_not_set") ? t.ruleNotSet
             : runError.message.includes("already_transferred") ? t.depositAlreadySent
+            : runError.message.includes("refund_by_card") ? t.refundByCardError
               : t.adminUpdateError,
       );
       return;
@@ -339,7 +365,17 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
                     </span>
                   )}
 
-                  {(booking.status === "refund_pending" || booking.status === "moved_in") && (
+                  {booking.status === "refund_pending" && fee?.method === "card" && (
+                    <span className="admin-reference admin-step">
+                      <strong className="admin-step-title">{t.adminStepRefund(egp(booking.total_amount))}</strong>
+                      <small className="field-hint">{t.refundCardHint}</small>
+                      <button className="admin-btn admin-btn-primary" type="button" disabled={busy} onClick={() => void refundToCard(booking)}>
+                        <RotateCcw size={15} /> {t.refundToCard}
+                      </button>
+                    </span>
+                  )}
+
+                  {((booking.status === "refund_pending" && fee?.method !== "card") || booking.status === "moved_in") && (
                     <span className="admin-reference admin-step">
                       <strong className="admin-step-title">{booking.status === "refund_pending" ? t.adminStepRefund(egp(booking.total_amount)) : t.adminStepPayout(egp(booking.payout_amount))}</strong>
                       <input

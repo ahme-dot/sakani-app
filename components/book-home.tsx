@@ -93,6 +93,7 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
         message.includes("phone_required") ? t.bookPhoneRequired
           : message.includes("stay_too_short") ? t.minStay(t.monthsCount(minMonths))
           : message.includes("dates_taken") ? t.bookDatesTaken
+          : message.includes("too_many_unpaid") ? t.bookTooManyUnpaid
           : message.includes("not_available_yet") ? t.notAvailableYet(earliestLabel)
           : message.includes("request_limit") ? t.bookBusy
             : message.includes("own_listing") ? t.bookOwnListing

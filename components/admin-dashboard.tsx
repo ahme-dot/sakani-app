@@ -231,7 +231,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
   // Places whose tenancy ended come back to the search (the daily job does it too, if pg_cron is on).
   useEffect(() => {
     if (!supabase || state !== "ready") return;
-    void supabase.rpc("release_ended_rentals").then(({ error: releaseError }) => {
+    void supabase.rpc("admin_release_ended_rentals").then(({ error: releaseError }) => {
       if (releaseError && releaseError.code !== "PGRST202") console.error("Could not release ended rentals:", releaseError);
     });
   }, [supabase, state]);
@@ -667,7 +667,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       label: t.adminGroupPeople,
       items: [
         { value: "users", label: t.adminViewUsers, icon: UsersRound },
-        { value: "identity", label: t.adminViewIdentity, icon: IdCard },
+        { value: "identity", label: t.adminViewIdentity, icon: IdCard, money: true },
         { value: "reviews", label: t.adminViewReviews, icon: Star },
         { value: "team", label: t.adminViewTeam, icon: Users, money: true },
       ],

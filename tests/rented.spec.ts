@@ -12,7 +12,7 @@ test.describe("rented places", () => {
 
   test("rented until a date, page still open, back in the search on its own", async ({ page }) => {
     const admin = await adminToken();
-    const ready = await api("/rest/v1/rpc/release_ended_rentals", { method: "POST", body: {} });
+    const ready = await api("/rest/v1/rpc/admin_release_ended_rentals", { token: admin, method: "POST", body: {} });
     test.skip(ready.status >= 400, "migration 20261108000000 not installed yet");
 
     const owner = await guestSession();
@@ -51,12 +51,12 @@ test.describe("rented places", () => {
       // Nobody else can put it back; the daily job leaves it while the date hasn't passed.
       const stranger = await guestSession();
       expect((await rpc("release_listing", { target_listing: id }, stranger.access_token)).status).toBeGreaterThanOrEqual(400);
-      await rpc("release_ended_rentals", {}, SUPABASE_KEY);
+      await rpc("admin_release_ended_rentals", {}, admin);
       expect((await place()).status).toBe("rented");
 
       // The date passes: the daily job brings it back and tells the owner.
       await api(`/rest/v1/properties?id=eq.${id}`, { token: admin, method: "PATCH", body: { rented_until: day(0) } });
-      await rpc("release_ended_rentals", {}, SUPABASE_KEY);
+      await rpc("admin_release_ended_rentals", {}, admin);
       expect(await place()).toMatchObject({ status: "approved", rented_until: null, rented_source: null });
       const notices = await api<Array<{ kind: string }>>("/rest/v1/notifications?select=kind&kind=eq.listing_available", { token: owner.access_token });
       expect(notices.data.length).toBeGreaterThanOrEqual(1);

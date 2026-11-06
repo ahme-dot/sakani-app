@@ -8,7 +8,8 @@ import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import SakaniSelect from "@/components/sakani-select";
 
 type Rule = { scenario: string; refund_rent_percent: number | null; refund_guest_fee: boolean | null; refund_deposit: boolean | null; notes: string };
-type Settings = { payment_mode: "manual" | "sandbox"; cancellation_policy_active: boolean; cancellation_policy_note: string };
+type Settings = { payment_mode: "manual" | "sandbox" | "paymob"; cancellation_policy_active: boolean; cancellation_policy_note: string; card_fee_percent: number; card_fee_fixed: number };
+const PAYMENT_MODES = ["manual", "paymob", "sandbox"] as const;
 type RateChange = { id: number; at: string; old_data: Record<string, unknown> | null; new_data: Record<string, unknown> | null };
 
 /** Admin: the cancellation rules (one per scenario), the policy switch, the payment mode, and the history of fee rate changes. */
@@ -22,12 +23,17 @@ export default function AdminPolicies({ locale, supabase }: { locale: SiteLocale
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  // Whether the Paymob keys are set on the server (asked once; null while unknown).
+  const [cardReady, setCardReady] = useState<boolean | null>(null);
+  useEffect(() => {
+    void fetch("/api/pay/checkout").then((response) => response.json()).then((data: { ready?: boolean }) => setCardReady(Boolean(data.ready))).catch(() => setCardReady(false));
+  }, []);
 
   useEffect(() => {
     let active = true;
     void Promise.all([
       supabase.from("cancellation_rules").select("scenario,refund_rent_percent,refund_guest_fee,refund_deposit,notes"),
-      supabase.from("app_settings").select("payment_mode,cancellation_policy_active,cancellation_policy_note").eq("id", 1).maybeSingle(),
+      supabase.from("app_settings").select("payment_mode,cancellation_policy_active,cancellation_policy_note,card_fee_percent,card_fee_fixed").eq("id", 1).maybeSingle(),
       supabase.from("audit_logs").select("id,at,old_data,new_data").eq("entity", "app_settings").order("at", { ascending: false }).limit(30),
     ]).then(([ruleRows, settingsRow, log]) => {
       if (!active) return;
@@ -66,8 +72,16 @@ export default function AdminPolicies({ locale, supabase }: { locale: SiteLocale
   function saveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    // Guests couldn't pay at all in card mode without the keys, so it can't be switched on before they're set.
+    if (String(form.get("payment_mode")) === "paymob" && cardReady !== true) {
+      setMessage("");
+      setError(t.paymentModeNotReady);
+      return;
+    }
     void save(() => supabase.from("app_settings").update({
-      payment_mode: String(form.get("payment_mode")) === "sandbox" ? "sandbox" : "manual",
+      payment_mode: PAYMENT_MODES.find((mode) => mode === String(form.get("payment_mode"))) ?? "manual",
+      card_fee_percent: Math.min(10, Math.max(0, Number(form.get("card_fee_percent")) || 0)),
+      card_fee_fixed: Math.min(100, Math.max(0, Math.round(Number(form.get("card_fee_fixed")) || 0))),
       cancellation_policy_active: form.has("cancellation_policy_active"),
       cancellation_policy_note: String(form.get("cancellation_policy_note") ?? "").trim().slice(0, 500),
     }).eq("id", 1));
@@ -109,10 +123,16 @@ export default function AdminPolicies({ locale, supabase }: { locale: SiteLocale
           <span>{t.paymentModeLabel}</span>
           <SakaniSelect name="payment_mode" defaultValue={settings.payment_mode}>
             <option value="manual">{t.paymentModeManual}</option>
+            <option value="paymob">{t.paymentModePaymob}</option>
             <option value="sandbox">{t.paymentModeSandbox}</option>
           </SakaniSelect>
           <small className="field-hint">{t.paymentModeHint}</small>
+          {cardReady === false && <small className="field-hint is-warning" role="status">{t.paymentModeNotReady}</small>}
         </label>
+        <div className="owner-form-grid">
+          <label className="owner-field"><span>{t.cardFeePercentLabel}</span><input name="card_fee_percent" type="number" min="0" max="10" step="0.05" defaultValue={settings.card_fee_percent ?? 2.75} dir="ltr" /></label>
+          <label className="owner-field"><span>{t.cardFeeFixedLabel}</span><input name="card_fee_fixed" type="number" min="0" max="100" step="1" defaultValue={settings.card_fee_fixed ?? 3} dir="ltr" /></label>
+        </div>
         <button className="admin-btn admin-btn-primary" type="submit" disabled={busy}><Save size={15} /> {t.settingsSave}</button>
       </form>
 

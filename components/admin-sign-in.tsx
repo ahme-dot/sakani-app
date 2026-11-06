@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
 import AuthLayout from "@/components/auth-layout";
-import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
+import Captcha, { captchaActive } from "@/components/captcha";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -23,7 +23,7 @@ export default function AdminSignIn({ locale }: { locale: SiteLocale }) {
   const [captchaReset, setCaptchaReset] = useState(0);
 
   function captchaMissing() {
-    if (CAPTCHA_SITE_KEY && !captchaToken) {
+    if (captchaActive() && !captchaToken) {
       setError(t.captchaRequired);
       return true;
     }

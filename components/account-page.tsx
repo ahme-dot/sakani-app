@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { Eye, EyeOff, House, Info, KeyRound, LoaderCircle, Mail, Phone, Search, UserRound } from "lucide-react";
 import AuthLayout from "@/components/auth-layout";
-import Captcha, { CAPTCHA_SITE_KEY } from "@/components/captcha";
+import Captcha, { captchaActive } from "@/components/captcha";
 import ProfilePage from "@/components/profile-page";
 import { PHONE_PATTERN, safeNext, signOutAccount, useAccount, type AccountRole } from "@/lib/account";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
@@ -142,7 +142,7 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
       (event.currentTarget.elements.namedItem(first) as HTMLInputElement | null)?.focus();
       return;
     }
-    if (CAPTCHA_SITE_KEY && !captchaToken) {
+    if (captchaActive() && !captchaToken) {
       setError(t.captchaRequired);
       return;
     }

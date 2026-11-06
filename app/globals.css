@@ -13324,3 +13324,13 @@ a.auth-submit, a.auth-submit:hover { color: #fff; }
 .listing-status-days { background: #eef2f6; color: #3d4a5c; }
 .admin-card-dates { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: #46546b; font-size: 12.5px; }
 .owner-rented-end { display: grid; gap: 6px; max-width: 360px; margin-block: 8px 4px; }
+
+/* ==== Card payments (Paymob) ==== */
+.pay-card { display: grid; gap: 12px; margin-top: 4px; }
+.pay-card .pay-breakdown { margin: 0; }
+.pay-card-button { width: 100%; min-height: 48px; justify-content: center; gap: 8px; font-size: 16px; }
+.pay-card-brands { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0; }
+.pay-card-brands span { border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 13px; font-weight: 700; color: var(--ink); background: #fff; }
+.pay-card-safe { display: flex; align-items: flex-start; gap: 6px; margin: 0; color: var(--muted); }
+.pay-card-safe svg { flex: none; margin-top: 2px; color: var(--green); }
+.field-hint.is-warning { color: #8a4b00; font-weight: 600; }

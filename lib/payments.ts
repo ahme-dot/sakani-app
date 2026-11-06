@@ -12,13 +12,16 @@ export type PaymentSettings = {
   team_whatsapp: string;
   student_fee_percent: number;
   student_fee_minimum: number;
-  /** "manual" InstaPay, or "sandbox" for testing without real money (lib/payment-providers.ts). */
-  payment_mode?: "manual" | "sandbox";
+  /** "manual" InstaPay, "paymob" card payments, or "sandbox" for testing without real money (lib/payment-providers.ts). */
+  payment_mode?: "manual" | "sandbox" | "paymob";
+  /** The card fee added to what the guest pays: a percent plus a fixed amount in pounds. */
+  card_fee_percent?: number;
+  card_fee_fixed?: number;
 };
 
 export type FeeStatus = "due" | "submitted" | "paid" | "waived" | "refunded";
-/** New payments are by InstaPay only; "vodafone_cash" remains on older fees. */
-export type PaymentMethod = "instapay" | "vodafone_cash";
+/** "card" through Paymob; "instapay" by hand; "vodafone_cash" remains on older fees. */
+export type PaymentMethod = "instapay" | "vodafone_cash" | "card";
 /** "fee": a service fee; "upfront": a guest's first month + service fee, held by Sakani. */
 export type FeeKind = "fee" | "upfront";
 
@@ -69,12 +72,12 @@ export const RENTAL_FEE_COLUMNS =
 /** A fee is overdue after this many days; owners then can't add new listings (enforced in the database). */
 export const FEE_GRACE_DAYS = 14;
 
+const SETTINGS_COLUMNS = "payee_name,instapay_address,vodafone_cash_number,fee_percent,fee_minimum,team_whatsapp,student_fee_percent,student_fee_minimum,payment_mode";
+
 export async function fetchPaymentSettings(client: SupabaseClient): Promise<PaymentSettings | null> {
-  const { data, error } = await client
-    .from("app_settings")
-    .select("payee_name,instapay_address,vodafone_cash_number,fee_percent,fee_minimum,team_whatsapp,student_fee_percent,student_fee_minimum,payment_mode")
-    .eq("id", 1)
-    .maybeSingle();
+  let { data, error } = await client.from("app_settings").select(`${SETTINGS_COLUMNS},card_fee_percent,card_fee_fixed`).eq("id", 1).maybeSingle();
+  // Before the card migration (20261110000000) the card fee columns don't exist yet.
+  if (error?.code === "42703") ({ data, error } = await client.from("app_settings").select(SETTINGS_COLUMNS).eq("id", 1).maybeSingle());
   if (error || !data) return null;
   return {
     ...data,
@@ -82,7 +85,16 @@ export async function fetchPaymentSettings(client: SupabaseClient): Promise<Paym
     fee_minimum: Number(data.fee_minimum),
     student_fee_percent: Number(data.student_fee_percent),
     student_fee_minimum: Number(data.student_fee_minimum),
+    card_fee_percent: Number(data.card_fee_percent ?? 0),
+    card_fee_fixed: Number(data.card_fee_fixed ?? 0),
   } as PaymentSettings;
+}
+
+/** The card fee on an amount, rounded up to a whole pound (the same formula as card_fee_for in the database). */
+export function cardFee(amount: number, percent: number, fixed: number) {
+  if (!(amount > 0)) return 0;
+  // Rounded to 6 places first so float noise (e.g. 286.25000000000003) never adds a pound.
+  return Math.ceil(Math.round((amount * percent / 100 + fixed) * 1e6) / 1e6);
 }
 
 /** The host commission on one month's rent (lib/finance.ts; the same formula as the database). */
