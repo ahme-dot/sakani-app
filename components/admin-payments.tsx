@@ -203,6 +203,7 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
           <label className="owner-field"><span>{t.settingsTeamWhatsapp}</span><input name="team_whatsapp" defaultValue={settings.team_whatsapp} maxLength={20} pattern="[0-9+ \(\)\-]{8,20}" inputMode="tel" dir="ltr" placeholder="010xxxxxxxx" /></label>
           <label className="owner-field"><span>{t.settingsStudentPercent}</span><input name="student_fee_percent" type="number" min="0" max="100" step="0.5" required defaultValue={settings.student_fee_percent} dir="ltr" /></label>
         </div>
+        <small className="field-hint">{t.feeRatesLegalHint}</small>
         <button className="admin-btn admin-btn-primary" type="submit" disabled={busy}>{t.settingsSave}</button>
       </form>
     </div>

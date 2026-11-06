@@ -1,5 +1,7 @@
 # Sakani — how the business makes money
 
+> **Out of date.** The fees and money flow below are from October 2026 and no longer apply. Today guests pay 8%, hosts pay 10%, and Sakani holds the rent until move-in. See `docs/payments.md`.
+
 *Draft, updated 25 October 2026. All figures are planning assumptions to test, not results.*
 
 ## The model in one line

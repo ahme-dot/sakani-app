@@ -29,7 +29,7 @@ export default function OpenGraphImage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <span style={{ fontSize: 72, fontWeight: 800, lineHeight: 1.1 }}>Places to rent across Egypt</span>
           <span style={{ fontSize: 34, color: "rgba(255,255,255,0.82)" }}>
-            Reviewed listings · Every host checked · Book with confidence
+            Reviewed listings · Rent held until you move in · Book with confidence
           </span>
         </div>
       </div>

@@ -23,6 +23,7 @@ import {
   Star,
   Wallet,
   X,
+  Trash2,
 } from "lucide-react";
 import BookingTimeline from "@/components/booking-timeline";
 import HostEarnings from "@/components/host-earnings";
@@ -295,6 +296,27 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
     setVersion((value) => value + 1);
   }
 
+  // Deleting an account has money and contracts behind it, so it goes to the team as a ticket.
+  async function requestDeletion() {
+    if (!window.confirm(t.deleteAccountConfirm)) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    const { error: ticketError } = await supabase.rpc("create_support_ticket", {
+      ticket_category: "other",
+      ticket_subject: t.deleteAccountSubject,
+      first_message: t.deleteAccountBody,
+      target_booking: null,
+    });
+    setBusy(false);
+    if (ticketError) {
+      console.error("Could not send the deletion request:", ticketError);
+      setError(t.chatSendError);
+      return;
+    }
+    setMessage(t.deleteAccountSent);
+  }
+
   async function switchRole() {
     const next: AccountRole = role === "host" ? "guest" : "host";
     setBusy(true);
@@ -450,6 +472,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
             {initialProfile && <Link className="button button-outline" href={`/${locale}/users/${user.id}`}><ExternalLink size={15} /> {t.viewPublicProfile}</Link>}
             {initialProfile && <button className="button button-outline" type="button" disabled={busy} onClick={() => void switchRole()}><Repeat size={15} /> {role === "host" ? t.switchToGuest : t.switchToHost}</button>}
             <button className="button button-outline profile-logout" type="button" onClick={() => void onSignOut()}><LogOut size={15} /> {t.accountSignOut}</button>
+            {initialProfile && <button className="button button-outline" type="button" disabled={busy} onClick={() => void requestDeletion()}><Trash2 size={15} /> {t.deleteAccountAsk}</button>}
           </div>
         </section>
 
