@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { KeyRound, LoaderCircle, ShieldCheck } from "lucide-react";
 import { CopyValue } from "@/components/owner-payments";
+import { latinDigits, onDigitsInput } from "@/lib/digits";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 export type MfaStatus = { enrolled: boolean; passed: boolean; factorId: string | null };
@@ -23,7 +24,7 @@ export function AdminMfaChallenge({ locale, supabase, factorId, onPassed }: { lo
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const code = String(new FormData(event.currentTarget).get("code") ?? "").replace(/\D/g, "");
+    const code = latinDigits(String(new FormData(event.currentTarget).get("code") ?? "")).replace(/\D/g, "");
     if (code.length !== 6) {
       setError(t.mfaCodeInvalid);
       return;
@@ -50,13 +51,14 @@ export function AdminMfaChallenge({ locale, supabase, factorId, onPassed }: { lo
           <span>{t.mfaCodeLabel}</span>
           <span className="auth-input">
             <KeyRound size={17} aria-hidden="true" />
-            <input name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" autoFocus required />
+            <input name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" autoFocus required onInput={onDigitsInput} />
           </span>
           {error && <small className="field-error" role="alert">{error}</small>}
         </label>
         <button className="button button-primary auth-submit" type="submit" disabled={busy}>{busy ? t.sending : t.mfaVerify}</button>
       </form>
-      <p className="field-hint">{t.mfaLostPhone}</p>
+      {/* This screen is reached with a password alone, so how the team recovers an account stays behind the code. */}
+      <p className="field-hint">{t.mfaLostPhoneAsk}</p>
     </section>
   );
 }
@@ -90,7 +92,7 @@ export function AdminMfaSetup({ locale, supabase, onDone }: { locale: SiteLocale
   async function confirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!factor) return;
-    const code = String(new FormData(event.currentTarget).get("code") ?? "").replace(/\D/g, "");
+    const code = latinDigits(String(new FormData(event.currentTarget).get("code") ?? "")).replace(/\D/g, "");
     if (code.length !== 6) {
       setError(t.mfaCodeInvalid);
       return;
@@ -129,7 +131,7 @@ export function AdminMfaSetup({ locale, supabase, onDone }: { locale: SiteLocale
             <li>
               <label className="owner-field">
                 <span>{t.mfaStepCode}</span>
-                <input name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" required />
+                <input name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" required onInput={onDigitsInput} />
               </label>
             </li>
           </ol>
@@ -163,6 +165,7 @@ export default function AdminMfaPanel({ locale, supabase, onChanged }: { locale:
       <section className="admin-mfa-setup is-on">
         <h2 className="admin-section-title"><ShieldCheck size={17} /> {t.mfaOnTitle}</h2>
         <p className="field-hint">{t.mfaOnText}</p>
+        <p className="field-hint">{t.mfaLostPhone}</p>
       </section>
     );
   }

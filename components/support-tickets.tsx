@@ -32,11 +32,21 @@ export default function SupportTickets({ locale, supabase, userId, asTeam = fals
   const [version, setVersion] = useState(0);
   // Finished tickets fold away so the open ones stay on top.
   const [showDone, setShowDone] = useState(false);
+  const [previews, setPreviews] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let active = true;
-    void supabase.from("support_tickets").select("id,number,category,subject,status,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50).then(({ data }) => {
-      if (active) setTickets((data ?? []) as SupportTicket[]);
+    void supabase.from("support_tickets").select("id,number,category,subject,status,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50).then(async ({ data }) => {
+      if (!active) return;
+      const rows = (data ?? []) as SupportTicket[];
+      setTickets(rows);
+      if (!rows.length) return;
+      // The latest message on each ticket, as one line under its subject. Only an extra, so a failure just leaves it out.
+      const { data: messages } = await supabase.from("support_messages").select("ticket_id,body").in("ticket_id", rows.map((row) => row.id)).order("created_at", { ascending: false }).limit(200);
+      const latest: Record<string, string> = {};
+      // A ticket's first message is saved as "#12 — text".
+      for (const row of (messages ?? []) as Array<{ ticket_id: string; body: string }>) latest[row.ticket_id] ??= row.body.replace(/^#\d+ — /, "");
+      if (active) setPreviews(latest);
     });
     return () => {
       active = false;
@@ -87,7 +97,7 @@ export default function SupportTickets({ locale, supabase, userId, asTeam = fals
         {!asTeam && <button className="button button-outline" type="button" onClick={() => setOpen((value) => !value)}>{t.ticketNew}</button>}
       </div>
       {open && (
-        <form className="tickets-form" onSubmit={(event) => void create(event)}>
+        <form className="tickets-form" key={bookingId ?? "general"} onSubmit={(event) => void create(event)}>
           <label className="owner-field">
             <span>{t.ticketCategory}</span>
             <SakaniSelect name="category" defaultValue={bookingId ? "booking" : "other"}>
@@ -113,6 +123,7 @@ export default function SupportTickets({ locale, supabase, userId, asTeam = fals
               ) : (
                 <span className={`status-chip is-${ticket.status === "resolved" || ticket.status === "closed" ? "paid" : "pending"}`}>{t.ticketStatus[ticket.status]}</span>
               )}
+              {previews[ticket.id] && <small className="tickets-preview">{previews[ticket.id]}</small>}
             </li>
           ))}
         </ul>

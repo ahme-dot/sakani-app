@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CheckCircle2, Clock3, CreditCard, FlaskConical, LoaderCircle, ShieldCheck, Wallet } from "lucide-react";
+import { useAccount } from "@/lib/account";
+import { latinDigits, onDigitsInput } from "@/lib/digits";
 import { paymentProvider, startCardCheckout } from "@/lib/payment-providers";
 import { CopyValue } from "@/components/owner-payments";
 import { fetchPaymentSettings, type FeeStatus, type PaymentMethod, type PaymentSettings } from "@/lib/payments";
@@ -51,6 +54,10 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
   const [error, setError] = useState("");
   const [cardState] = useState(cardReturnState);
   const [checks, setChecks] = useState(0);
+  // The payer's number: what they typed, otherwise the one on their account.
+  const account = useAccount(supabase);
+  const [typedPhone, setTypedPhone] = useState<string | null>(null);
+  const phoneValue = typedPhone ?? (account.status === "signedIn" ? account.profile?.phone ?? "" : "");
 
   const tokenValid = Boolean(supabase) && TOKEN_PATTERN.test(token);
   const titleOf = useListingTitles(supabase, [fee && fee !== "invalid" ? fee.listing_id : null], locale);
@@ -103,8 +110,8 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
     if (!supabase) return;
     const form = new FormData(event.currentTarget);
     // Checked here (not by the browser) so the messages are in the page's language.
-    const reference = String(form.get("reference") ?? "").trim();
-    const phone = String(form.get("phone") ?? "").trim();
+    const reference = latinDigits(String(form.get("reference") ?? "")).trim();
+    const phone = latinDigits(String(form.get("phone") ?? "")).trim();
     if (reference.length < 3) {
       setError(t.payReferenceInvalid);
       document.getElementById("pay-reference")?.focus();
@@ -134,9 +141,21 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  if (!tokenValid) return <p className="owner-feedback owner-feedback-error" role="alert">{t.payInvalid}</p>;
-  if (fee === null) return <div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.loading}</div>;
-  if (fee === "invalid") return <p className="owner-feedback owner-feedback-error" role="alert">{t.payInvalid}</p>;
+  if (!tokenValid || fee === "invalid") {
+    return (
+      <>
+        <h1>{t.payInvalidTitle}</h1>
+        <p role="alert">{t.payInvalid}</p>
+        <div className="pay-invalid-actions">
+          <Link className="button button-primary" href={`/${locale}/help#contact`}>{t.payInvalidAction}</Link>
+          <Link className="button button-outline" href={`/${locale}/account#bookings`}>{t.bookSeeMine}</Link>
+        </div>
+      </>
+    );
+  }
+
+  const heading = <><h1>{t.payPageTitle}</h1><p>{t.payPageIntro}</p></>;
+  if (fee === null) return <>{heading}<div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.loading}</div></>;
 
   const upfront = fee.kind === "upfront";
   const provider = paymentProvider(settings?.payment_mode);
@@ -155,7 +174,16 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
     setVersion((value) => value + 1);
   }
 
+  // Where to go once the money is on its way: guests to their bookings, hosts back to their listings.
+  const onward = fee.status === "submitted" || fee.status === "paid" ? (
+    <Link className="button button-primary pay-onward" href={fee.payer === "student" ? `/${locale}/account#bookings` : `/${locale}/host`}>
+      {fee.payer === "student" ? t.bookSeeMine : t.payOnwardHost}
+    </Link>
+  ) : null;
+
   return (
+    <>
+    {heading}
     <article className={`fee-card pay-page-card is-${fee.status}`}>
       <div className="fee-card-head">
         <div>
@@ -218,6 +246,7 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
           <form className="fee-pay" onSubmit={(event) => void submit(event)} noValidate>
             <p>{t.feeHowTo}</p>
             <div className="pay-accounts">
+              <CopyValue label={t.payAmountToSend} value={String(fee.amount)} copyLabel={t.copy} copiedLabel={t.copied} />
               {settings.instapay_address && <CopyValue label={t.payInstapay} value={settings.instapay_address} copyLabel={t.copy} copiedLabel={t.copied} />}
               {settings.payee_name && <p className="pay-payee">{t.payeeName}: <strong>{settings.payee_name}</strong></p>}
             </div>
@@ -225,12 +254,12 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
             <div className="owner-form-grid">
               <label className="owner-field">
                 <span>{t.payReference}</span>
-                <input name="reference" id="pay-reference" required minLength={3} maxLength={64} dir="ltr" autoComplete="off" />
+                <input name="reference" id="pay-reference" required minLength={3} maxLength={64} dir="ltr" autoComplete="off" onInput={onDigitsInput} />
                 <small className="field-hint">{t.payReferenceHint}</small>
               </label>
               <label className="owner-field">
                 <span>{t.payPhone}</span>
-                <input name="phone" id="pay-phone" type="tel" inputMode="tel" required pattern="[0-9+ \(\)\-]{8,20}" dir="ltr" autoComplete="tel" placeholder="01xxxxxxxxx" />
+                <input name="phone" id="pay-phone" type="tel" inputMode="tel" required pattern="[0-9+ \(\)\-]{8,20}" dir="ltr" autoComplete="tel" placeholder="01xxxxxxxxx" value={phoneValue} onChange={(event) => setTypedPhone(latinDigits(event.target.value))} />
                 <small className="field-hint">{t.payPhoneHint}</small>
               </label>
             </div>
@@ -254,6 +283,8 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
       {fee.status === "refunded" && (
         <p className="pay-state is-paid"><Wallet size={18} /> {t.feeStatus.refunded}</p>
       )}
+      {onward}
     </article>
+    </>
   );
 }

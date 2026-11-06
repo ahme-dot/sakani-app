@@ -7,6 +7,7 @@ import { Armchair, ArrowLeft, ArrowRight, BedSingle, Building2, DoorOpen, ImageP
 import { AMENITIES, AMENITY_KEYS } from "@/lib/amenities";
 import VisitChecklist, { readVisit } from "@/components/visit-checklist";
 import { GOVERNORATES, areaLabel, areaSuggestions, normalizeArea, placeLabel } from "@/lib/egypt";
+import { isEgyptMobile, latinDigits, numberField, onDigitsInput, outOfRange } from "@/lib/digits";
 import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
 import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings, successFee, type PaymentSettings } from "@/lib/payments";
 import { listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
@@ -25,6 +26,7 @@ const STEPS = ["type", "location", "beds", "amenities", "photos", "text", "price
 type StepId = (typeof STEPS)[number];
 const STAGE_OF: Record<StepId, number> = { type: 0, location: 0, beds: 0, amenities: 1, photos: 1, text: 1, price: 2, contact: 2, review: 2 };
 const STAGE_START = [0, 3, 6];
+const PHOTOS_STEP = STEPS.indexOf("photos");
 
 const TYPE_ICONS = { room: DoorOpen, studio: Armchair, apartment: Building2, bed: BedSingle } as const;
 const GENDER_ICONS = { male: Mars, female: Venus } as const;
@@ -43,7 +45,19 @@ type Props = {
   onCancel?: () => void;
 };
 
-type Draft = { step: number; values: Record<string, string | string[]> };
+/** `photos`: how many were chosen when the draft was saved. The files themselves can't be kept. */
+type Draft = { step: number; values: Record<string, string | string[]>; photos?: number };
+type Field = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+/** What the owner sees as this field's name: a choice by its group, anything else by its own label (not the screen's title). */
+function fieldLabel(field: Field) {
+  const group = field.closest('[role="radiogroup"]');
+  if (group) return group.getAttribute("aria-label") ?? "";
+  return field.closest("label")?.querySelector("span")?.textContent?.trim() ?? "";
+}
+
+/** The element that shows the red mark: a group of tiles as a whole, otherwise the field. */
+const markOf = (field: Field): HTMLElement => field.closest<HTMLElement>('[role="radiogroup"]') ?? field;
 
 /** The owner's unfinished listing (text only, not photos), kept in this browser so they can finish later. */
 function readDraft(): Draft | null {
@@ -96,6 +110,11 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
   const [busyText, setBusyText] = useState("");
   const [error, setError] = useState("");
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  // The field the error message is about; marked until it's fixed.
+  const flagged = useRef<Field | null>(null);
+  const shownStep = useRef(step);
+  // A restored draft has its words but not its photos, so say so rather than let the owner find out at the end.
+  const [photosLost, setPhotosLost] = useState(() => Boolean(draft && ((draft.photos ?? 0) > 0 || draft.step > PHOTOS_STEP)));
   // A whole flat or studio is described by its rooms; rooms and beds by their free beds.
   const [placeType, setPlaceType] = useState<string>(() => editing?.property_type ?? text("property_type") ?? "room");
   const wholePlace = placeType === "apartment" || placeType === "studio";
@@ -125,48 +144,90 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
     };
   }, [isAdmin, supabase]);
 
+  // A new screen: bring the top of the form back into view, clear of the sticky header. Done after the screen has
+  // changed, because the form's height (and so the target) changes with it.
+  useEffect(() => {
+    if (shownStep.current === step) return;
+    shownStep.current = step;
+    const form = formRef.current;
+    if (!form) return;
+    const bars = Array.from(document.querySelectorAll<HTMLElement>(".site-header, .admin-sidebar")).filter(
+      (bar) => bar.offsetWidth > window.innerWidth * 0.6 && ["sticky", "fixed"].includes(getComputedStyle(bar).position),
+    );
+    const covered = Math.max(0, ...bars.map((bar) => bar.getBoundingClientRect().bottom));
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: form.getBoundingClientRect().top + window.scrollY - covered - 12, behavior: still ? "auto" : "smooth" });
+  }, [step]);
+
   function saveDraft(nextStep = step) {
     if (editing || isAdmin || !formRef.current) return;
     try {
-      window.localStorage.setItem(DRAFT_KEY, JSON.stringify({ step: nextStep, values: formValues(formRef.current) }));
+      const photos = formRef.current.querySelector<HTMLInputElement>('input[type="file"]')?.files?.length ?? 0;
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify({ step: nextStep, values: formValues(formRef.current), photos }));
     } catch {
       // Storage blocked: the form still works, it just won't be remembered.
     }
   }
 
-  /** Checks one screen. Shows the browser's message on the first problem; returns false if something is missing. */
+  /** What's wrong with one field, naming it and its limit, in the page's language; empty when it's fine. */
+  function problemWith(field: Field) {
+    const label = fieldLabel(field);
+    if (field instanceof HTMLInputElement && field.type === "file") {
+      const files = Array.from(field.files ?? []);
+      if ((!editing && files.length === 0) || files.some((file) => !ALLOWED_IMAGE_TYPES.includes(file.type) || file.size > MAX_IMAGE_SIZE)) return t.imageError;
+      return files.length > MAX_IMAGES ? t.tooManyPhotos : "";
+    }
+    const entered = field.value.trim();
+    if (field.validity.valueMissing || (field.required && !entered)) return t.formFieldCheck(label);
+    if (!entered) return "";
+    if (field instanceof HTMLInputElement && field.dataset.min && outOfRange(field)) {
+      return t.formNumberRange(label, Number(field.dataset.min).toLocaleString("en-US"), Number(field.dataset.max).toLocaleString("en-US"));
+    }
+    if (field.name === "available_beds") {
+      const total = field.form?.elements.namedItem("total_beds") as HTMLInputElement | null;
+      if (total && Number(entered) > Number(total.value)) return t.bedsError;
+    }
+    // A number saved before this check shouldn't stop the owner fixing a typo elsewhere in the listing.
+    if (field.name === "whatsapp_number" && !isEgyptMobile(entered) && entered !== editing?.whatsapp_number) return t.formPhoneEgypt;
+    if ("minLength" in field && field.minLength > 0 && entered.length < field.minLength) return t.formTooShort(label, field.minLength, entered.length);
+    return field.validity.valid ? "" : t.formFieldCheck(label);
+  }
+
+  function unflag() {
+    if (flagged.current) markOf(flagged.current).removeAttribute("aria-invalid");
+    flagged.current = null;
+  }
+
+  /** Our own message (the browser's would be in the browser's language), the field marked, and the owner taken to it. */
+  function flag(field: Field, message: string) {
+    unflag();
+    flagged.current = field;
+    markOf(field).setAttribute("aria-invalid", "true");
+    setError(message);
+    field.focus({ preventScroll: true });
+    (field.closest<HTMLElement>('[role="radiogroup"]') ?? field.closest<HTMLElement>("label"))?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  /** While a field is marked, every change looks at it again: the message follows the value and goes once it's right. */
+  function recheck() {
+    if (!flagged.current) return;
+    const message = problemWith(flagged.current);
+    if (message) {
+      setError(message);
+    } else {
+      unflag();
+      setError("");
+    }
+  }
+
+  /** Checks one screen and, if asked, reports its first problem; returns false if there is one. */
   function checkStep(index: number, report: boolean) {
-    const form = formRef.current;
-    if (!form) return false;
-    const section = form.querySelector<HTMLElement>(`[data-step="${STEPS[index]}"]`);
-    const fields = Array.from(section?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea") ?? []);
-    const invalid = fields.find((field) => !field.checkValidity());
-    if (invalid) {
-      if (report) {
-        // Our own message (the browser's would be in the browser's language), then take the owner to the field.
-        // A choice (radio or checkbox) is named by its group, not by the option.
-        const group = invalid.closest<HTMLElement>('[role="radiogroup"], fieldset');
-        const holder = group ?? invalid.closest<HTMLElement>("label");
-        const label = (group?.getAttribute("aria-label") ?? holder?.querySelector("legend, span")?.textContent ?? "").trim();
-        setError(t.formFieldCheck(label));
-        invalid.focus({ preventScroll: true });
-        holder?.scrollIntoView({ block: "center", behavior: "smooth" });
-      }
-      return false;
-    }
-    const data = new FormData(form);
-    if (STEPS[index] === "beds" && Number(data.get("available_beds")) > Number(data.get("total_beds"))) {
-      if (report) setError(t.bedsError);
-      return false;
-    }
-    if (STEPS[index] === "photos") {
-      const files = data.getAll("images").filter((value): value is File => value instanceof File && value.size > 0);
-      if ((!editing && files.length === 0) || files.some((file) => !ALLOWED_IMAGE_TYPES.includes(file.type) || file.size > MAX_IMAGE_SIZE)) {
-        if (report) setError(t.imageError);
-        return false;
-      }
-      if (files.length > MAX_IMAGES) {
-        if (report) setError(t.tooManyPhotos);
+    const section = formRef.current?.querySelector<HTMLElement>(`[data-step="${STEPS[index]}"]`);
+    if (!section) return false;
+    for (const field of section.querySelectorAll<Field>("input, select, textarea")) {
+      const message = problemWith(field);
+      if (message) {
+        if (report) flag(field, message);
         return false;
       }
     }
@@ -174,12 +235,12 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
   }
 
   function goTo(index: number) {
+    unflag();
     setError("");
     if (STEPS[index] === "review" && formRef.current) setSummary(formValues(formRef.current));
     setStep(index);
     setReached((value) => Math.max(value, index));
     saveDraft(Math.min(index, STEPS.length - 2));
-    formRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
   function next() {
@@ -316,6 +377,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
 
     if (editing && uploadedPaths.length) await removeListingImages(supabase, listingImages(editing));
     if (!editing && !isAdmin) clearDraft();
+    setPhotosLost(false);
     form.reset();
     setImagePreviews([]);
     setVisited(false);
@@ -358,7 +420,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
   const Forward = locale === "ar" ? ArrowLeft : ArrowRight;
 
   return (
-    <form className="owner-form listing-steps" id="owner-form" ref={formRef} noValidate onSubmit={submit} onChange={() => saveDraft()}>
+    <form className="owner-form listing-steps" id="owner-form" data-step-index={step} ref={formRef} noValidate onSubmit={submit} onChange={() => { saveDraft(); recheck(); }}>
       <nav className="listing-stages" aria-label={t.stepCount(step + 1, STEPS.length)}>
         {stageNames.map((name, index) => {
           const done = index < stage ? 1 : index > stage ? 0 : (stepInStage + (isLast ? 1 : 0)) / stageSize;
@@ -378,6 +440,12 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
         })}
       </nav>
       <p className="listing-step-count">{t.stepCount(step + 1, STEPS.length)}</p>
+      {photosLost && (
+        <p className="listing-photos-lost" role="status">
+          {t.draftPhotosLost}
+          {current !== "photos" && <button type="button" onClick={() => goTo(PHOTOS_STEP)}>{t.draftPhotosAdd}</button>}
+        </p>
+      )}
 
       {screen("type", t.stepTypeTitle, t.stepTypeText, (
         <>
@@ -432,12 +500,12 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
       {screen("beds", wholePlace ? t.stepPlaceTitle : t.stepBedsTitle, wholePlace ? t.stepPlaceText : t.stepBedsText, (
         <div className="owner-form-grid">
           {/* A flat or studio is booked whole: one "bed" each, kept out of sight. */}
-          <label className="owner-field" hidden={wholePlace}><span>{t.availableBeds}</span><input name="available_beds" type="number" inputMode="numeric" min="1" max="100" defaultValue={editing?.available_beds ?? text("available_beds") ?? 1} required /></label>
-          <label className="owner-field" hidden={wholePlace}><span>{t.totalBeds}</span><input name="total_beds" type="number" inputMode="numeric" min="1" max="100" defaultValue={editing?.total_beds ?? text("total_beds") ?? 1} required /></label>
-          <label className="owner-field"><span>{t.bedroomsLabel}</span><input name="bedrooms" type="number" inputMode="numeric" min="0" max="20" defaultValue={editing?.bedrooms ?? text("bedrooms") ?? ""} required={wholePlace} /></label>
-          <label className="owner-field"><span>{t.bathroomsLabel}</span><input name="bathrooms" type="number" inputMode="numeric" min="0" max="20" defaultValue={editing?.bathrooms ?? text("bathrooms") ?? ""} /></label>
-          <label className="owner-field"><span>{t.areaSqmLabel}</span><input name="area_sqm" type="number" inputMode="numeric" min="5" max="2000" defaultValue={editing?.area_sqm ?? text("area_sqm") ?? ""} /></label>
-          <label className="owner-field"><span>{t.minMonthsLabel}</span><input name="min_months" type="number" inputMode="numeric" min="1" max="24" defaultValue={editing?.min_months ?? text("min_months") ?? 1} required /></label>
+          <label className="owner-field" hidden={wholePlace}><span>{t.availableBeds}</span><input name="available_beds" {...numberField(1, 100)} defaultValue={editing?.available_beds ?? text("available_beds") ?? 1} required /></label>
+          <label className="owner-field" hidden={wholePlace}><span>{t.totalBeds}</span><input name="total_beds" {...numberField(1, 100)} defaultValue={editing?.total_beds ?? text("total_beds") ?? 1} required /></label>
+          <label className="owner-field"><span>{t.bedroomsLabel}</span><input name="bedrooms" {...numberField(0, 20)} defaultValue={editing?.bedrooms ?? text("bedrooms") ?? ""} required={wholePlace} /></label>
+          <label className="owner-field"><span>{t.bathroomsLabel}</span><input name="bathrooms" {...numberField(0, 20)} defaultValue={editing?.bathrooms ?? text("bathrooms") ?? ""} /></label>
+          <label className="owner-field"><span>{t.areaSqmLabel}</span><input name="area_sqm" {...numberField(5, 2000)} defaultValue={editing?.area_sqm ?? text("area_sqm") ?? ""} /></label>
+          <label className="owner-field"><span>{t.minMonthsLabel}</span><input name="min_months" {...numberField(1, 24)} defaultValue={editing?.min_months ?? text("min_months") ?? 1} required /></label>
           <label className="owner-field"><span>{t.availableFromLabel}</span><SakaniDate name="available_from" dir="ltr" defaultValue={editing?.available_from ?? text("available_from") ?? ""} /></label>
         </div>
       ))}
@@ -468,6 +536,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
                 setError("");
                 const files = Array.from(event.target.files ?? []).slice(0, MAX_IMAGES);
                 setImagePreviews(files.map((file) => URL.createObjectURL(file)));
+                if (files.length > 0) setPhotosLost(false);
               }}
             />
           </label>
@@ -502,15 +571,15 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
         <>
           <label className="owner-field listing-price-field">
             <span>{t.price}</span>
-            <input name="monthly_price" type="number" inputMode="numeric" min="1" max="1000000" required value={price} onChange={(event) => setPrice(event.target.value)} dir="ltr" />
+            <input name="monthly_price" {...numberField(1, 1000000)} required value={price} onChange={(event) => setPrice(latinDigits(event.target.value))} dir="ltr" />
           </label>
           {fee !== null && <p className="listing-fee-note">{t.stepFeeNote(numberFormat.format(fee))}</p>}
-          <label className="owner-field"><span>{t.deposit}</span><input name="deposit" type="number" inputMode="numeric" min="0" max="1000000" defaultValue={editing?.deposit ?? text("deposit") ?? 0} required dir="ltr" /></label>
+          <label className="owner-field"><span>{t.deposit}</span><input name="deposit" {...numberField(0, 1000000)} defaultValue={editing?.deposit ?? text("deposit") ?? 0} required dir="ltr" /></label>
         </>
       ))}
 
       {screen("contact", t.stepContactTitle, t.ownerNumberPrivate, (
-        <label className="owner-field"><span>{isAdmin ? t.ownerWhatsapp : t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" autoComplete={isAdmin ? "off" : "tel"} pattern="[0-9+ \(\)\-]{8,20}" placeholder={t.whatsappHint} required dir="ltr" defaultValue={editing?.whatsapp_number ?? text("whatsapp_number")} /></label>
+        <label className="owner-field"><span>{isAdmin ? t.ownerWhatsapp : t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" autoComplete={isAdmin ? "off" : "tel"} placeholder={t.whatsappHint} required dir="ltr" defaultValue={editing?.whatsapp_number ?? text("whatsapp_number")} onInput={onDigitsInput} /></label>
       ))}
 
       {screen("review", t.stepReviewTitle, isAdmin ? null : t.stepReviewText, (
@@ -547,7 +616,8 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
       ))}
 
       {error && <p className="owner-feedback owner-feedback-error" role="alert">{error}</p>}
-      {!editing && !isAdmin && step > 0 && <p className="listing-draft-note">{t.draftSavedNote}</p>}
+      {/* Said once, on the first screen after the start. */}
+      {!editing && !isAdmin && step === 1 && reached === 1 && <p className="listing-draft-note">{t.draftSavedNote}</p>}
       <div className="listing-step-actions">
         {step > 0 ? (
           <button className="listing-step-back" type="button" disabled={submitting} onClick={() => goTo(step - 1)}><Back size={16} /> {t.formBack}</button>

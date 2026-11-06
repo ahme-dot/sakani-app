@@ -9,6 +9,7 @@ import AuthLayout from "@/components/auth-layout";
 import Captcha, { captchaActive } from "@/components/captcha";
 import ProfilePage from "@/components/profile-page";
 import { PHONE_PATTERN, safeNext, signOutAccount, useAccount, type AccountRole } from "@/lib/account";
+import { latinDigits } from "@/lib/digits";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -114,8 +115,10 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
 
   async function finishSignedIn(client: SupabaseClient) {
     await claimGuestListings(client);
-    // Back to the listing being booked; otherwise this page shows the new profile.
-    if (returnTo) router.replace(returnTo);
+    // Back to the listing being booked; otherwise this page shows the new profile. An address with a #place is
+    // loaded in full: the browser then keeps the booking box in view while the page and its photos come in.
+    if (returnTo?.includes("#")) window.location.assign(returnTo);
+    else if (returnTo) router.replace(returnTo);
     else router.refresh();
   }
 
@@ -305,7 +308,7 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
             <span>{role === "host" ? t.phoneOptional : t.phoneLabel}</span>
             <span className="auth-input">
               <Phone size={17} aria-hidden="true" />
-              <input name="phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="01xxxxxxxxx" value={phone} aria-invalid={Boolean(fieldErrors.phone) || undefined} onChange={(event) => { setPhone(event.target.value); setError(""); clearField("phone"); }} required={role !== "host"} />
+              <input name="phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="01xxxxxxxxx" value={phone} aria-invalid={Boolean(fieldErrors.phone) || undefined} onChange={(event) => { setPhone(latinDigits(event.target.value)); setError(""); clearField("phone"); }} required={role !== "host"} />
             </span>
             {fieldErrors.phone && <small className="field-error" role="alert">{fieldErrors.phone}</small>}
           </label>

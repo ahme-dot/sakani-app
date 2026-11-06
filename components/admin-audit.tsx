@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LoaderCircle, ScrollText } from "lucide-react";
+import type { DirectoryUser } from "@/components/admin-users";
 import { DOCUMENTS_COPY } from "@/messages/documents";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
@@ -20,10 +21,10 @@ type AuditEntry = {
 const ENTITIES = ["", "listing_requests", "rental_fees", "deposit_transfers", "contract_acceptances", "cancellation_requests", "app_settings"] as const;
 // The fields worth showing when they change; the full rows stay in the database.
 const WATCHED = ["status", "amount", "total_amount", "deposit_amount", "host_decision", "fee_percent", "student_fee_percent", "reference", "refund_reference", "payout_reference", "transfer_reference", "contract_signed_at", "document", "document_version", "party", "scenario", "decision", "slug"];
-const ISO_TIME = /^d{4}-d{2}-d{2}Td{2}:d{2}/;
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
 /** Admin: the append-only record of every money change (bookings, payments, deposits, fee settings). */
-export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; supabase: SupabaseClient }) {
+export default function AdminAudit({ locale, supabase, people = [] }: { locale: SiteLocale; supabase: SupabaseClient; people?: DirectoryUser[] }) {
   const t = SITE_COPY[locale];
   const timeFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium", timeStyle: "medium" });
   const [entity, setEntity] = useState<(typeof ENTITIES)[number]>("");
@@ -59,8 +60,13 @@ export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; s
 
   // Field names and statuses in words; amounts and references as they are.
   const statusWord = (entity: string, value: unknown) => {
-    const map: Record<string, string> = entity === "rental_fees" ? t.feeStatus : entity === "listing_requests" ? t.adminBookingTabs : {};
+    const map: Record<string, string> = entity === "rental_fees" ? t.feeStatus : entity === "listing_requests" ? t.adminBookingTabs : t.auditStatuses;
     return typeof value === "string" ? map[value] ?? value : String(value ?? "—");
+  };
+  // Team members often have no profile, so their name in the directory, then their email, before "a user".
+  const who = (actor: string) => {
+    const person = people.find((item) => item.user_id === actor);
+    return names[actor] || person?.full_name || person?.email || t.auditSomeone;
   };
   const documents = DOCUMENTS_COPY[locale].titles as Record<string, string>;
   const show = (entry: AuditEntry, key: string, value: unknown) => {
@@ -69,6 +75,8 @@ export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; s
     if (key === "host_decision") return t.hostDecisionAdmin[value as keyof typeof t.hostDecisionAdmin] ?? String(value);
     if (key === "document") return documents[String(value)] ?? String(value);
     if (key === "party") return value === "host" ? t.roleHost : t.roleGuest;
+    if (key === "scenario") return t.cancelScenarios[value as keyof typeof t.cancelScenarios] ?? String(value);
+    if (key === "decision") return t.auditStatuses[value as keyof typeof t.auditStatuses] ?? String(value);
     if (typeof value === "string" && ISO_TIME.test(value)) return timeFormat.format(new Date(value));
     if (typeof value === "number") return new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG").format(value);
     return String(value);
@@ -94,7 +102,7 @@ export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; s
         <section className="admin-empty-state"><ScrollText size={26} /><p>{t.auditEmpty}</p></section>
       ) : (
         <div className="admin-table-wrap">
-          <table className="admin-table">
+          <table className="admin-table admin-table-stack">
             <thead>
               <tr>
                 <th scope="col">{t.auditTime}</th>
@@ -107,8 +115,8 @@ export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; s
               {entries.map((entry) => (
                 <tr key={entry.id}>
                   <td className="admin-audit-time">{timeFormat.format(new Date(entry.at))}</td>
-                  <td>{t.auditEntities[entry.entity as keyof typeof t.auditEntities] ?? entry.entity} · {t.auditActions[entry.action as keyof typeof t.auditActions] ?? entry.action}<br /><small dir="ltr" className="admin-audit-id">#{entry.entity_id?.slice(0, 8)}</small></td>
-                  <td className="admin-audit-change">
+                  <td data-label={t.auditWhat}>{t.auditEntities[entry.entity as keyof typeof t.auditEntities] ?? entry.entity} · {t.auditActions[entry.action as keyof typeof t.auditActions] ?? entry.action}<br /><small dir="ltr" className="admin-audit-id">#{entry.entity_id?.slice(0, 8)}</small></td>
+                  <td className="admin-audit-change" data-label={t.auditChange}>
                     {changes(entry).length === 0 ? "—" : (
                       <ul>
                         {/* Each value is isolated so numbers and codes keep their direction in Arabic lines. */}
@@ -122,7 +130,7 @@ export default function AdminAudit({ locale, supabase }: { locale: SiteLocale; s
                       </ul>
                     )}
                   </td>
-                  <td><small>{entry.actor ? names[entry.actor] || t.auditSomeone : t.auditSystem}</small></td>
+                  <td data-label={t.auditBy}><small>{entry.actor ? who(entry.actor) : t.auditSystem}</small></td>
                 </tr>
               ))}
             </tbody>
