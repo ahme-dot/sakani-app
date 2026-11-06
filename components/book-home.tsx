@@ -13,6 +13,8 @@ import SakaniSelect from "@/components/sakani-select";
 import SakaniDate from "@/components/sakani-date";
 
 type Props = {
+  /** Dates already full, closed on the calendar. */
+  booked?: ReadonlyArray<{ starts: string; ends: string }>;
   locale: SiteLocale;
   listingId: string;
   monthlyPrice: number;
@@ -41,7 +43,7 @@ const MAX_PEOPLE = 6;
  * A signed-in guest books and pays straight away (first month + Sakani fee, by InstaPay).
  * Sakani holds the money: it is refunded within 24 hours if anything goes wrong, and the host is paid after move-in.
  */
-export default function BookHome({ locale, listingId, monthlyPrice, deposit, fees, isDemo = false, minMonths = 1, availableFrom = null, freeBeds, hostReady = true }: Props) {
+export default function BookHome({ locale, listingId, booked, monthlyPrice, deposit, fees, isDemo = false, minMonths = 1, availableFrom = null, freeBeds, hostReady = true }: Props) {
   const t = SITE_COPY[locale];
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const account = useAccount(supabase);
@@ -155,7 +157,7 @@ export default function BookHome({ locale, listingId, monthlyPrice, deposit, fee
           <div className="book-form-grid">
             <label className="owner-field">
               <span>{t.bookMoveIn}</span>
-              <SakaniDate name="move_in" required min={earliest} dir="ltr" aria-invalid={dateError || undefined} onChange={() => error && setError("")} />
+              <SakaniDate name="move_in" required min={earliest} booked={booked} dir="ltr" aria-invalid={dateError || undefined} onChange={() => error && setError("")} />
               {dateError && <small className="field-error" role="alert">{error}</small>}
             </label>
             <label className="owner-field">

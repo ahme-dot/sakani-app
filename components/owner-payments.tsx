@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Check, Copy, Wallet } from "lucide-react";
 import { FEE_GRACE_DAYS, type PaymentSettings, type RentalFee } from "@/lib/payments";
+import { latinDigits } from "@/lib/digits";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 type Props = {
@@ -59,7 +60,7 @@ export default function OwnerPayments({ locale, supabase, fees, settings, loaded
       target_fee: fee.id,
       pay_method: String(form.get("method") ?? ""),
       pay_reference: String(form.get("reference") ?? ""),
-      pay_phone: String(form.get("phone") ?? ""),
+      pay_phone: latinDigits(String(form.get("phone") ?? "")),
     });
     setBusyId(null);
     if (rpcError) {

@@ -68,7 +68,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
   const place = placeLabel(locale, listing.area, listing.city);
   const intlLocale = locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG";
   const numberFormat = new Intl.NumberFormat(intlLocale);
-  const dateFormat = new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium" });
+  const dateFormat = new Intl.DateTimeFormat(intlLocale, { dateStyle: "long" });
   const monthYear = new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric" });
   const verified = listing.verification_status === "verified";
   const wholePlace = listing.property_type === "apartment" || listing.property_type === "studio";
@@ -280,7 +280,7 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
                   <p>{t.rentedAsideText}</p>
                   {similar.length > 0 && <a className="button button-primary" href="#similar-title">{t.rentedSeeSimilar}</a>}
                 </div>
-              ) : <BookHome locale={locale} listingId={listing.id} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} minMonths={listing.min_months ?? 1} availableFrom={listing.available_from ?? null} freeBeds={wholePlace ? undefined : listing.available_beds} hostReady={hostReady} />}
+              ) : <BookHome locale={locale} listingId={listing.id} booked={booked} monthlyPrice={listing.monthly_price} deposit={listing.deposit} fees={fees} isDemo={listing.is_demo} minMonths={listing.min_months ?? 1} availableFrom={listing.available_from ?? null} freeBeds={wholePlace ? undefined : listing.available_beds} hostReady={hostReady} />}
               <AskTeam locale={locale} listingId={listing.id} whatsappHref={teamHref} className="button button-outline listing2-whatsapp" />
               <p className="listing3-middleman"><ShieldCheck size={16} /> {t.middlemanNote}</p>
               <p className={`listing-trust ${verified ? "is-verified" : ""}`}>

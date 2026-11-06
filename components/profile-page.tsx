@@ -40,6 +40,7 @@ import { useListingTitles } from "@/lib/listing-titles";
 import { LANGUAGE_OPTIONS } from "@/lib/profiles";
 import { useSavedListings } from "@/lib/saved";
 import { fetchListingsByIds } from "@/lib/supabase/listings";
+import { latinDigits } from "@/lib/digits";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import type { Property } from "@/types";
 import SakaniSelect from "@/components/sakani-select";
@@ -248,7 +249,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
     const form = new FormData(event.currentTarget);
     const values = {
       full_name: String(form.get("full_name") ?? "").trim(),
-      phone: String(form.get("phone") ?? "").trim(),
+      phone: latinDigits(String(form.get("phone") ?? "")).trim(),
       bio: String(form.get("bio") ?? "").trim().slice(0, 500),
       governorate: String(form.get("governorate") ?? ""),
       gender: (String(form.get("gender") ?? "") || null) as FullProfile["gender"],

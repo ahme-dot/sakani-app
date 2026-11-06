@@ -39,6 +39,8 @@ Admin → Policies → Payment mode → **Card (Paymob)**. It can't be switched 
 4. Refunds: Admin → Bookings → **Refund to the card** → `POST /api/admin/refund` (full admins with the two-step code only) → Paymob refund → `gateway_mark_refunded`. A full refund (host declined or didn't answer) includes the card fee; an approved cancellation refunds what the policy allows. Card payments can't be marked refunded by hand.
 5. Host payouts and deposit returns stay manual (bank or wallet transfer), as before.
 
+Paying the host doesn't end a booking: it stays `moved_in` with `paid_out_at` set, and becomes `completed` when the stay's end date passes. Hosts need a real account with a phone and an InstaPay address before a listing can be booked. A refund that isn't the guest's fault uses `admin_full_refund`, which works with the cancellation policy off.
+
 The `gateway_*` functions can only be called with the service-role key (`SUPABASE_SERVICE_ROLE_KEY`), which only the server routes use.
 
 Edge cases the database handles: a second paid checkout for the same fee is flagged in the fee's note for a manual refund in the Paymob dashboard; a payment that arrives after the booking expired moves the booking to "refund pending"; a wrong amount is noted and not marked paid.

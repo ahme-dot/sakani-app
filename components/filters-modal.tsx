@@ -7,6 +7,7 @@ import { GOVERNORATES, areaSuggestions } from "@/lib/egypt";
 import { AMENITY_FILTERS, EMPTY_FILTERS, countApprovedListings, type ListingFilters } from "@/lib/supabase/listings";
 import { amenityLabel } from "@/lib/amenities";
 import { trapTab } from "@/lib/site";
+import { latinDigits } from "@/lib/digits";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import SakaniSelect from "@/components/sakani-select";
 
@@ -83,11 +84,11 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
             <h3>{t.filtersPrice}</h3>
             <div className="filters-price">
               <label className="owner-field"><span>{t.filtersMin}</span>
-                <input type="number" inputMode="numeric" min="0" step="100" dir="ltr" placeholder="0" value={draft.minPrice} onChange={(event) => set({ minPrice: event.target.value.replace(/\D/g, "").slice(0, 7) })} />
+                <input type="text" inputMode="numeric" dir="ltr" placeholder="0" value={draft.minPrice} onChange={(event) => set({ minPrice: latinDigits(event.target.value).replace(/\D/g, "").slice(0, 7) })} />
               </label>
               <span aria-hidden="true">–</span>
               <label className="owner-field"><span>{t.filtersMax}</span>
-                <input type="number" inputMode="numeric" min="0" step="100" dir="ltr" placeholder={t.anyPrice} value={draft.maxPrice} onChange={(event) => set({ maxPrice: event.target.value.replace(/\D/g, "").slice(0, 7) })} />
+                <input type="text" inputMode="numeric" dir="ltr" placeholder={t.anyPrice} value={draft.maxPrice} onChange={(event) => set({ maxPrice: latinDigits(event.target.value).replace(/\D/g, "").slice(0, 7) })} />
               </label>
             </div>
           </section>

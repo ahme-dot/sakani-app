@@ -1281,8 +1281,8 @@ create policy "Owners can update their pending properties"
 -- ---------------------------------------------------------------------------
 -- K) What guests can see
 -- ---------------------------------------------------------------------------
--- After confirmation: who to call for the keys and where. Only the booking's guest (or an admin).
--- Listings have no exact address yet, so this is the area and the host's contact.
+-- After confirmation: the area. The host's contact comes only once the contract is accepted, from 48 hours
+-- before move-in, to arrange the keys. Only the booking's guest (or an admin).
 create or replace function public.booking_handover(target_booking uuid)
 returns jsonb
 language plpgsql
@@ -1295,7 +1295,7 @@ declare
   place record;
   host record;
 begin
-  select id, guest_id, host_id, listing_id, status into b from public.listing_requests where id = target_booking;
+  select id, guest_id, host_id, listing_id, status, move_in, contract_signed_at into b from public.listing_requests where id = target_booking;
   if b.id is null or not (b.guest_id = (select auth.uid()) or public.is_admin()) then
     raise exception 'booking_not_found' using errcode = 'P0002';
   end if;
@@ -1308,7 +1308,8 @@ begin
     'area', place.area,
     'governorate', place.governorate,
     'host_first_name', nullif(split_part(coalesce(host.full_name, ''), ' ', 1), ''),
-    'contact', coalesce(nullif(host.phone, ''), nullif(place.whatsapp_number, ''))
+    'contact', case when b.contract_signed_at is not null and public.cairo_today() >= b.move_in - 2
+      then coalesce(nullif(host.phone, ''), nullif(place.whatsapp_number, '')) end
   );
 end;
 $$;
