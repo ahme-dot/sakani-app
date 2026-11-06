@@ -30,7 +30,7 @@ export default async function HostPage({ locale }: { locale: SiteLocale }) {
             </div>
             <div className="host-hero-visual">
               <Image
-                src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80"
+                src="https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80"
                 alt=""
                 fill
                 sizes="(max-width: 760px) 100vw, 48vw"

@@ -15,7 +15,7 @@ export const LEGAL_PAGE_DEFAULTS: Record<SiteLocale, Record<LegalSlug, { title: 
     },
     "refund-policy": {
       title: "سياسة رد المبالغ",
-      body: "يُرد أي مبلغ مستحق بتحويل إنستاباي، ويُسجَّل برقم عملية يظهر للمستأجر في حسابه وفي إيصال الرد.\n\nيهدف فريق سكني إلى إتمام الرد خلال 24 ساعة من الموافقة على الطلب.\n\nقيمة المبلغ المستحق تُحدد حسب سياسة الإلغاء المعتمدة.",
+      body: "إذا رفض صاحب المكان الحجز أو لم يرد خلال 24 ساعة من تأكيد الدفع، يُرد للمستأجر كامل ما دفعه.\n\nيُرد أي مبلغ مستحق بتحويل إنستاباي، ويُسجَّل برقم عملية يظهر للمستأجر في حسابه وفي إيصال الرد.\n\nيهدف فريق سكني إلى إتمام الرد خلال 24 ساعة من الموافقة على الطلب.\n\nفي باقي الحالات تُحدد قيمة المبلغ المستحق حسب سياسة الإلغاء المعتمدة. بعد تحويل الإيجار لصاحب المكان، تواصل مع فريق سكني.",
     },
     "deposit-policy": {
       title: "سياسة التأمين",
@@ -23,7 +23,7 @@ export const LEGAL_PAGE_DEFAULTS: Record<SiteLocale, Record<LegalSlug, { title: 
     },
     "commission-disclosure": {
       title: "الإفصاح عن الرسوم",
-      body: "رسوم المستأجر: 8% من إيجار الشهر الأول، تُضاف إلى الدفعة المقدمة.\n\nرسوم صاحب المكان: 10% من إيجار الشهر الأول، تُخصم من أول تحويل له.\n\nلا تُحسب أي رسوم على التأمين أو على باقي أشهر الإيجار. كل حجز يحتفظ بالنسب السارية وقت إنشائه.",
+      body: "رسوم المستأجر: 8٪ من إيجار الشهر الأول، تُضاف إلى الدفعة المقدمة.\n\nرسوم صاحب المكان: 10٪ من إيجار الشهر الأول، تُخصم من أول تحويل له.\n\nلا تُحسب أي رسوم على التأمين أو على باقي أشهر الإيجار. كل حجز يحتفظ بالنسب السارية وقت إنشائه.",
     },
     "host-responsibilities": {
       title: "مسؤوليات صاحب المكان",
@@ -41,7 +41,7 @@ export const LEGAL_PAGE_DEFAULTS: Record<SiteLocale, Record<LegalSlug, { title: 
     },
     "refund-policy": {
       title: "Refund policy",
-      body: "Any amount due is refunded by InstaPay transfer and recorded with a transaction number shown to the guest in their account and on the refund receipt.\n\nThe Sakani team aims to complete refunds within 24 hours of approving a request.\n\nThe amount due is set by the approved cancellation policy.",
+      body: "If the host declines the booking or doesn’t answer within 24 hours of the payment being confirmed, the guest gets a full refund.\n\nAny amount due is refunded by InstaPay transfer and recorded with a transaction number shown to the guest in their account and on the refund receipt.\n\nThe Sakani team aims to complete refunds within 24 hours of approving a request.\n\nIn other cases the amount due is set by the approved cancellation policy. Once the rent has been paid to the host, talk to the Sakani team.",
     },
     "deposit-policy": {
       title: "Deposit policy",

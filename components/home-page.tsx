@@ -167,6 +167,8 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
   const extraCount = [filters.minPrice, filters.maxPrice, filters.bedrooms, filters.bathrooms, filters.stay].filter(Boolean).length + filters.amenities.length;
   const hasMore = !isDemoMode && listings.length < total;
   const searchValue = { governorate: filters.governorate, propertyType: filters.propertyType, gender: filters.gender };
+  const noListings = loading === "none" && listings.length === 0;
+  const noMatches = filtersActive && !showSaved && noListings;
 
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
@@ -184,21 +186,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
             }}
           />
         )}
-      >
-        <CategoryBar
-          locale={locale}
-          filters={filters}
-          onChange={(patch) => {
-            updateFilters(patch);
-            showResults();
-          }}
-          onOpenFilters={() => setFiltersOpen(true)}
-          extraCount={extraCount}
-          savedCount={isDemoMode ? 0 : savedIds.length}
-          showSaved={showSaved}
-          onToggleSaved={toggleSaved}
-        />
-      </SiteHeader>
+      />
 
       <main>
         <section className="home-intro home-hero section-wrap" aria-labelledby="home-hero-title">
@@ -239,15 +227,31 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
           </div>
         </section>
 
+        {/* The category bar is sticky inside this wrapper, so it leaves with the listings instead of following the visitor to the footer. */}
+        <div className="home-listings">
+          <CategoryBar
+            locale={locale}
+            filters={filters}
+            onChange={(patch) => {
+              updateFilters(patch);
+              showResults();
+            }}
+            onOpenFilters={() => setFiltersOpen(true)}
+            extraCount={extraCount}
+            savedCount={isDemoMode ? 0 : savedIds.length}
+            showSaved={showSaved}
+            onToggleSaved={toggleSaved}
+          />
+
         <section className="listings-section section-wrap" id="homes" aria-labelledby="homes-title">
           <div className="listings-head">
             <div>
               {!showSaved && !filtersActive && <span className="section-kicker">{t.featuredKicker}</span>}
-              <h2 id="homes-title">{showSaved ? t.savedTitle : filtersActive ? t.filteredTitle : t.featuredTitle}</h2>
+              <h2 id="homes-title">{showSaved ? t.savedTitle : noMatches ? t.noMatchTitle : filtersActive ? t.filteredTitle : t.featuredTitle}</h2>
               {/* No count while there are no homes yet: the empty state below says it better than "0". */}
-              <p aria-live="polite">{showSaved ? t.savedCount(savedIds.length) : filtersActive ? t.resultCount(total) : isDemoMode ? t.browseHint : total > 0 ? t.approvedListingCount(total) : ""}</p>
+              <p aria-live="polite">{showSaved ? t.savedCount(savedIds.length) : noMatches ? "" : filtersActive ? t.resultCount(total) : isDemoMode ? t.browseHint : total > 0 ? t.approvedListingCount(total) : ""}</p>
             </div>
-            {!showSaved && (
+            {!showSaved && !noListings && (
               <label className="listing-sort">
                 <span className="visually-hidden">{t.sortLabel}</span>
                 <span className="select-wrap">
@@ -298,7 +302,6 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
           ) : filtersActive ? (
             <div className="empty-state">
               <Search size={26} />
-              <h3>{t.noMatchTitle}</h3>
               <p>{t.noMatchText}</p>
               <button className="button button-outline" type="button" onClick={() => applyFilters(EMPTY_FILTERS)}>{t.showAll}</button>
             </div>
@@ -321,6 +324,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
             </div>
           )}
         </section>
+        </div>
 
         <HowItWorks locale={locale} fees={fees} />
 

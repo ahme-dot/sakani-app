@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { GOVERNORATES, areaSuggestions } from "@/lib/egypt";
 import { AMENITY_FILTERS, EMPTY_FILTERS, countApprovedListings, type ListingFilters } from "@/lib/supabase/listings";
 import { amenityLabel } from "@/lib/amenities";
+import { trapTab } from "@/lib/site";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import SakaniSelect from "@/components/sakani-select";
 
@@ -42,18 +43,21 @@ export default function FiltersModal({ locale, filters, supabase, onClose, onApp
     };
   }, [supabase, draft]);
 
-  // Escape closes; page scroll is locked; focus starts inside the window.
+  // Escape closes; page scroll is locked; focus starts inside the window, stays there, and goes back when it closes.
   useEffect(() => {
     const previous = document.body.style.overflow;
+    const opener = document.activeElement as HTMLElement | null;
     document.body.style.overflow = "hidden";
     dialogRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
+      trapTab(event, dialogRef.current);
     };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = previous;
       window.removeEventListener("keydown", onKey);
+      opener?.focus({ preventScroll: true });
     };
   }, [onClose]);
 

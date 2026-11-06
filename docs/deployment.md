@@ -11,8 +11,11 @@
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase publishable (anon) key — safe in the browser with the RLS policies |
-| `NEXT_PUBLIC_SITE_URL` | The public address, e.g. `https://sakani.example` |
+| `NEXT_PUBLIC_SITE_URL` | The public address, e.g. `https://sakani.example`. Without it the build prints a warning, and canonical links, the sitemap and share previews point at localhost. |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Optional: Cloudflare Turnstile spam protection |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only. Used by the payment routes. Supabase → Project Settings → API. |
+| `PAYMOB_SECRET_KEY`, `PAYMOB_PUBLIC_KEY`, `PAYMOB_HMAC_SECRET`, `PAYMOB_CARD_INTEGRATION_ID` | Server only. Needed for card payments; card mode can't be switched on in Admin → Policies without them. |
+| `PAYMOB_FALLBACK_EMAIL` | Optional, server only. The address sent to Paymob when the guest's contact is a phone number. Use one you own; otherwise Paymob gets the placeholder `payments@example.com`. |
 
 Never put a Supabase service-role key or any payment secret in a `NEXT_PUBLIC_` variable. See `env.example`.
 
@@ -37,6 +40,26 @@ Never put a Supabase service-role key or any payment secret in a `NEXT_PUBLIC_` 
 4. In the admin panel: **Payments** (InstaPay address, account name, team WhatsApp, fee rates), **Policies** (keep the cancellation policy off until legally approved; payment mode InstaPay), **Legal pages**.
 5. Import the project in Vercel, add the environment variables, deploy.
 6. Before launch: Admin → Demo → **Remove all demo listings**.
+
+## Changing the domain
+
+Moving the site to a new address has side effects. Plan it before real people depend on the old one.
+
+**What visitors lose:** sign-ins and browser storage belong to one address, so everyone is logged out once. Saved places on the device are lost unless they're in an account. Hosts who listed **without an account** lose access to those listings, because their session lives in the old address's browser storage. Ask them to create an account on the old address first.
+
+1. Vercel → Settings → Domains: add the new domain, and keep the old one redirecting to it.
+2. Change `NEXT_PUBLIC_SITE_URL` in Vercel and redeploy. The value is built in, so a redeploy is required.
+3. Supabase → Authentication → URL Configuration: set the Site URL and add `https://new-domain/**` to the Redirect URLs. Keep the old entry until the move is finished, so password-reset links already sent keep working.
+4. Paymob dashboard: change the webhook to `https://new-domain/api/paymob/webhook`, and the return address if it's set there.
+5. Cloudflare Turnstile: add the new domain to the widget, or the spam check fails on sign-up.
+6. Google Search Console: add the new address and submit `https://new-domain/sitemap.xml`.
+7. Reprint or replace any flyers and QR codes that carry the old address.
+
+## Backups
+
+Check what your Supabase plan includes in Project Settings → Database → Backups, and don't assume a backup exists. Before launch, and before each migration that changes money or bookings, take your own copy of the database and test restoring it once. Database backups don't include Storage files (listing photos, avatars, identity documents), so those need their own copy.
+
+Check too that the daily job is on: migration `20261108000000_sakani_rented_amenities.sql` needs `pg_cron`, and only prints a notice if it isn't available. Enable it in Database → Extensions if needed.
 
 ## Tests
 

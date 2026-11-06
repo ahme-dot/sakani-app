@@ -13,7 +13,7 @@ Check every new screen in Arabic and English at these four sizes:
 | Laptop | 1093 × 520 | A 1366×768 laptop at 125% zoom. It's the most common small screen, and it's very short. |
 | Desktop | 1440 × 900 | The page width stops growing at 1440px. |
 
-Nothing may scroll sideways. On the laptop size, the main action (for example "Book", "Save" or the first listing row) must be visible without scrolling far.
+Nothing may scroll sideways. On the laptop size, the main action (for example "Book", "Save" or the first listing row) must be visible without scrolling far. The home intro is capped at about 340px on short screens and drops its note cards.
 
 ## Colours
 
@@ -31,22 +31,25 @@ Text must reach WCAG AA contrast: 4.5:1, or 3:1 for text that is at least 24px, 
 
 ## Text
 
-- **Fonts:** Cairo for Arabic, Inter for English. Georgia is only for page titles (the `h1` on home, host, sign-in, legal and admin pages) and the listing section titles.
+- **Fonts:** Cairo for Arabic, Inter for English, headings included.
+- **Arabic spacing:** `letter-spacing` stays 0 on Arabic text, because the letters join.
 - **Minimum sizes:**
   - 13px for anything people read.
   - 16px for anything typed into on a phone, so the phone doesn't zoom in.
 - **No ALL-CAPS headings or labels.** The only exception is the small green kicker above English section titles.
 - **Dates:** written in words in the page language, for example «الخميس، 26 نوفمبر 2026» or "Thursday, 26 November 2026". Never 11/26/2026.
-- **Numbers:** Western digits in both languages (`ar-EG-u-nu-latn`).
+- **Numbers:** Western digits in both languages (`ar-EG-u-nu-latn`), with a thousands comma (2,002). Percent in Arabic is written 8٪.
 
 ## Shapes
 
 | Element | Corner radius |
 |---|---|
-| Buttons, chips, the search bar | 999px (pill) |
-| Inputs and small buttons | 10px |
-| Cards, lists, the calendar | 14px |
+| Buttons (including card buttons and form submits), chips, filter chips, the search bar | 999px (pill) |
+| Small items: inputs, notes, badges, icon tiles | 10px |
+| Cards, lists, documents, the calendar, the home intro | 14px |
 | Big panels and modals | 16–20px |
+
+Phones keep the same corners. Don't drop cards to 10px on a small screen.
 
 ## Form controls
 
@@ -65,7 +68,7 @@ Text must reach WCAG AA contrast: 4.5:1, or 3:1 for text that is at least 24px, 
 
 **File uploads:** a normal `<input type="file">`. Its button is styled globally.
 
-**Phone tap targets:** at least 40px high.
+**Phone tap targets:** at least 44px high and wide, including footer links, card buttons, the save heart and icon buttons. The only exception is a link inside a sentence.
 
 ## Listing cards
 
@@ -87,8 +90,21 @@ Text must reach WCAG AA contrast: 4.5:1, or 3:1 for text that is at least 24px, 
 ## Accessibility
 
 - Everything works by keyboard. Anything that scrolls on its own (photo strips) can take focus and moves with the arrow keys.
-- Focus is always visible: a 2–3px green outline.
+- Focus is always visible: a 2–3px green outline. If a control hides its own outline, its wrapper shows one.
+- Every page has a skip link, drawn by `SiteHeader`.
+- A window that covers the page keeps Tab inside it (`trapTab` in `lib/site.ts`) and returns focus to the button that opened it.
+- Headings go in order. Footer column titles are `h2`.
 - Animations stop when the visitor's system asks for reduced motion.
+
+## Sticky bars
+
+- The header sticks on every page. Its height is `--header-h`, and `scroll-padding-top` is built from it, so a focused item is never hidden.
+- The home category bar sticks only inside `.home-listings`, so it leaves with the listings. On the home page the scroll padding counts both bars (`--category-h`).
+- If the header or the bar changes height, update those two variables.
+
+## Legal pages
+
+Terms, privacy, policies and agreements all start with `LegalHead` (`components/legal-page.tsx`): back link, heading, date and draft note. Don't build another page top.
 
 ## The stylesheet
 
@@ -96,4 +112,4 @@ Text must reach WCAG AA contrast: 4.5:1, or 3:1 for text that is at least 24px, 
 
 - Change its last block. Search for the component's class, and the newest rule wins.
 - Don't add yet another override at the end.
-- The newest blocks are marked `==== … 2026-11-04 ====`: dropdowns, calendar, cards, contrast, tablet header.
+- Dated blocks are marked `==== … ====`. The last one, **Pre-launch look pass (2026-11-06)**, holds only rules that must beat every earlier layer: the skip link, Arabic spacing, the legal template, the short laptop intro and phone tap targets.

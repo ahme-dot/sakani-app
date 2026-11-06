@@ -4,21 +4,31 @@ import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { LEGAL_COPY, LEGAL_UPDATED } from "@/messages/legal";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
+/** The top of every legal page: back to the policies page, heading, date and the draft note. */
+export function LegalHead({ locale, title, updated = LEGAL_UPDATED, draft }: { locale: SiteLocale; title: string; updated?: string; draft?: string }) {
+  const date = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "long" }).format(new Date(updated));
+  return (
+    <header className="legal-head">
+      <Link className="listing-back no-print" href={`/${locale}/legal`}><ArrowRight size={16} /> {SITE_COPY[locale].legalHubTitle}</Link>
+      <h1>{title}</h1>
+      <p className="legal-updated">{LEGAL_COPY[locale].updatedLabel}: <time dateTime={updated}>{date}</time></p>
+      {draft && <p className="document-draft">{draft}</p>}
+    </header>
+  );
+}
+
 export default function LegalPage({ locale, kind }: { locale: SiteLocale; kind: "privacy" | "terms" }) {
   const t = SITE_COPY[locale];
   const legal = LEGAL_COPY[locale];
   const page = legal[kind];
   const otherLocale: SiteLocale = locale === "ar" ? "en" : "ar";
-  const updated = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "long" }).format(new Date(LEGAL_UPDATED));
 
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
       <SiteHeader locale={locale} switchHref={`/${otherLocale}/${kind}`} />
       <main className="legal-page section-wrap">
-        <Link className="listing-back" href={`/${locale}`}><ArrowRight size={16} /> {t.adminBackHome}</Link>
         <article className="legal-article">
-          <h1>{page.title}</h1>
-          <p className="legal-updated">{legal.updatedLabel}: <time dateTime={LEGAL_UPDATED}>{updated}</time></p>
+          <LegalHead locale={locale} title={page.title} draft={t.legalDraftNotice} />
           <p className="legal-intro">{page.intro}</p>
           {page.sections.map((section) => (
             <section key={section.heading}>

@@ -29,40 +29,42 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
             "المدفوعات: عند الدفع نحفظ المبلغ ورقم عملية إنستاباي ورقم الهاتف المستخدم في التحويل، لنتأكد من وصول المبلغ. لأصحاب الأماكن نحفظ عنوان إنستاباي الذي يضيفونه لنحوّل لهم مستحقاتهم. لا نطلب ولا نحفظ أي بيانات بطاقات بنكية.",
             "المحادثات: نحفظ رسائلك مع فريق سكني لنرد عليك ونتابع حجزك أو أي مشكلة.",
             "البروفايل: الصورة والنبذة والمحافظة والعمل أو الدراسة واللغات تظهر في صفحتك العامة إذا أضفتها. رقمك وبريدك وعنوان إنستاباي لا تظهر لأحد.",
-            "تأكيد الهوية: إذا أرسلت مستند هوية نحفظه في مخزن خاص لا يراه إلا صاحبه ومديرو سكني، لمراجعته وتأكيد هويتك.",
+            "تأكيد الهوية: إذا أرسلت مستند هوية نحفظه في مخزن خاص لا يراه إلا صاحبه ومديرو سكني، لمراجعته وتأكيد هويتك. نحتفظ به حتى تطلب حذفه.",
             "العقود والموافقات: نحفظ موافقتك على الاتفاقيات والعقود مع إصدارها ووقتها.",
-            "التقييمات: تقييمك للمكان بعد الإقامة يظهر للجميع مع اسمك الأول.",
+            "التقييمات: تقييمك للمكان بعد الاستلام يظهر للجميع مع اسمك الأول.",
             "الاستخدام: نسجل عدد مشاهدات الإعلانات والضغط عليها، ونستخدم Vercel Analytics لقياس زيارات الموقع وأدائه دون إعلانات.",
             "الأخطاء: إذا حدث خطأ في الموقع نحفظ تقريراً عنه يشمل الصفحة ونوع المتصفح وحسابك إن كنت مسجلاً، لنصلحه.",
             "سجل المراجعة: نحفظ سجلاً بالتغييرات المهمة على الحجوزات والمدفوعات، قد يتضمن الاسم ورقم الهاتف، لحماية الطرفين ومنع الاحتيال.",
+            "ملفات تعريف الارتباط والتخزين في المتصفح: نستخدم ملفات تعريف الارتباط (الكوكيز) وتخزين المتصفح لإبقائك مسجّل الدخول، وحفظ الأماكن المحفوظة ومسودات الإعلانات، وعدم احتساب المشاهدة نفسها مرتين. لا نستخدمها للإعلانات.",
             "سجلات تقنية أساسية يحتفظ بها مزودو الاستضافة لأغراض الأمان والتشغيل. لا نستخدم إعلانات أو أدوات تتبع إعلانية.",
           ],
         },
         {
           heading: "لماذا نستخدمها",
           body: [
-            "لتشغيل الموقع: نشر الإعلانات بعد مراجعتها، وترتيب الحجوزات والمعاينات بين المستأجر وصاحب المكان، وتحصيل الرسوم، والرد على رسائلك وبلاغاتك.",
+            "لتشغيل الموقع: نشر الإعلانات بعد مراجعتها، ومتابعة الحجوزات بين المستأجر وصاحب المكان، وتحصيل الرسوم، والرد على رسائلك وبلاغاتك.",
             "للأمان: منع الاحتيال والإعلانات المزيفة والرسائل المزعجة.",
           ],
         },
         {
           heading: "ما الذي يظهر للعامة",
           body: [
-            "عند نشر إعلانك تظهر تفاصيله وصوره للجميع. لا يظهر رقمك أو بريدك أو اسم حسابك؛ يتواصل الزوار مع فريق سكني فقط.",
+            "عند نشر إعلانك تظهر تفاصيله وصوره للجميع. ويظهر عليه اسمك الأول، وصورتك إن أضفتها. لا يظهر رقمك أو بريدك؛ يتواصل الزوار مع فريق سكني فقط.",
           ],
         },
         {
           heading: "مع من نشارك البيانات",
           body: [
-            "لا نبيع بياناتك. عند تأكيد حجز يشارك فريق سكني مع كل طرف ما يلزم لإتمام المعاينة والتأجير فقط.",
-            "نستخدم مزودي خدمة لتشغيل الموقع: Supabase (قاعدة البيانات وتسجيل الدخول وتخزين الصور) وVercel (استضافة الموقع وقياس الزيارات) وCloudflare Turnstile (التحقق من أن المستخدم ليس برنامجاً آلياً). قد تُعالج البيانات على خوادمهم خارج مصر.",
+            "لا نبيع بياناتك. عند تأكيد حجز يشارك فريق سكني مع كل طرف ما يلزم لإتمام الحجز والتأجير فقط.",
+            "نستخدم مزودي خدمة لتشغيل الموقع: Supabase (قاعدة البيانات وتسجيل الدخول وتخزين الصور) وVercel (استضافة الموقع وقياس الزيارات) وCloudflare Turnstile (التحقق من أن المستخدم ليس برنامجاً آلياً) وPaymob (عند الدفع بالبطاقة، حيث تكتب بيانات بطاقتك في صفحة Paymob ولا نراها). قد تُعالج البيانات على خوادمهم خارج مصر.",
+            "خرائط جوجل: تعرض صفحة الإعلان خريطة من Google Maps للمنطقة التقريبية، فيتصل متصفحك بخوادم جوجل عند فتحها، وقد تجمع جوجل بيانات مثل عنوان IP وفق سياسة الخصوصية الخاصة بها.",
             "قد نكشف البيانات إذا طلبتها جهة قانونية مختصة.",
           ],
         },
         {
           heading: "مدة الاحتفاظ",
           body: [
-            "نحتفظ ببيانات الحساب والإعلانات والحجوزات حتى تحذفها أو تطلب حذفها. قد نحتفظ بسجلات الحجوزات والمدفوعات وسجل المراجعة بعد الحذف المدة التي يتطلبها القانون أو حل النزاعات. نحتفظ بالرسائل والبلاغات حتى 12 شهراً بعد إغلاقها، وبسجلات المدفوعات المدة التي يتطلبها القانون.",
+            "نحتفظ ببيانات الحساب والإعلانات والحجوزات حتى تحذفها أو تطلب حذفها. قد نحتفظ بسجلات الحجوزات والمدفوعات وسجل المراجعة بعد الحذف المدة التي يتطلبها القانون أو حل النزاعات. نحتفظ بمستندات الهوية حتى تطلب حذفها، وبالرسائل والبلاغات حتى 12 شهراً بعد إغلاقها، وبسجلات المدفوعات المدة التي يتطلبها القانون.",
           ],
         },
         {
@@ -90,7 +92,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "ما هو سكني",
           body: [
-            "سكني منصة تربط المستأجرين بأصحاب الأماكن المعروضة للإيجار في مصر، ويعمل فريق سكني وسيطاً بينهما: يراجع كل إعلان قبل نشره، ويرتّب المعاينة، ويؤكد الحجز. لا يزور الفريق كل الأماكن؛ الأماكن التي زارها تحمل علامة «متأكد منه». لا تظهر أرقام أصحاب الأماكن للزوار.",
+            "سكني منصة تربط المستأجرين بأصحاب الأماكن المعروضة للإيجار في مصر، ويعمل فريق سكني وسيطاً بينهما: يراجع كل إعلان قبل نشره ويؤكد الحجز. من يريد معاينة المكان قبل الدفع يتواصل مع الفريق. لا يزور الفريق كل الأماكن؛ الأماكن التي زارها تحمل علامة «متأكد منه». لا تظهر أرقام أصحاب الأماكن للزوار.",
             "عند الحجز يدفع المستأجر لسكني مقدماً إيجار الشهر الأول ورسوم الخدمة والتأمين. يحتفظ سكني بالإيجار حتى يؤكد المستأجر استلام المكان، ثم يحوّل لصاحب المكان الإيجار بعد خصم رسومه. لسنا طرفاً في عقد الإيجار نفسه، وباقي الشهور يُتفق عليها بين الطرفين بمساعدة فريق سكني.",
           ],
         },
@@ -98,6 +100,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           heading: "الحسابات",
           body: [
             "يمكنك إنشاء حساب مستأجر أو حساب صاحب مكان، والتحويل بينهما من صفحة حسابك. يلزم حساب مستأجر لإرسال طلب حجز.",
+            "يمكن لصاحب المكان إضافة إعلان دون حساب، لكن يلزمه إنشاء حساب صاحب مكان لاستقبال الحجوزات والموافقة على العقد واستلام مستحقاته.",
             "أنت مسؤول عن صحة بياناتك، والحفاظ على سرية كلمة مرورك، وعن أي نشاط يتم من خلال حسابك.",
           ],
         },
@@ -113,21 +116,22 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           heading: "مسؤولية أصحاب الأماكن",
           body: [
             "تقر بأن لديك الحق في عرض المكان للإيجار، وأن كل التفاصيل والصور صحيحة وحديثة وتخص المكان نفسه، وأن المكان مخصص للرجال أو للنساء كما هو محدد في الإعلان.",
-            "يُمنع نشر إعلانات مزيفة أو مضللة، أو طلب دفع قبل المعاينة، أو أي محتوى مسيء أو مخالف للقانون.",
+            "يُمنع نشر إعلانات مزيفة أو مضللة، أو طلب أي دفع خارج سكني، أو أي محتوى مسيء أو مخالف للقانون.",
             "نراجع الإعلانات قبل نشرها، ويحق لنا رفض أي إعلان أو إيقافه أو حذفه دون إشعار مسبق.",
           ],
         },
         {
           heading: "استرداد المبلغ",
           body: [
+            "إذا رفض صاحب المكان الحجز أو لم يرد خلال 24 ساعة من تأكيد الدفع، يُرد للمستأجر كامل ما دفعه.",
             "يمكن للمستأجر طلب رد المبلغ من حسابه. يراجع فريق سكني كل طلب حسب سياسة الإلغاء والرد، ويُسجَّل أي رد برقم عملية. سياسة الإلغاء والرد مسودة لم تُعتمد قانونياً بعد، ولا يتم تطبيق أي خصم أو احتجاز تلقائياً.",
-            "بعد أن يؤكد المستأجر استلام المكان يتم التحويل لصاحب المكان. يظل بإمكان المستأجر تقديم طلب إلغاء يراجعه الفريق حسب السياسة، لكن لا نضمن استرداد ما تم تحويله لصاحب المكان. لا تدفع لأي شخص خارج سكني؛ أي مبلغ يُدفع خارج الموقع ليس مسؤولية سكني.",
+            "بعد أن يؤكد المستأجر استلام المكان يتم التحويل لصاحب المكان. يظل بإمكان المستأجر تقديم طلب إلغاء يراجعه الفريق حسب السياسة، وبعد تحويل الإيجار لصاحب المكان تواصل مع فريق سكني، ولا نضمن استرداد ما تم تحويله. لا تدفع لأي شخص خارج سكني؛ أي مبلغ يُدفع خارج الموقع ليس مسؤولية سكني.",
           ],
         },
         {
           heading: "رسوم الخدمة",
           body: [
-            "يدفع المستأجر مقدماً إيجار الشهر الأول، ورسوم خدمة 8% من إيجار شهر واحد، ومبلغ التأمين. يدفع صاحب المكان 10% من إيجار شهر واحد تُخصم من أول تحويل له. الرسوم تُحسب على إيجار الشهر الأول فقط، ولا تُحسب أي رسوم على التأمين. يُحوَّل التأمين لصاحب المكان بعد توقيع العقد وتأكيد الدفع، ويصبح صاحب المكان مسؤولاً عن رده حسب العقد.",
+            "يدفع المستأجر مقدماً إيجار الشهر الأول، ورسوم خدمة 8٪ من إيجار شهر واحد، ومبلغ التأمين. يدفع صاحب المكان 10٪ من إيجار شهر واحد تُخصم من أول تحويل له. الرسوم تُحسب على إيجار الشهر الأول فقط، ولا تُحسب أي رسوم على التأمين. يُحوَّل التأمين لصاحب المكان بعد موافقة الطرفين على العقد وتأكيد الدفع، ويصبح صاحب المكان مسؤولاً عن رده حسب العقد.",
             "تتم كل المدفوعات بتحويل إنستاباي إلى الحساب الموضح في صفحة الدفع، وتُعتبر مدفوعة بعد تأكيد فريق سكني لوصول التحويل. يتم تحويل مستحقات صاحب المكان إلى عنوان إنستاباي المسجل في حسابه.",
             "يحق لنا إيقاف نشر إعلانات جديدة لصاحب المكان إذا تأخر سداد رسوم مستحقة أكثر من 14 يوماً.",
           ],
@@ -164,40 +168,42 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
             "Payments: when you pay we keep the amount, the InstaPay transaction reference and the phone number used for the transfer, so we can confirm it arrived. For hosts we keep the InstaPay address they add, to send their payouts. We never ask for or store bank card details.",
             "Chats: we keep your messages with the Sakani team so we can reply and follow up on your booking or any problem.",
             "Profile: your photo, bio, governorate, work or study and languages appear on your public page if you add them. Your number, email and InstaPay are never shown.",
-            "Identity checks: if you send an identity document we keep it in private storage that only you and Sakani’s managers can open, to review it and confirm your identity.",
+            "Identity checks: if you send an identity document we keep it in private storage that only you and Sakani’s managers can open, to review it and confirm your identity. We keep it until you ask us to delete it.",
             "Contracts and acceptances: we keep your acceptance of agreements and contracts, with their version and time.",
-            "Reviews: your review of a place after your stay is public, with your first name.",
+            "Reviews: your review of a place after moving in is public, with your first name.",
             "Usage: we count listing views and clicks, and use Vercel Analytics to measure site visits and performance, without advertising.",
             "Errors: if something breaks on the site we keep a report with the page, your browser type and your account if you’re signed in, so we can fix it.",
             "Audit log: we keep a record of important changes to bookings and payments, which may include a name and phone number, to protect both sides and prevent fraud.",
+            "Cookies and browser storage: we use cookies and your browser’s storage to keep you logged in, to keep your saved places and listing drafts, and to avoid counting the same view twice. We don’t use them for advertising.",
             "Basic technical logs kept by our hosting providers for security and operations. We don’t use advertising or ad-tracking tools.",
           ],
         },
         {
           heading: "Why we use it",
           body: [
-            "To run the site: publishing listings after review, arranging bookings and visits between guests and hosts, collecting fees, and answering your messages and reports.",
+            "To run the site: publishing listings after review, following bookings between guests and hosts, collecting fees, and answering your messages and reports.",
             "For safety: preventing fraud, fake listings and spam.",
           ],
         },
         {
           heading: "What is public",
           body: [
-            "When your listing is published, its details and photos are visible to everyone. Your number, email address and account name are not shown; visitors contact the Sakani team only.",
+            "When your listing is published, its details and photos are visible to everyone. Your first name also appears on it, with your photo if you added one. Your number and email address are not shown; visitors contact the Sakani team only.",
           ],
         },
         {
           heading: "Who we share data with",
           body: [
-            "We don’t sell your data. When a booking is confirmed, the Sakani team shares with each side only what is needed to complete the visit and the rental.",
-            "We use service providers to run the site: Supabase (database, sign-in and photo storage) Vercel (website hosting and visit measurement) and Cloudflare Turnstile (checking that a user isn’t a bot). Data may be processed on their servers outside Egypt.",
+            "We don’t sell your data. When a booking is confirmed, the Sakani team shares with each side only what is needed to complete the booking and the rental.",
+            "We use service providers to run the site: Supabase (database, sign-in and photo storage), Vercel (website hosting and visit measurement), Cloudflare Turnstile (checking that a user isn’t a bot) and Paymob (for card payments, where you type your card details on Paymob’s page and we never see them). Data may be processed on their servers outside Egypt.",
+            "Google Maps: the listing page shows a Google Maps map of the approximate area, so your browser connects to Google’s servers when you open it, and Google may collect data such as your IP address under its own privacy policy.",
             "We may disclose data if required by a competent legal authority.",
           ],
         },
         {
           heading: "How long we keep it",
           body: [
-            "We keep account, listing and booking data until you delete it or ask us to. After deletion we may keep booking and payment records and the audit log for as long as the law or a dispute requires. We keep messages and reports for up to 12 months after they are closed, and payment records for as long as the law requires.",
+            "We keep account, listing and booking data until you delete it or ask us to. After deletion we may keep booking and payment records and the audit log for as long as the law or a dispute requires. We keep identity documents until you ask us to delete them, messages and reports for up to 12 months after they are closed, and payment records for as long as the law requires.",
           ],
         },
         {
@@ -225,7 +231,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
         {
           heading: "What Sakani is",
           body: [
-            "Sakani connects guests with hosts who have places to rent across Egypt. The Sakani team works as the middleman: it reviews every listing before publishing, arranges the visit and confirms the booking. The team doesn’t visit every place; places it has visited carry a “Verified” mark. Hosts’ numbers are not shown to visitors.",
+            "Sakani connects guests with hosts who have places to rent across Egypt. The Sakani team works as the middleman: it reviews every listing before publishing and confirms the booking. Anyone who wants to see a place before paying can talk to the team. The team doesn’t visit every place; places it has visited carry a “Verified” mark. Hosts’ numbers are not shown to visitors.",
             "When booking, the guest pays Sakani the first month’s rent, the service fee and the deposit upfront. Sakani holds the rent until the guest confirms they have moved in, then pays the host the rent minus the host fee. We are not a party to the rental contract itself; later months are agreed between both sides with the Sakani team’s help.",
           ],
         },
@@ -233,6 +239,7 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           heading: "Accounts",
           body: [
             "You can create a guest account or a host account, and switch between them on your account page. A guest account is needed to send a booking request.",
+            "Hosts can add a listing without an account, but must create a host account to take bookings, accept the contract and get paid.",
             "You are responsible for the accuracy of your details, for keeping your password secret, and for activity on your account.",
           ],
         },
@@ -248,21 +255,22 @@ export const LEGAL_COPY: Record<SiteLocale, { privacy: LegalPage; terms: LegalPa
           heading: "Hosts’ responsibilities",
           body: [
             "You confirm you have the right to rent out the place, that all details and photos are accurate, current and of that place, and that it is for men or for women as stated in the listing.",
-            "Fake or misleading listings, asking for payment before a visit, and offensive or unlawful content are not allowed.",
+            "Fake or misleading listings, asking for payment outside Sakani, and offensive or unlawful content are not allowed.",
             "We review listings before publishing and may reject, unpublish or delete any listing without prior notice.",
           ],
         },
         {
           heading: "Refunds",
           body: [
+            "If the host declines the booking or doesn’t answer within 24 hours of the payment being confirmed, the guest gets a full refund.",
             "Guests can request a refund from their account. The Sakani team reviews every request under the cancellation and refund policy, and every refund is recorded with a transaction number. The cancellation and refund policy is a draft pending legal approval; no deduction or retention is applied automatically.",
-            "Once the guest confirms moving in, the host is paid. The guest can still send a cancellation request, which the team reviews under the policy, but we can’t guarantee recovering money already paid to the host. Never pay anyone outside Sakani; money paid outside the site is not Sakani’s responsibility.",
+            "Once the guest confirms moving in, the host is paid. The guest can still send a cancellation request, which the team reviews under the policy, and once the rent has been paid to the host, talk to the team; we can’t guarantee recovering money already paid. Never pay anyone outside Sakani; money paid outside the site is not Sakani’s responsibility.",
           ],
         },
         {
           heading: "Service fees",
           body: [
-            "Guests pay upfront the first month’s rent, a service fee of 8% of one month’s rent, and the security deposit. Hosts pay 10% of one month’s rent, taken from their first payout. Fees are calculated on the first month’s rent only; no fee is charged on the deposit. The deposit is transferred to the host after the contract is signed and the payment confirmed, and the host is then responsible for returning it under the contract.",
+            "Guests pay upfront the first month’s rent, a service fee of 8% of one month’s rent, and the security deposit. Hosts pay 10% of one month’s rent, taken from their first payout. Fees are calculated on the first month’s rent only; no fee is charged on the deposit. The deposit is transferred to the host after both sides accept the contract and the payment is confirmed, and the host is then responsible for returning it under the contract.",
             "All payments are made by InstaPay transfer to the account shown on the payment page, and count as paid once the Sakani team confirms the transfer arrived. Host payouts are sent to the InstaPay address in their account.",
             "We may stop a host from publishing new listings while a fee is more than 14 days overdue.",
           ],
