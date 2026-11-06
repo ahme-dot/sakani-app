@@ -31,24 +31,24 @@ export function SiteHeader({ locale, switchHref, search, children }: HeaderProps
   const t = SITE_COPY[locale];
   return (
     <>
-    <a className="skip-link" href="#main-content">{t.skipToContent}</a>
-    <header className="site-header" id="top">
-      <div className="header-inner">
-        <Brand locale={locale} />
-        <div className="header-search">{search ?? <SearchPill locale={locale} />}</div>
-        <div className="header-actions">
-          <Link className="header-host" href={`/${locale}/host`}>{t.navOwner}</Link>
-          <Link className="header-lang" href={switchHref} hrefLang={locale === "ar" ? "en" : "ar"} aria-label={t.languageName} title={t.languageName}>
-            <Globe size={18} />
-          </Link>
-          <NotificationsBell locale={locale} />
-          <UserMenu locale={locale} switchHref={switchHref} />
+      <a className="skip-link" href="#main-content">{t.skipToContent}</a>
+      <header className="site-header" id="top">
+        <div className="header-inner">
+          <Brand locale={locale} />
+          <div className="header-search">{search ?? <SearchPill locale={locale} />}</div>
+          <div className="header-actions">
+            <Link className="header-host" href={`/${locale}/host`}>{t.navOwner}</Link>
+            <Link className="header-lang" href={switchHref} hrefLang={locale === "ar" ? "en" : "ar"} aria-label={t.languageName} title={t.languageName}>
+              <Globe size={18} />
+            </Link>
+            <NotificationsBell locale={locale} />
+            <UserMenu locale={locale} switchHref={switchHref} />
+          </div>
         </div>
-      </div>
-      {children}
-    </header>
-    {/* Where the skip link lands: pages own their <main>, so the target sits right after the header. */}
-    <div id="main-content" tabIndex={-1} />
+        {children}
+      </header>
+      {/* Where the skip link lands: pages own their <main>, so the target sits right after the header. */}
+      <div id="main-content" tabIndex={-1} />
     </>
   );
 }
