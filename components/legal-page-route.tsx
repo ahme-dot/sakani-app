@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { LegalHead } from "@/components/legal-page";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { LEGAL_PAGE_DEFAULTS, LEGAL_SLUGS, type LegalSlug } from "@/messages/legal-pages";
@@ -20,18 +21,15 @@ export default async function LegalPageRoute({ locale, params }: { locale: SiteL
   return (
     <div className="site-shell" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
       <SiteHeader locale={locale} switchHref={`/${otherLocale}/legal/${slug}`} />
-      <main className="documents-page section-wrap">
-        <article className="document">
-          <header className="document-head">
-            <h1>{page.title}</h1>
-            {!page.approved && <p className="document-draft">{t.legalDraftNotice}</p>}
-          </header>
+      <main className="legal-page section-wrap">
+        <article className="legal-article">
+          <LegalHead locale={locale} title={page.title} updated={page.updated_at ?? undefined} draft={page.approved ? undefined : t.legalDraftNotice} />
           {page.body.split(/\n{2,}/).map((paragraph) => (
             <p className="legal-paragraph" key={paragraph.slice(0, 40)}>{paragraph}</p>
           ))}
         </article>
       </main>
-      <SiteFooter locale={locale} switchHref={`/${otherLocale}/legal/${slug}`} tab={false} />
+      <SiteFooter locale={locale} switchHref={`/${otherLocale}/legal/${slug}`} />
     </div>
   );
 }

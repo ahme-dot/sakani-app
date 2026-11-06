@@ -77,7 +77,7 @@ export type CheckoutInput = {
 /** Creates a payment intention and returns the address of Paymob's checkout page for it. */
 export async function createCheckout(config: PaymobConfig, input: CheckoutInput): Promise<string> {
   const [first, ...rest] = (input.name || "Sakani guest").trim().split(/\s+/);
-  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.contact) ? input.contact : process.env.PAYMOB_FALLBACK_EMAIL?.trim() || "payments@sakani.app";
+  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.contact) ? input.contact : process.env.PAYMOB_FALLBACK_EMAIL?.trim() || "payments@example.com";
   const phone = /^[+0-9 ()-]{8,20}$/.test(input.contact) ? input.contact.replace(/[^\d+]/g, "") : "NA";
   const response = await fetch(`${API}/v1/intention/`, {
     method: "POST",

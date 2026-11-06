@@ -1,4 +1,5 @@
-const arPlaces = (count: number) => (count === 1 ? "مكان واحد" : count === 2 ? "مكانين" : count <= 10 ? `${count} أماكن` : `${count} مكان`);
+const grouped = (count: number) => count.toLocaleString("en-US");
+const arPlaces = (count: number) => (count === 1 ? "مكان واحد" : count === 2 ? "مكانين" : count <= 10 ? `${count} أماكن` : `${grouped(count)} مكان`);
 
 export const SITE_COPY = {
   ar: {
@@ -999,6 +1000,7 @@ export const SITE_COPY = {
     legalUsingDefault: "دي النسخة الافتراضية. احفظ عشان تعدّلها.",
     legalTooShort: "العنوان أو النص قصيرين أوي.",
     footerPolicies: "السياسات",
+    skipToContent: "انزل للمحتوى",
     legalHubTitle: "السياسات والشروط",
     legalHubIntro: "كل القواعد اللي بتنظّم استخدام سكني في مكان واحد. اختار اللي عايز تقراه.",
     legalHubText: {
@@ -1196,7 +1198,7 @@ export const SITE_COPY = {
     featuredTitle: "Places across Egypt",
     filteredTitle: "Places that fit your search",
     browseHint: "Explore a selection of places across Egypt.",
-    resultCount: (count: number) => `${count} listings match your search`,
+    resultCount: (count: number) => `${grouped(count)} listings match your search`,
     demoNotice: "These are sample listings for preview only; they can’t be booked.",
     feedError: "Couldn’t load published listings. Please refresh the page in a moment.",
     loadingListings: "Loading published listings...",
@@ -1496,7 +1498,7 @@ export const SITE_COPY = {
     unsaveAria: (title: string) => `Remove “${title}” from saved`,
     savedFilter: (count: number) => `Saved (${count})`,
     savedTitle: "Saved places",
-    savedCount: (count: number) => (count === 1 ? "1 saved place" : `${count} saved places`),
+    savedCount: (count: number) => (count === 1 ? "1 saved place" : `${grouped(count)} saved places`),
     savedEmptyTitle: "No saved places yet",
     savedEmptyText: "Tap the heart on any listing to keep it here and compare your options later.",
     savedBack: "Show all places",
@@ -1696,7 +1698,7 @@ export const SITE_COPY = {
     formError: "Couldn’t submit this listing. Please try again shortly.",
     imageError: "Choose a JPG, PNG or WEBP image that is no larger than 5 MB.",
     bedsError: "Available beds can’t be more than the total number of beds.",
-    approvedListingCount: (count: number) => `${count} places available`,
+    approvedListingCount: (count: number) => `${grouped(count)} places available`,
     promotionKicker: "Coming soon",
     promotionTitle: "Help your listing stand out",
     promotionText: "More ways to get your listing noticed are on the way.",
@@ -2162,6 +2164,7 @@ export const SITE_COPY = {
     legalUsingDefault: "This is the default text. Save to change it.",
     legalTooShort: "The title or text is too short.",
     footerPolicies: "Policies",
+    skipToContent: "Skip to content",
     legalHubTitle: "Policies and terms",
     legalHubIntro: "Every rule for using Sakani, in one place. Choose what you want to read.",
     legalHubText: {

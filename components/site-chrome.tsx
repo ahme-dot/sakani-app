@@ -23,13 +23,15 @@ type HeaderProps = {
   switchHref: string;
   /** The home page passes its own controlled search; other pages get one that opens the home page. */
   search?: ReactNode;
-  /** Shown under the header row, inside the sticky header (the home page's category bar). */
+  /** Shown under the header row, inside the sticky header. */
   children?: ReactNode;
 };
 
 export function SiteHeader({ locale, switchHref, search, children }: HeaderProps) {
   const t = SITE_COPY[locale];
   return (
+    <>
+    <a className="skip-link" href="#main-content">{t.skipToContent}</a>
     <header className="site-header" id="top">
       <div className="header-inner">
         <Brand locale={locale} />
@@ -45,6 +47,9 @@ export function SiteHeader({ locale, switchHref, search, children }: HeaderProps
       </div>
       {children}
     </header>
+    {/* Where the skip link lands: pages own their <main>, so the target sits right after the header. */}
+    <div id="main-content" tabIndex={-1} />
+    </>
   );
 }
 
@@ -56,27 +61,26 @@ export function SiteFooter({ locale, switchHref, tab }: { locale: SiteLocale; sw
       <footer className="site-footer">
         <div className="footer-inner footer-columns">
           <nav className="footer-brand-column" aria-label={t.footerSakani}>
-            <h3>{t.footerSakani}</h3>
+            <h2>{t.footerSakani}</h2>
             <Link href={`/${locale}`}>{t.headerSearch}</Link>
             <Link href={`/${locale}?saved=1#homes`}>{t.menuSaved}</Link>
-            <p className="footer-about">{t.footerText}</p>
           </nav>
           <nav aria-label={t.footerSupport}>
-            <h3>{t.footerSupport}</h3>
+            <h2>{t.footerSupport}</h2>
             <Link href={`/${locale}/help`}>{t.footerHelp}</Link>
             <Link href={`/${locale}/help#contact`}>{t.navContact}</Link>
             <Link href={`/${locale}/help#faq`}>{t.faqKicker}</Link>
           </nav>
           <nav aria-label={t.footerForOwners}>
-            <h3>{t.footerForOwners}</h3>
+            <h2>{t.footerForOwners}</h2>
             <Link href={`/${locale}/host`}>{t.navOwner}</Link>
             <Link href={`/${locale}/account`}>{t.footerOwnerAccount}</Link>
           </nav>
           <nav className="footer-policies" aria-label={t.footerPolicies}>
-            <h3>{t.footerPolicies}</h3>
+            <h2>{t.footerPolicies}</h2>
             <Link href={`/${locale}/legal`}>{t.legalHubTitle}</Link>
-            <Link href={`/${locale}/privacy`}>{t.privacyLink}</Link>
           </nav>
+          <p className="footer-about">{t.footerText}</p>
         </div>
         <div className="footer-inner footer-bottom">
           <p>

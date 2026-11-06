@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, LogIn, Printer } from "lucide-react";
+import { LegalHead } from "@/components/legal-page";
 import { useAccount } from "@/lib/account";
 import { DOCUMENT_VERSION, type PlatformDocument } from "@/lib/documents";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -60,14 +61,11 @@ export default function AgreementView({ locale, document }: { locale: SiteLocale
         <span />
         <button className="button button-primary" type="button" onClick={() => window.print()}><Printer size={16} /> {d.print}</button>
       </div>
-      <header className="document-head">
-        <strong className="document-brand">{t.brandLabel} · {locale === "ar" ? "Sakani" : "سكني"}</strong>
-        <h1>{d.titles[document]}</h1>
-        <dl className="document-meta">
-          <div><dt>{d.version}</dt><dd dir="ltr">{DOCUMENT_VERSION}</dd></div>
-        </dl>
-        <p className="document-draft">{d.draftNotice}</p>
-      </header>
+      <strong className="document-brand">{t.brandLabel} · {locale === "ar" ? "Sakani" : "سكني"}</strong>
+      <LegalHead locale={locale} title={d.titles[document]} draft={d.draftNotice} />
+      <dl className="document-meta">
+        <div><dt>{d.version}</dt><dd dir="ltr">{DOCUMENT_VERSION}</dd></div>
+      </dl>
       {sections.map((section) => (
         <section className="document-section" key={section.heading}>
           <h2>{section.heading}</h2>
