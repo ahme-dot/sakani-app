@@ -2,7 +2,8 @@ import HomePage from "@/components/home-page";
 import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings } from "@/lib/payments";
 import { fetchApprovedListings, filtersFromParams } from "@/lib/supabase/listings";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import type { SiteLocale } from "@/messages/site";
+import { SITE_URL } from "@/lib/site";
+import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 export type HomeSearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -22,5 +23,13 @@ export default async function HomeRoute({ locale, searchParams }: { locale: Site
   const [{ listings, total, error }, fees] = await Promise.all([fetchApprovedListings(client, filters, 0), fetchPaymentSettings(client)]);
   if (error) console.error("Could not load published listings:", error);
 
-  return <HomePage key={key} locale={locale} initialListings={listings} initialTotal={total} initialError={Boolean(error)} initialFilters={filters} initialSaved={saved} fees={fees ?? DEFAULT_PAYMENT_SETTINGS} />;
+  const structuredData = [
+    { "@context": "https://schema.org", "@type": "Organization", name: "Sakani", alternateName: "سكني", url: SITE_URL, logo: `${SITE_URL}/icon.svg` },
+    { "@context": "https://schema.org", "@type": "WebSite", name: SITE_COPY[locale].brandLabel, url: `${SITE_URL}/${locale}`, inLanguage: locale },
+  ];
+
+  return <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
+    <HomePage key={key} locale={locale} initialListings={listings} initialTotal={total} initialError={Boolean(error)} initialFilters={filters} initialSaved={saved} fees={fees ?? DEFAULT_PAYMENT_SETTINGS} />
+  </>;
 }

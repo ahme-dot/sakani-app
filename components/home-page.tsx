@@ -334,7 +334,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
             </div>
             <div className="host-banner-photo">
               <Image
-                src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=75"
+                src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=75"
                 alt=""
                 fill
                 sizes="(max-width: 760px) 100vw, 50vw"

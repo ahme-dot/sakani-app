@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LEGAL_PAGE_DEFAULTS, type LegalSlug } from "@/messages/legal-pages";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 const OG_LOCALE: Record<SiteLocale, string> = { ar: "ar_EG", en: "en_US" };
@@ -45,3 +46,18 @@ export function bilingualMetadata(
 export const PRIVATE_PAGE_METADATA: Metadata = {
   robots: { index: false, follow: false },
 };
+
+/** Metadata for a policy page: its own title, in its own language. */
+export function legalPageMetadata(locale: SiteLocale, slug: string): Metadata {
+  const page = LEGAL_PAGE_DEFAULTS[locale][slug as LegalSlug];
+  if (!page) return { title: SITE_COPY[locale].metaTitle };
+  return bilingualMetadata(locale, `/legal/${slug}`, { title: page.title, description: page.body.slice(0, 155).replace(/\s+\S*$/, "") });
+}
+
+/** Metadata for the guest or host agreement. */
+export function agreementMetadata(locale: SiteLocale, type: string): Metadata {
+  const title = locale === "ar"
+    ? (type === "host" ? "اتفاقية صاحب المكان مع سكني" : "اتفاقية المستأجر مع سكني")
+    : (type === "host" ? "Sakani host agreement" : "Sakani guest agreement");
+  return bilingualMetadata(locale, `/agreements/${type}`, { title });
+}

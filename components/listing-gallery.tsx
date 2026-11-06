@@ -33,7 +33,7 @@ export default function ListingGallery({ locale, images, altFor }: { locale: Sit
       <div className={`photo-grid photo-grid-${tiles.length}`}>
         {tiles.map((src, index) => (
           <button key={src} type="button" className="photo-grid-tile" onClick={() => setShowAll(true)} aria-label={altFor[index]}>
-            <Image src={src} alt="" fill priority={index === 0} sizes={index === 0 ? "(max-width: 900px) 100vw, 560px" : "280px"} />
+            <Image src={src} alt={altFor[index]} fill priority={index === 0} sizes={index === 0 ? "(max-width: 900px) 100vw, 560px" : "280px"} />
           </button>
         ))}
         {images.length > 1 && (

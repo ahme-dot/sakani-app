@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 import { getApprovedListingIds } from "@/lib/supabase/server";
+import { LEGAL_SLUGS } from "@/messages/legal-pages";
 
 // Rebuild hourly so newly approved listings are discoverable.
 export const revalidate = 3600;
@@ -25,6 +26,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "yearly" as const,
       priority: 0.2,
       alternates: bilingual(`/${page}`),
+    }))),
+    ...LEGAL_SLUGS.flatMap((slug) => (["ar", "en"] as const).map((locale) => ({
+      url: `${SITE_URL}/${locale}/legal/${slug}`,
+      changeFrequency: "yearly" as const,
+      priority: 0.2,
+      alternates: bilingual(`/legal/${slug}`),
     }))),
     ...listings.flatMap((listing) => (["ar", "en"] as const).map((locale) => ({
       url: `${SITE_URL}/${locale}/listings/${listing.id}`,

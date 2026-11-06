@@ -110,15 +110,20 @@ export default async function ListingRoute({ locale, params }: { locale: SiteLoc
 
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "Accommodation",
-    name: title,
-    description,
+    "@type": "Offer",
     url: pageUrl,
-    image: listing.images,
-    numberOfBedrooms: listing.total_beds,
-    address: { "@type": "PostalAddress", addressLocality: listing.area, addressRegion: governorateLabel("en", listing.city), addressCountry: "EG" },
-    amenityFeature: amenityList.filter((amenity) => amenity.available).map((amenity) => ({ "@type": "LocationFeatureSpecification", name: amenity.label, value: true })),
-    offers: { "@type": "Offer", price: listing.monthly_price, priceCurrency: "EGP", availability: "https://schema.org/InStock" },
+    price: listing.monthly_price,
+    priceCurrency: "EGP",
+    availability: listing.status === "rented" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+    itemOffered: {
+      "@type": "Accommodation",
+      name: title,
+      description,
+      image: listing.images,
+      ...(listing.bedrooms ? { numberOfBedrooms: listing.bedrooms } : {}),
+      address: { "@type": "PostalAddress", addressLocality: listing.area, addressRegion: governorateLabel("en", listing.city), addressCountry: "EG" },
+      amenityFeature: amenityList.filter((amenity) => amenity.available).map((amenity) => ({ "@type": "LocationFeatureSpecification", name: amenity.label, value: true })),
+    },
   };
 
   return (

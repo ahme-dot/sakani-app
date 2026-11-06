@@ -9811,7 +9811,7 @@ body:has(.site-shell) { background: #f5f7fa; }
 .site-shell .home-hero-badge { border-radius: 4px; background: rgb(255 255 255 / 10%); }
 .site-shell .home-hero h1 {
   max-width: 760px;
-  font-family: Georgia, "Times New Roman", var(--font-cairo), serif;
+  font-family: var(--font-inter), var(--font-cairo), sans-serif;
   font-size: clamp(48px, 6vw, 78px);
   font-weight: 700;
   letter-spacing: -.055em;
@@ -9847,7 +9847,7 @@ body:has(.site-shell) { background: #f5f7fa; }
 .site-shell .listing3-section h2,
 .site-shell .listing3-know h2,
 .site-shell .listing3-similar h2 {
-  font-family: Georgia, "Times New Roman", var(--font-cairo), serif;
+  font-family: var(--font-inter), var(--font-cairo), sans-serif;
   color: #14213d;
   letter-spacing: -.045em;
 }
@@ -9909,7 +9909,7 @@ body:has(.site-shell) { background: #f5f7fa; }
 
 .site-shell .host-hero-main { border-radius: 5px; background: #eef1f5; }
 .site-shell .host-hero-kicker { border-color: #e1d6c8; border-radius: 4px; background: #f5f7fa; color: #1f7a5a; }
-.site-shell .host-hero h1 { font-family: Georgia, "Times New Roman", var(--font-cairo), serif; color: #14213d; }
+.site-shell .host-hero h1 { font-family: var(--font-inter), var(--font-cairo), sans-serif; color: #14213d; }
 .site-shell[lang="ar"] .host-hero h1 { font-family: var(--font-cairo), sans-serif; letter-spacing: 0; }
 .site-shell .host-hero-visual { border-radius: 5px; box-shadow: none; }
 .site-shell .host-hero-image-note { border-radius: 4px; }
@@ -9922,7 +9922,7 @@ body:has(.site-shell) { background: #f5f7fa; }
 .site-shell .owner-section { background: #f5f7fa; }
 .site-shell .owner-intro h2,
 .site-shell .contact2-intro h2 {
-  font-family: Georgia, "Times New Roman", var(--font-cairo), serif;
+  font-family: var(--font-inter), var(--font-cairo), sans-serif;
   color: #14213d;
 }
 html[lang="ar"] .site-shell .owner-intro h2,
@@ -9956,7 +9956,7 @@ html[lang="ar"] .site-shell .contact2-intro h2 { font-family: var(--font-cairo),
 }
 .site-shell .help-hero h1 {
   max-width: 760px;
-  font-family: Georgia, "Times New Roman", var(--font-cairo), serif;
+  font-family: var(--font-inter), var(--font-cairo), sans-serif;
   color: #14213d;
   font-size: clamp(42px, 6vw, 70px);
   letter-spacing: -.055em;
@@ -9967,7 +9967,7 @@ html[lang="ar"] .site-shell .contact2-intro h2 { font-family: var(--font-cairo),
 .site-shell .legal-page { padding-top: 34px; }
 .site-shell .legal-article { border-color: #e3e7ec; border-radius: 5px; background: #ffffff; box-shadow: none; }
 .site-shell .legal-article h1,
-.site-shell .legal-article h2 { font-family: Georgia, "Times New Roman", var(--font-cairo), serif; color: #14213d; }
+.site-shell .legal-article h2 { font-family: var(--font-inter), var(--font-cairo), sans-serif; color: #14213d; }
 .site-shell[lang="ar"] .legal-article h1,
 .site-shell[lang="ar"] .legal-article h2 { font-family: var(--font-cairo), sans-serif; }
 .site-shell .legal-intro { border-inline-start: 3px solid #14213d; border-radius: 0 4px 4px 0; background: #f3eae1; }
@@ -10005,7 +10005,7 @@ body:has(.auth-page) { background: #f5f7fa; }
 .auth-brand-copy li span { border-radius: 4px; background: rgb(255 255 255 / 11%); color: #efb294; }
 .auth-form-side { padding: clamp(92px, 9vw, 112px) clamp(30px, 5vw, 62px) clamp(30px, 5vw, 62px); }
 .auth-back { gap: 8px; color: #58675e; }
-.auth-form-side h1 { font-family: Georgia, "Times New Roman", var(--font-cairo), serif; color: #14213d; }
+.auth-form-side h1 { font-family: var(--font-inter), var(--font-cairo), sans-serif; color: #14213d; }
 .auth-page[dir="rtl"] .auth-form-side h1 { font-family: var(--font-cairo), sans-serif; }
 .auth-input { border-color: #e1e6ec; border-radius: 4px; background: #ffffff; }
 .auth-submit,
@@ -10019,7 +10019,7 @@ body:has(.auth-page) { background: #f5f7fa; }
 .admin-nav button.is-active svg { color: #1f7a5a; }
 .admin-main { color: #14213d; }
 .admin-main-header { border-bottom: 1px solid #e2d9cd; }
-.admin-main-header h1 { font-family: Georgia, "Times New Roman", var(--font-cairo), serif; }
+.admin-main-header h1 { font-family: var(--font-inter), var(--font-cairo), sans-serif; }
 .admin-shell[dir="rtl"] .admin-main-header h1 { font-family: var(--font-cairo), sans-serif; }
 .admin-shell .admin-stat,
 .admin-shell .admin-card,
@@ -10114,7 +10114,7 @@ body:has(.auth-page) { background: #f5f7fa; }
 .flyer-print:hover { background: #1f7a5a; }
 .flyer-sheet { background: #ffffff; color: #14213d; box-shadow: 0 20px 50px rgb(48 41 33 / 12%); }
 .flyer-sheet h1 { color: #14213d; }
-.flyer-shell[dir="ltr"] .flyer-sheet h1 { font-family: Georgia, "Times New Roman", var(--font-cairo), serif; letter-spacing: -.03em; }
+.flyer-shell[dir="ltr"] .flyer-sheet h1 { font-family: var(--font-inter), var(--font-cairo), sans-serif; letter-spacing: -.03em; }
 .flyer-points svg { border-radius: 4px; background: #e8f4ee; color: #1f7a5a; }
 .flyer-qr-block { border-color: #6aa58b; border-radius: 4px; background: #f5f7fa; }
 .flyer-foot { color: #59695f; }
