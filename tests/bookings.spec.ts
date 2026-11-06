@@ -198,6 +198,36 @@ test.describe("bookings", () => {
     }
   });
 
+  test("a room with two free beds is rented only when both are taken", async () => {
+    const host = await guestSession();
+    const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
+      token: host.access_token, method: "POST",
+      body: sampleListing(host.user.id, "Two beds", { property_type: "room", available_beds: 2, total_beds: 2 }),
+    });
+    const listingId = created.data[0].id;
+    await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "approved" } });
+    const place = async () => (await api<Array<{ status: string }>>(`/rest/v1/properties?select=status&id=eq.${listingId}`, { token: admin })).data[0].status;
+    const moveIn = async (reference: string) => {
+      const booked = await api<{ booking_id: string; pay_token: string }>("/rest/v1/rpc/guest_create_booking", {
+        token: admin, method: "POST", body: { target_listing: listingId, move_in_date: tomorrow(), stay_months: 3, people: 1, guest_note: "E2E" },
+      });
+      expect(booked.status).toBe(200);
+      const target = { target_booking: booked.data.booking_id };
+      await api("/rest/v1/rpc/submit_payment_by_token", { method: "POST", body: { token: booked.data.pay_token, pay_method: "instapay", pay_reference: reference, pay_phone: "01112223334" } });
+      await api("/rest/v1/rpc/host_decide_booking", { token: host.access_token, method: "POST", body: { ...target, accept: true } });
+      await api("/rest/v1/rpc/admin_confirm_booking_payment", { token: admin, method: "POST", body: target });
+      expect((await api("/rest/v1/rpc/guest_confirm_move_in", { token: admin, method: "POST", body: target })).status).toBeLessThan(300);
+    };
+    try {
+      await moveIn("IP-BED-1");
+      expect(await place()).toBe("approved");
+      await moveIn("IP-BED-2");
+      expect(await place()).toBe("rented");
+    } finally {
+      await cleanup(admin, listingId);
+    }
+  });
+
   test("homes are for men or women only; profiles, saved places and chats are private", async () => {
     const owner = await guestSession();
     const mixed = await api("/rest/v1/properties?select=id", { token: owner.access_token, method: "POST", body: sampleListing(owner.user.id, "Mixed", { gender: "mixed" }) });

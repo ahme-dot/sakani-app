@@ -81,7 +81,9 @@ export async function adminToken() {
 
 /** A fresh anonymous (guest) session, like an owner who continues without an account. */
 export async function guestSession() {
-  const { data } = await api<{ access_token: string; user: { id: string } }>("/auth/v1/signup", { method: "POST", body: {} });
+  const { status, data } = await api<{ access_token: string; user: { id: string } }>("/auth/v1/signup", { method: "POST", body: {} });
+  // Said plainly, so a sign-up limit isn't mistaken for a bug in the code under test.
+  if (!data?.user) throw new Error(`Could not create a test account (HTTP ${status}): Supabase's sign-up limit or captcha.`);
   return data;
 }
 
