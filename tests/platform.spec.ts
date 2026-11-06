@@ -164,3 +164,14 @@ test("policy pages and agreements open for everyone", async ({ page }) => {
     await expect(page.locator(".document h1")).toBeVisible();
   }
 });
+
+test("one page lists every policy, and the footer links to it", async ({ page }) => {
+  await page.goto("/en");
+  await page.locator(".footer-policies a", { hasText: "Policies and terms" }).click();
+  await expect(page).toHaveURL(/\/en\/legal$/);
+  await expect(page.locator(".legal-hub-grid a")).toHaveCount(10);
+  await page.locator(".legal-hub-grid a", { hasText: "Refund policy" }).click();
+  await expect(page).toHaveURL(/\/en\/legal\/refund-policy$/);
+  await page.goto("/ar/legal");
+  await expect(page.locator(".legal-hub-grid a")).toHaveCount(10);
+});

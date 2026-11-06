@@ -27,6 +27,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.2,
       alternates: bilingual(`/${page}`),
     }))),
+    ...(["ar", "en"] as const).map((locale) => ({
+      url: `${SITE_URL}/${locale}/legal`,
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+      alternates: bilingual("/legal"),
+    })),
     ...LEGAL_SLUGS.flatMap((slug) => (["ar", "en"] as const).map((locale) => ({
       url: `${SITE_URL}/${locale}/legal/${slug}`,
       changeFrequency: "yearly" as const,

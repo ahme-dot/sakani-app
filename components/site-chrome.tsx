@@ -5,7 +5,6 @@ import BottomTabs, { type BottomTab } from "@/components/bottom-tabs";
 import SearchPill from "@/components/search-pill";
 import NotificationsBell from "@/components/notifications-bell";
 import UserMenu from "@/components/user-menu";
-import { LEGAL_SLUGS } from "@/messages/legal-pages";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 export function Brand({ locale, href }: { locale: SiteLocale; href?: string }) {
@@ -75,9 +74,8 @@ export function SiteFooter({ locale, switchHref, tab }: { locale: SiteLocale; sw
           </nav>
           <nav className="footer-policies" aria-label={t.footerPolicies}>
             <h3>{t.footerPolicies}</h3>
-            {LEGAL_SLUGS.map((slug) => <Link key={slug} href={`/${locale}/legal/${slug}`}>{t.legalTitles[slug]}</Link>)}
-            <Link href={`/${locale}/agreements/guest`}>{t.footerGuestAgreement}</Link>
-            <Link href={`/${locale}/agreements/host`}>{t.footerHostAgreement}</Link>
+            <Link href={`/${locale}/legal`}>{t.legalHubTitle}</Link>
+            <Link href={`/${locale}/privacy`}>{t.privacyLink}</Link>
           </nav>
         </div>
         <div className="footer-inner footer-bottom">

@@ -10791,3 +10791,15 @@ a.auth-submit, a.auth-submit:hover { color: #fff; }
 .pay-card-safe { display: flex; align-items: flex-start; gap: 6px; margin: 0; color: var(--muted); }
 .pay-card-safe svg { flex: none; margin-top: 2px; color: var(--green); }
 .field-hint.is-warning { color: #8a4b00; font-weight: 600; }
+
+/* ==== Policies and terms page ==== */
+.legal-hub { padding-block: 40px 64px; }
+.legal-hub h1 { margin: 0 0 8px; color: var(--ink); font-size: clamp(28px, 4vw, 38px); }
+.legal-hub-intro { margin: 0 0 28px; color: #46546b; font-size: 16px; }
+.legal-hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.legal-hub-grid a { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 100%; padding: 18px; border: 1px solid #e3e7ec; border-radius: 14px; background: #fff; color: var(--ink); text-decoration: none; transition: border-color .15s ease, background .15s ease; }
+.legal-hub-grid a:hover { border-color: var(--green); background: #eef4f1; }
+.legal-hub-grid a span { display: grid; gap: 4px; }
+.legal-hub-grid strong { font-size: 16px; }
+.legal-hub-grid small { color: #46546b; font-size: 14px; line-height: 1.5; }
+.legal-hub-grid svg { flex: none; color: var(--green); }
