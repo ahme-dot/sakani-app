@@ -61,6 +61,9 @@ export const HIDDEN_STATUSES = ["paused", "reserved", "rented", "suspended"] as 
 export const PUBLIC_LISTING_COLUMNS =
   "id,title_ar,title_en,description_ar,description_en,governorate,area,university,gender,property_type,monthly_price,deposit,furnished,wifi,air_conditioning,security,available_beds,total_beds,walking_distance_minutes,image_url,image_urls,verified,verified_at,is_demo,bedrooms,bathrooms,area_sqm,min_months,available_from,status,created_at,updated_at,kitchen,washing_machine,fridge,water_heater,elevator,rented_until,published_at,available_since";
 
+/** The same without the long descriptions: everything a card shows (up to 4,000 fewer characters per card). */
+export const CARD_LISTING_COLUMNS = PUBLIC_LISTING_COLUMNS.replace(",description_ar,description_en", "");
+
 /** Short reference guests quote to the Sakani team, e.g. "SK-3F9A2C". */
 export function listingRef(id: string) {
   return `SK-${id.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
@@ -171,7 +174,7 @@ export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0
 export async function fetchSimilarListings(client: SupabaseClient, listing: Pick<Property, "id" | "city" | "gender" | "is_demo">, limit = 3) {
   let query = client
     .from("properties")
-    .select(PUBLIC_LISTING_COLUMNS)
+    .select(CARD_LISTING_COLUMNS)
     .eq("status", "approved")
     .eq("governorate", listing.city)
     .eq("gender", listing.gender)
@@ -192,7 +195,7 @@ export async function fetchListingsByIds(client: SupabaseClient, ids: string[]) 
   if (!valid.length) return { listings: [] as Property[], error: null };
   const { data, error } = await client
     .from("properties")
-    .select(PUBLIC_LISTING_COLUMNS)
+    .select(CARD_LISTING_COLUMNS)
     .eq("status", "approved")
     .in("id", valid);
   const byId = new Map(((data ?? []) as unknown as MarketplaceListing[]).map((listing) => [listing.id, toProperty(listing)]));
@@ -242,7 +245,8 @@ export async function fetchApprovedListings(
 ): Promise<{ listings: Property[]; total: number; error: unknown }> {
   let query = applyFilters(client
     .from("properties")
-    .select(PUBLIC_LISTING_COLUMNS, { count: "exact" })
+    // Counting every match is the slow part, so only the first page asks; "load more" keeps that total.
+    .select(CARD_LISTING_COLUMNS, page === 0 ? { count: "exact" } : undefined)
     .eq("status", "approved"), filters);
 
   // Real places always come before demo places.
@@ -272,8 +276,8 @@ export function toProperty(listing: MarketplaceListing): Property {
     id: listing.id,
     title_ar: listing.title_ar,
     title_en: listing.title_en,
-    description_ar: listing.description_ar,
-    description_en: listing.description_en,
+    description_ar: listing.description_ar ?? "",
+    description_en: listing.description_en ?? "",
     city: listing.governorate || "Giza",
     area: listing.area,
     university: listing.university,

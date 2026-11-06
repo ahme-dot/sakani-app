@@ -131,7 +131,7 @@ export default function HomePage({ locale, initialListings, initialTotal, initia
     } else {
       setListingError(false);
       setListings((current) => (nextPage === 0 ? result.listings : [...current, ...result.listings]));
-      setTotal(result.total);
+      if (nextPage === 0) setTotal(result.total);
       setPage(nextPage);
     }
     setLoading("none");
