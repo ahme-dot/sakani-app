@@ -19,6 +19,8 @@ export default function AdminPasswordReset({ locale }: { locale: SiteLocale }) {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Only a reset asked for on the admin sign-in comes back here with ?next=admin.
+  const [adminReset, setAdminReset] = useState(false);
 
   useEffect(() => {
     if (!supabase) return;
@@ -35,6 +37,7 @@ export default function AdminPasswordReset({ locale }: { locale: SiteLocale }) {
 
     void supabase.auth.getSession().then(({ data, error: sessionError }) => {
       if (!mounted) return;
+      setAdminReset(new URLSearchParams(window.location.search).get("next") === "admin");
       if (linkError) {
         console.error("The password recovery link was rejected:", linkError);
         setError(linkError);
@@ -83,7 +86,7 @@ export default function AdminPasswordReset({ locale }: { locale: SiteLocale }) {
         <>
           <p className="auth-lead">{t.adminResetInvalid}</p>
           {error && <p className="auth-message is-error" role="alert">{error}</p>}
-          <Link className="auth-submit" href={`/${locale}/sign-in`}>{t.signIn}</Link>
+          <Link className="auth-submit" href={adminReset ? `/${locale}/sign-in` : `/${locale}/account`}>{t.signIn}</Link>
         </>
       ) : (
         <>

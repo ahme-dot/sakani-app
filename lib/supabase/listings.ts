@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Property } from "@/types";
-import { AMENITIES, type AmenityKey } from "@/lib/amenities";
+import { AMENITIES, AMENITY_KEYS, type AmenityKey } from "@/lib/amenities";
 
 export type MarketplaceListing = {
   id: string;
@@ -63,6 +63,15 @@ export const PUBLIC_LISTING_COLUMNS =
 
 /** The same without the long descriptions: everything a card shows (up to 4,000 fewer characters per card). */
 export const CARD_LISTING_COLUMNS = PUBLIC_LISTING_COLUMNS.replace(",description_ar,description_en", "");
+
+/** What an owner can change on a published or paused place without a new review (properties_guard has the same list). */
+const NO_REVIEW_FIELDS: readonly string[] = ["monthly_price", "deposit", "available_from", "min_months", "available_beds", ...AMENITY_KEYS];
+
+/** Would saving these values send this published or paused place back to review? */
+export function editNeedsReview(listing: Record<string, unknown>, values: Record<string, unknown>) {
+  if (listing.status !== "approved" && listing.status !== "paused") return false;
+  return Object.entries(values).some(([key, value]) => key !== "status" && !NO_REVIEW_FIELDS.includes(key) && JSON.stringify(value ?? null) !== JSON.stringify(listing[key] ?? null));
+}
 
 /** Short reference guests quote to the Sakani team, e.g. "SK-3F9A2C". */
 export function listingRef(id: string) {

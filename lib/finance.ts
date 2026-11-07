@@ -75,6 +75,14 @@ export function cairoDay(offset = 0) {
 }
 
 /** The day a stay ends, as YYYY-MM-DD. Like public.stay_end in the database: 31 January + 1 month is the end of February. */
+/** How long a host has to answer a paid booking (host_bookings in the database uses the same). */
+export const HOST_ANSWER_HOURS = 24;
+
+/** Until when the host can answer a booking paid at this time. */
+export function hostDecideBy(paidAt: string) {
+  return new Date(new Date(paidAt).getTime() + HOST_ANSWER_HOURS * 3_600_000);
+}
+
 export function stayEnd(moveIn: string, months: number | null) {
   const start = new Date(`${moveIn}T00:00:00Z`);
   const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + (months ?? 1), 1));

@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CalendarCheck, CheckCircle2, ExternalLink, FileText, Headset, LoaderCircle, Phone, RotateCcw, Timer, Wallet, X } from "lucide-react";
-import { cairoDay } from "@/lib/finance";
+import { CalendarCheck, CheckCircle2, ExternalLink, FileText, Headset, LoaderCircle, MessageCircle, Phone, RotateCcw, Timer, Wallet, X } from "lucide-react";
+import { PHONE_PATTERN } from "@/lib/account";
+import { cairoDay, hostDecideBy } from "@/lib/finance";
 import { isMissingFunction, refundableAmount } from "@/lib/payments";
 import { useListingTitles } from "@/lib/listing-titles";
-import { listingPath, whatsappLink } from "@/lib/site";
+import { SITE_URL, listingPath, whatsappLink } from "@/lib/site";
 import { fetchPrivateContacts, listingRef } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import SakaniSelect from "@/components/sakani-select";
@@ -53,7 +54,7 @@ type Booking = {
   created_at: string;
 };
 type DepositInfo = { booking_id: string; status: string; amount: number; transfer_reference: string; acknowledged_at: string | null };
-type FeeInfo = { id: string; status: string; amount: number; received_amount: number | null; reference: string | null; payer_phone: string | null; method?: string | null };
+type FeeInfo = { id: string; status: string; amount: number; received_amount: number | null; reference: string | null; payer_phone: string | null; method?: string | null; pay_token: string };
 type HostInfo = { id: string; full_name: string; instapay_address: string };
 
 // Most urgent first: money to check, money to return, hosts to pay.
@@ -149,7 +150,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
       const listingIds = [...new Set(rows.map((row) => row.listing_id).filter((id): id is string => Boolean(id)))];
       const bookingIds = rows.map((row) => row.id);
       const [feeRows, hostRows, numbers, depositRows, cancellationRows, settingsRow] = await Promise.all([
-        feeIds.length ? supabase.from("rental_fees").select("id,status,amount,received_amount,reference,payer_phone,method").in("id", feeIds) : Promise.resolve({ data: [] }),
+        feeIds.length ? supabase.from("rental_fees").select("id,status,amount,received_amount,reference,payer_phone,method,pay_token").in("id", feeIds) : Promise.resolve({ data: [] }),
         hostIds.length ? supabase.from("profiles").select("id,full_name,instapay_address").in("id", hostIds) : Promise.resolve({ data: [] }),
         fetchPrivateContacts(supabase, listingIds),
         bookingIds.length ? supabase.from("deposit_transfers").select("booking_id,status,amount,transfer_reference,acknowledged_at").in("booking_id", bookingIds) : Promise.resolve({ data: [] }),
@@ -274,6 +275,24 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
             const payoutDue = (booking.status === "moved_in" || booking.status === "completed") && !booking.paid_out_at;
             const moneyArrived = fee?.status === "paid" || (fee?.received_amount ?? 0) > 0;
             const canFullRefund = !policyActive && moneyArrived && (booking.status === "payment_review" || booking.status === "confirmed" || booking.status === "moved_in" || booking.status === "cancellation_requested");
+            // Ready-made WhatsApp messages for what's happening with this booking right now.
+            const place = titleOf(booking.listing_id, booking.listing_title);
+            const guestNumber = PHONE_PATTERN.test(booking.contact ?? "") ? booking.contact : null;
+            const awaitingMoney = booking.status === "pending_payment" || booking.status === "payment_review";
+            const payLink = fee ? `${SITE_URL}/${locale}/pay/${fee.pay_token}` : `${SITE_URL}/${locale}/account#bookings`;
+            const bookingsLink = `${SITE_URL}/${locale}/account#bookings`;
+            const shortfall = fee?.status === "due" && (fee.received_amount ?? 0) > 0;
+            const readyMessages = [
+              hostNumber && awaitingMoney && booking.host_decision === "pending" && {
+                to: hostNumber, label: t.waHostButton,
+                text: t.waHostRequest(place, booking.paid_at ? dateFormat.format(hostDecideBy(booking.paid_at)) : null, `${SITE_URL}/${locale}/account#requests`),
+              },
+              guestNumber && awaitingMoney && fee?.reference && !shortfall && (fee.status === "submitted" || fee.status === "due") && { to: guestNumber, label: t.waNotReceivedButton, text: t.waNotReceived(place, payLink) },
+              guestNumber && shortfall && { to: guestNumber, label: t.waAmountButton, text: t.waAmount(place, egp(fee?.received_amount ?? 0), egp(fee?.amount ?? 0), payLink) },
+              guestNumber && booking.status === "confirmed" && { to: guestNumber, label: t.waConfirmedButton, text: t.waConfirmed(place, bookingsLink) },
+              guestNumber && booking.status === "confirmed" && booking.move_in && { to: guestNumber, label: t.waMoveInButton, text: t.waMoveIn(place, dayFormat.format(new Date(booking.move_in)), bookingsLink) },
+              guestNumber && booking.status === "refunded" && { to: guestNumber, label: t.waRefundButton, text: t.waRefund(place, egp(refundableAmount(booking)), booking.refund_reference ?? "") },
+            ].filter((item) => Boolean(item)) as Array<{ to: string; label: string; text: string }>;
             const fullRefundCase = draft("case", booking.id) || (FAULT_CASES as readonly string[]).find((item) => item === cancellation?.scenario) || FAULT_CASES[0];
             return (
               <article className={`admin-fee admin-request${left !== null && left <= 6 ? " is-urgent" : ""}`} key={booking.id}>
@@ -331,6 +350,7 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
                   {booking.guest_id && <button className="admin-btn admin-btn-ghost" type="button" onClick={() => onOpenChat(booking.guest_id!, booking.id)}><Headset size={15} /> {t.chatWithGuest}</button>}
                   {booking.host_id && <button className="admin-btn admin-btn-ghost" type="button" onClick={() => onOpenChat(booking.host_id!, booking.id)}><Headset size={15} /> {t.chatWithHost}</button>}
                   {hostNumber && <a className="admin-btn admin-btn-ghost" href={whatsappLink(hostNumber)} target="_blank" rel="noreferrer"><Phone size={15} /> {t.requestOwner}</a>}
+                  {readyMessages.map((item) => <a key={item.label} className="admin-btn admin-btn-ghost" href={whatsappLink(item.to, item.text)} target="_blank" rel="noreferrer"><MessageCircle size={15} /> {item.label}</a>)}
 
                   {(booking.status === "pending_payment" || booking.status === "payment_review") && (
                     <>
@@ -340,9 +360,13 @@ export default function AdminRequests({ locale, supabase, onChanged, onOpenChat,
                         </button>
                       )}
                       {fee?.status === "submitted" && (
-                        <button className="admin-btn admin-btn-danger-outline" type="button" disabled={busy} onClick={() => void run(booking, "admin_decide_fee", { target_fee: fee.id, decision: "due" }, t.adminStatusUpdated)}>
-                          <RotateCcw size={15} /> {t.markDue}
-                        </button>
+                        <span className="admin-reference admin-step">
+                          <strong className="admin-step-title">{t.adminNotReceivedTitle}</strong>
+                          <input value={draft("notreceived", booking.id)} onChange={(event) => setDraft("notreceived", booking.id, event.target.value)} placeholder={t.adminNotReceivedNote} aria-label={t.adminNotReceivedNote} maxLength={300} dir="auto" />
+                          <button className="admin-btn admin-btn-danger-outline" type="button" disabled={busy} onClick={() => void run(booking, "admin_decide_fee", { target_fee: fee.id, decision: "due", note: draft("notreceived", booking.id) }, t.adminStatusUpdated)}>
+                            <RotateCcw size={15} /> {t.markDue}
+                          </button>
+                        </span>
                       )}
                       {booking.host_decision === "declined" && fee?.status === "submitted" && <small className="field-hint">{t.adminDeclinedWaiting}</small>}
                       {fee?.status === "submitted" && (

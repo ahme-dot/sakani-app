@@ -68,7 +68,7 @@ import AdminReports from "@/components/admin-reports";
 import AdminTeam from "@/components/admin-team";
 import AdminUsers, { type DirectoryUser } from "@/components/admin-users";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getSupabaseBrowserClient, onDatabaseRefused } from "@/lib/supabase/client";
 import { HIDDEN_STATUSES, PUBLIC_LISTING_COLUMNS, fetchPrivateContacts, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
 import { storagePathFromPublicUrl } from "@/lib/images";
 import { listingPath, whatsappLink } from "@/lib/site";
@@ -82,7 +82,15 @@ const SEARCH_DEBOUNCE_MS = 300;
 /** Published listings not updated or confirmed for this long are flagged as possibly out of date. */
 const STALE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
-type DashboardState = "loading" | "unconfigured" | "signed-out" | "checking" | "denied" | "mfa" | "ready";
+type DashboardState = "loading" | "unconfigured" | "signed-out" | "session-ended" | "checking" | "denied" | "mfa" | "ready";
+
+/** Where a session change leaves the panel. Someone who was working here is told their session ended. */
+function afterSessionChange(previous: DashboardState, signedIn: boolean): DashboardState {
+  const wasIn = previous === "ready" || previous === "mfa";
+  // A token refresh on these screens changes nothing; "checking" would wait for a check that isn't coming.
+  if (signedIn) return wasIn || previous === "denied" ? previous : "checking";
+  return wasIn || previous === "session-ended" ? "session-ended" : "signed-out";
+}
 /** The admin tabs; "paused" also shows reserved, rented and suspended listings (everything hidden from search). */
 type ReviewFilter = "pending" | "approved" | "rejected" | "paused";
 type AdminView = "today" | "reviews" | "errors" | "listings" | "add" | "requests" | "chat" | "reports" | "inbox" | "payments" | "finance" | "policies" | "legal" | "audit" | "users" | "identity" | "demo" | "grow" | "team";
@@ -166,7 +174,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       }
       const currentUser = data.session?.user ?? null;
       setUser((previous) => (previous?.id === currentUser?.id ? previous : currentUser));
-      setState((previous) => (currentUser ? (previous === "ready" ? previous : "checking") : "signed-out"));
+      setState((previous) => afterSessionChange(previous, Boolean(currentUser)));
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -174,7 +182,7 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       const currentUser = session?.user ?? null;
       // Token refreshes emit a new user object for the same account; only re-check admin access when the account changes.
       setUser((previous) => (previous?.id === currentUser?.id ? previous : currentUser));
-      setState((previous) => (currentUser ? (previous === "ready" ? previous : "checking") : "signed-out"));
+      setState((previous) => afterSessionChange(previous, Boolean(currentUser)));
     });
 
     return () => {
@@ -182,6 +190,42 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
       listener.subscription.unsubscribe();
     };
   }, [supabase, t.adminLoadError]);
+
+  // A dead session sends every request as a visitor, and the database answers 401 to all of them. One refusal can be a
+  // token that expired a moment ago, so the session gets one chance to renew before the panel gives up.
+  useEffect(() => {
+    if (!supabase || state !== "ready") return;
+    let checking = false;
+    return onDatabaseRefused(() => {
+      if (checking) return;
+      checking = true;
+      void supabase.auth.refreshSession().then(({ data, error: refreshError }) => {
+        checking = false;
+        if (refreshError || !data.session) {
+          setUser(null);
+          setState("session-ended");
+        }
+      });
+    });
+  }, [supabase, state]);
+
+  // Coming back to the tab, or a sign-in in another tab. Signing in again without the code leaves this tab with a
+  // session the database doesn't count as admin, so it asks for the code instead of failing everywhere. Asking also
+  // finds out if the session was ended elsewhere. Deferred: auth calls can't run inside this callback.
+  useEffect(() => {
+    if (!supabase || state !== "ready") return;
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== "SIGNED_IN" || !session) return;
+      window.setTimeout(() => {
+        void loadMfaStatus(supabase).then((mfa) => {
+          if (mfa.passed) return;
+          setMfaFactor(mfa.factorId);
+          setState("mfa");
+        });
+      }, 0);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, [supabase, state]);
 
   useEffect(() => {
     if (!supabase || !user) return;
@@ -534,7 +578,10 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
 
   async function signOut() {
     if (!supabase) return;
-    const { error: signOutError } = await supabase.auth.signOut();
+    // Leaving on purpose isn't a lost session.
+    setState("signed-out");
+    // This device only: the default ends every session of the account, on the team's other devices too.
+    const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
     if (signOutError) {
       console.error("Could not sign out admin:", signOutError);
       setError(t.adminSignInError);
@@ -596,6 +643,19 @@ export default function AdminDashboard({ locale }: { locale: SiteLocale }) {
     return (
       <main className="admin-page" dir={dir}>
         <AdminMfaChallenge locale={locale} supabase={supabase} factorId={mfaFactor} onPassed={() => setState("ready")} />
+      </main>
+    );
+  }
+
+  if (state === "session-ended") {
+    return (
+      <main className="admin-page" dir={dir}>
+        <section className="admin-auth-panel admin-session-ended">
+          <span className="signin-icon"><LockKeyhole size={20} /></span>
+          <h1>{t.sessionEndedTitle}</h1>
+          <p>{t.sessionEndedText}</p>
+          <Link className="button button-primary owner-submit" href={`/${locale}/sign-in`}>{t.signIn}</Link>
+        </section>
       </main>
     );
   }

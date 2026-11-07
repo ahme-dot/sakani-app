@@ -204,7 +204,8 @@ export default function PayFee({ locale, token }: { locale: SiteLocale; token: s
       )}
       {upfront && <p className="pay-guarantee">{t.refundPromise}</p>}
 
-      {fee.admin_note && <p className="fee-note"><strong>{t.feeNote}:</strong> {fee.admin_note}</p>}
+      {/* Once the guest has sent the transfer again, the team's earlier note no longer applies. */}
+      {fee.admin_note && fee.status !== "submitted" && <p className="fee-note"><strong>{t.feeNote}:</strong> {fee.admin_note}</p>}
 
       {fee.status === "due" && provider.settle && (
         <div className="pay-sandbox">

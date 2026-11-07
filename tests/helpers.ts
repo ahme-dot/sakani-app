@@ -62,7 +62,19 @@ export async function api<T = unknown>(path: string, { token, method = "GET", bo
   return { status: response.status, data: (text ? JSON.parse(text) : null) as T };
 }
 
+/**
+ * One admin sign-in per run, renewed before the token's hour is up. Each pass of the two-step code ends the account's
+ * sessions that haven't passed it yet, so signing in again for every test could end a browser that's about to.
+ */
+let adminSession: { token: string; at: number } | null = null;
 export async function adminToken() {
+  if (adminSession && Date.now() - adminSession.at < 50 * 60_000) return adminSession.token;
+  const token = await freshAdminToken();
+  adminSession = { token, at: Date.now() };
+  return token;
+}
+
+async function freshAdminToken() {
   const { data } = await api<{ access_token: string }>("/auth/v1/token?grant_type=password", {
     method: "POST",
     body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },

@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { LoaderCircle, ScrollText } from "lucide-react";
 import type { DirectoryUser } from "@/components/admin-users";
 import { DOCUMENTS_COPY } from "@/messages/documents";
+import { AMENITY_KEYS, amenityLabel, type AmenityKey } from "@/lib/amenities";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 type AuditEntry = {
@@ -18,9 +19,9 @@ type AuditEntry = {
   new_data: Record<string, unknown> | null;
 };
 
-const ENTITIES = ["", "listing_requests", "rental_fees", "deposit_transfers", "contract_acceptances", "cancellation_requests", "app_settings"] as const;
+const ENTITIES = ["", "listing_requests", "rental_fees", "deposit_transfers", "contract_acceptances", "cancellation_requests", "properties", "app_settings"] as const;
 // The fields worth showing when they change; the full rows stay in the database.
-const WATCHED = ["status", "amount", "total_amount", "deposit_amount", "host_decision", "fee_percent", "student_fee_percent", "reference", "refund_reference", "payout_reference", "transfer_reference", "contract_signed_at", "document", "document_version", "party", "scenario", "decision", "slug"];
+const WATCHED = ["status", "amount", "total_amount", "deposit_amount", "host_decision", "fee_percent", "student_fee_percent", "reference", "refund_reference", "payout_reference", "transfer_reference", "contract_signed_at", "document", "document_version", "party", "scenario", "decision", "slug", "monthly_price", "deposit", "available_from", "min_months", "available_beds", ...AMENITY_KEYS];
 const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
 /** Admin: the append-only record of every money change (bookings, payments, deposits, fee settings). */
@@ -83,7 +84,7 @@ export default function AdminAudit({ locale, supabase, people = [] }: { locale: 
   };
   const changes = (entry: AuditEntry) =>
     WATCHED.filter((key) => (entry.old_data?.[key] ?? null) !== (entry.new_data?.[key] ?? null) && (entry.new_data?.[key] !== undefined || entry.old_data?.[key] !== undefined))
-      .map((key) => ({ key, label: t.auditFields[key as keyof typeof t.auditFields] ?? key, from: show(entry, key, entry.old_data?.[key]), to: show(entry, key, entry.new_data?.[key]) }));
+      .map((key) => ({ key, label: t.auditFields[key as keyof typeof t.auditFields] ?? amenityLabel(key as AmenityKey, locale), from: show(entry, key, entry.old_data?.[key]), to: show(entry, key, entry.new_data?.[key]) }));
 
   if (failed) return <p className="owner-feedback owner-feedback-error">{t.auditLoadError}</p>;
 

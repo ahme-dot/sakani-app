@@ -10,7 +10,8 @@ import { GOVERNORATES, areaLabel, areaSuggestions, normalizeArea, placeLabel } f
 import { isEgyptMobile, latinDigits, numberField, onDigitsInput, outOfRange } from "@/lib/digits";
 import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
 import { DEFAULT_PAYMENT_SETTINGS, fetchPaymentSettings, successFee, type PaymentSettings } from "@/lib/payments";
-import { listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
+import { PHONE_PATTERN } from "@/lib/account";
+import { editNeedsReview, listingImages, type MarketplaceListing } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import SakaniSelect from "@/components/sakani-select";
 import SakaniDate from "@/components/sakani-date";
@@ -41,7 +42,11 @@ type Props = {
   editing?: EditableListing | null;
   /** "admin" adds Publish now / visited-and-verified options and skips owner review. */
   mode?: "owner" | "admin";
-  onSaved: (result: { created: boolean; listingId: string }) => void | Promise<void>;
+  /** A signed-in host's phone and InstaPay; what's missing is asked before submitting. Left out for everyone else. */
+  hostContact?: { phone: string; instapay_address: string } | null;
+  onHostContactSaved?: (saved: { phone?: string; instapay_address?: string }) => void;
+  /** `reviewed`: false when an edit of a published or paused place didn't need a new review. */
+  onSaved: (result: { created: boolean; listingId: string; reviewed: boolean }) => void | Promise<void>;
   onCancel?: () => void;
 };
 
@@ -96,7 +101,7 @@ export async function removeListingImages(supabase: SupabaseClient, urls: string
 }
 
 /** The step-by-step listing form shared by the owner portal and the admin "Add listing" view. */
-export default function ListingForm({ locale, supabase, ownerId, editing = null, mode = "owner", onSaved, onCancel }: Props) {
+export default function ListingForm({ locale, supabase, ownerId, editing = null, mode = "owner", hostContact = null, onHostContactSaved, onSaved, onCancel }: Props) {
   const t = SITE_COPY[locale];
   const isAdmin = mode === "admin";
   const formRef = useRef<HTMLFormElement>(null);
@@ -126,6 +131,8 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
   const [governorate, setGovernorate] = useState(editing?.governorate ?? text("governorate") ?? "");
   const current: StepId = STEPS[step];
   const isLast = step === STEPS.length - 1;
+  const askPhone = !isAdmin && Boolean(hostContact) && !hostContact?.phone.trim();
+  const askInstapay = !isAdmin && Boolean(hostContact) && !hostContact?.instapay_address.trim();
 
   useEffect(() => {
     return () => {
@@ -272,7 +279,64 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
       return;
     }
 
+    // Owners write the title and description once, in either language; both language versions show the same text.
+    // Left as it was, a text keeps both versions, so re-saving a place doesn't count as changing them.
+    const optional = (name: string) => {
+      const value = String(formData.get(name) ?? "").trim();
+      return value === "" ? null : Number(value);
+    };
+    const title = String(formData.get("title")).trim();
+    const description = String(formData.get("description")).trim();
+    const area = String(formData.get("area")).trim();
+    const sameTitle = editing && title === (locale === "ar" ? editing.title_ar : editing.title_en).trim();
+    const sameDescription = editing && description === (locale === "ar" ? editing.description_ar : editing.description_en).trim();
+    const fields = {
+      title_ar: sameTitle ? editing.title_ar : title,
+      title_en: sameTitle ? editing.title_en : title,
+      description_ar: sameDescription ? editing.description_ar : description,
+      description_en: sameDescription ? editing.description_en : description,
+      governorate: String(formData.get("governorate")),
+      area: editing && area === areaLabel(locale, editing.area).trim() ? editing.area : normalizeArea(area),
+      gender: String(formData.get("gender")),
+      property_type: String(formData.get("property_type")),
+      monthly_price: Number(formData.get("monthly_price")),
+      deposit: Number(formData.get("deposit")),
+      available_beds: Number(formData.get("available_beds")),
+      total_beds: Number(formData.get("total_beds")),
+      bedrooms: optional("bedrooms"),
+      bathrooms: optional("bathrooms"),
+      area_sqm: optional("area_sqm"),
+      min_months: Number(formData.get("min_months") || 1),
+      available_from: String(formData.get("available_from") ?? "") || null,
+      whatsapp_number: String(formData.get("whatsapp_number")).trim(),
+      // Every amenity is a clear yes or no once the owner has been through this step.
+      ...Object.fromEntries(AMENITY_KEYS.map((key) => [key, formData.has(key)])),
+      // New listings always start pending (database rule); admins publish right after saving.
+      status: "pending" as const,
+    };
+
+    // Only what the database would really send back to review is worth a warning, and only before anything is saved.
+    const needsReview = Boolean(editing) && (selectedImages.length > 0 || editNeedsReview({ ...editing }, fields));
+    if (!isAdmin && needsReview && !window.confirm(t.editPublishedWarn)) return;
+
     setSubmitting(true);
+
+    // The details the database needs before this host's places can be booked, into the profile.
+    const contact = {
+      ...(askPhone && PHONE_PATTERN.test(fields.whatsapp_number) ? { phone: fields.whatsapp_number } : {}),
+      ...(askInstapay ? { instapay_address: latinDigits(String(formData.get("host_instapay") ?? "")).trim().slice(0, 80) } : {}),
+    };
+    if (Object.keys(contact).length > 0) {
+      const { error: contactError } = await supabase.from("profiles").update(contact).eq("id", ownerId);
+      if (contactError) {
+        console.error("Could not save the host's details:", contactError);
+        setError(t.formError);
+        setSubmitting(false);
+        return;
+      }
+      onHostContactSaved?.(contact);
+    }
+
     let imageUrls = editing ? listingImages(editing) : [];
     const uploadedPaths: string[] = [];
 
@@ -302,38 +366,12 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
       imageUrls = uploadedPaths.map((path) => supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl);
     }
 
-    // Owners write the title and description once, in either language; both language versions show the same text.
-    const optional = (name: string) => {
-  const value = String(formData.get(name) ?? "").trim();
-  return value === "" ? null : Number(value);
-};
-    const title = String(formData.get("title")).trim();
-    const description = String(formData.get("description")).trim();
+    // No new photos: the stored values as they are, so an older place's empty list doesn't count as a change.
+    const keepPhotos = editing && selectedImages.length === 0;
     const values = {
-      title_ar: title,
-      title_en: title,
-      description_ar: description,
-      description_en: description,
-      governorate: String(formData.get("governorate")),
-      area: normalizeArea(String(formData.get("area"))),
-      gender: String(formData.get("gender")),
-      property_type: String(formData.get("property_type")),
-      monthly_price: Number(formData.get("monthly_price")),
-      deposit: Number(formData.get("deposit")),
-      available_beds: Number(formData.get("available_beds")),
-      total_beds: Number(formData.get("total_beds")),
-      bedrooms: optional("bedrooms"),
-      bathrooms: optional("bathrooms"),
-      area_sqm: optional("area_sqm"),
-      min_months: Number(formData.get("min_months") || 1),
-      available_from: String(formData.get("available_from") ?? "") || null,
-      whatsapp_number: String(formData.get("whatsapp_number")).trim(),
-      // Every amenity is a clear yes or no once the owner has been through this step.
-      ...Object.fromEntries(AMENITY_KEYS.map((key) => [key, formData.has(key)])),
-      image_url: imageUrls[0],
-      image_urls: imageUrls,
-      // New listings always start pending (database rule); admins publish right after saving.
-      status: "pending" as const,
+      ...fields,
+      image_url: keepPhotos ? editing.image_url : imageUrls[0],
+      image_urls: keepPhotos ? editing.image_urls : imageUrls,
     };
     const publishNow = isAdmin && formData.has("publish_now");
 
@@ -384,7 +422,7 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
     setSubmitting(false);
     setBusyText("");
     setStep(0);
-    await onSaved({ created: !editing, listingId });
+    await onSaved({ created: !editing, listingId, reviewed: !editing || needsReview || (editing.status !== "approved" && editing.status !== "paused") });
   }
 
   const stage = STAGE_OF[current];
@@ -579,7 +617,20 @@ export default function ListingForm({ locale, supabase, ownerId, editing = null,
       ))}
 
       {screen("contact", t.stepContactTitle, t.ownerNumberPrivate, (
-        <label className="owner-field"><span>{isAdmin ? t.ownerWhatsapp : t.phoneNumber}</span><input name="whatsapp_number" type="tel" inputMode="tel" autoComplete={isAdmin ? "off" : "tel"} placeholder={t.whatsappHint} required dir="ltr" defaultValue={editing?.whatsapp_number ?? text("whatsapp_number")} onInput={onDigitsInput} /></label>
+        <>
+          <label className="owner-field">
+            <span>{isAdmin ? t.ownerWhatsapp : t.phoneNumber}</span>
+            <input name="whatsapp_number" type="tel" inputMode="tel" autoComplete={isAdmin ? "off" : "tel"} placeholder={t.whatsappHint} required dir="ltr" defaultValue={editing?.whatsapp_number ?? text("whatsapp_number")} onInput={onDigitsInput} />
+            {askPhone && <small className="field-hint">{t.listingPhoneSaved}</small>}
+          </label>
+          {askInstapay && (
+            <label className="owner-field">
+              <span>{t.instapayLabel}</span>
+              <input name="host_instapay" required maxLength={80} autoComplete="off" dir="ltr" placeholder="name@instapay" defaultValue={text("host_instapay")} onInput={onDigitsInput} />
+              <small className="field-hint">{t.listingInstapayAsk}</small>
+            </label>
+          )}
+        </>
       ))}
 
       {screen("review", t.stepReviewTitle, isAdmin ? null : t.stepReviewText, (

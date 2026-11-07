@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { Eye, EyeOff, House, Info, KeyRound, LoaderCircle, Mail, Phone, Search, UserRound } from "lucide-react";
+import { Eye, EyeOff, House, Info, KeyRound, LoaderCircle, Mail, Phone, Search, UserRound, Wallet } from "lucide-react";
 import AuthLayout from "@/components/auth-layout";
 import Captcha, { captchaActive } from "@/components/captcha";
 import ProfilePage from "@/components/profile-page";
@@ -14,7 +14,7 @@ import { SITE_COPY, type SiteLocale } from "@/messages/site";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup" | "reset";
-type FieldErrors = Partial<Record<"name" | "phone" | "email" | "password", string>>;
+type FieldErrors = Partial<Record<"name" | "phone" | "instapay" | "email" | "password", string>>;
 const TRANSFER_KEY = "sakani-listing-transfer";
 
 function readTransferToken() {
@@ -66,6 +66,7 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
   const [mode, setMode] = useState<Mode>(initialMode);
   const [role, setRole] = useState<AccountRole | null>(initialRole);
   const [phone, setPhone] = useState("");
+  const [instapay, setInstapay] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(Boolean(supabase));
   const [guestListingCount, setGuestListingCount] = useState(0);
@@ -137,10 +138,12 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
     const problems: FieldErrors = {};
     if (mode === "signup" && !fullName.trim()) problems.name = t.accountNameRequired;
     if (mode === "signup" && (role === "guest" || phone.trim()) && !PHONE_PATTERN.test(phone.trim())) problems.phone = t.accountPhoneRequired;
+    // Without it a host's places can't be booked, so it's asked here and kept by the database at sign-up.
+    if (mode === "signup" && role === "host" && !instapay.trim()) problems.instapay = t.accountInstapayRequired;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) problems.email = t.adminInvalidEmail;
     if (mode !== "reset" && password.length < (mode === "signup" ? 8 : 1)) problems.password = mode === "signup" ? t.accountWeakPassword : t.adminPasswordRequired;
     setFieldErrors(problems);
-    const first = (["name", "phone", "email", "password"] as const).find((field) => problems[field]);
+    const first = (["name", "phone", "instapay", "email", "password"] as const).find((field) => problems[field]);
     if (first) {
       (event.currentTarget.elements.namedItem(first) as HTMLInputElement | null)?.focus();
       return;
@@ -182,7 +185,7 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
           email: cleanEmail,
           password,
           options: {
-            data: { full_name: fullName.trim(), role, phone: phone.trim() },
+            data: { full_name: fullName.trim(), role, phone: phone.trim(), ...(role === "host" ? { instapay_address: instapay.trim() } : {}) },
             emailRedirectTo: `${window.location.origin}${returnTo ?? `/${locale}/account`}`,
             ...captcha,
           },
@@ -311,6 +314,16 @@ export default function AccountPage({ locale, initialMode = "login", initialRole
               <input name="phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="01xxxxxxxxx" value={phone} aria-invalid={Boolean(fieldErrors.phone) || undefined} onChange={(event) => { setPhone(latinDigits(event.target.value)); setError(""); clearField("phone"); }} required={role !== "host"} />
             </span>
             {fieldErrors.phone && <small className="field-error" role="alert">{fieldErrors.phone}</small>}
+          </label>
+        )}
+        {isSignup && role === "host" && (
+          <label className="auth-field">
+            <span>{t.instapayLabel}</span>
+            <span className="auth-input">
+              <Wallet size={17} aria-hidden="true" />
+              <input name="instapay" autoComplete="off" dir="ltr" placeholder="name@instapay" maxLength={80} value={instapay} aria-invalid={Boolean(fieldErrors.instapay) || undefined} onChange={(event) => { setInstapay(latinDigits(event.target.value)); setError(""); clearField("instapay"); }} required />
+            </span>
+            {fieldErrors.instapay ? <small className="field-error" role="alert">{fieldErrors.instapay}</small> : <small className="auth-hint">{t.instapayHint}</small>}
           </label>
         )}
 

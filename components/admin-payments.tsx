@@ -37,6 +37,8 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  // Why a transfer wasn't received, per fee: the guest reads it on the pay page.
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -95,7 +97,7 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
     setBusy(true);
     setError("");
     setMessage("");
-    const { error: decideError } = await supabase.rpc("admin_decide_fee", { target_fee: fee.id, decision });
+    const { error: decideError } = await supabase.rpc("admin_decide_fee", { target_fee: fee.id, decision, note: decision === "due" ? notes[fee.id] ?? "" : "" });
     setBusy(false);
     if (decideError) {
       console.error("Could not update fee:", decideError);
@@ -157,7 +159,10 @@ export default function AdminPayments({ locale, supabase, onChanged }: Props) {
                     <button className="admin-btn admin-btn-primary" type="button" disabled={busy} onClick={() => void decide(fee, "paid")}><Check size={15} /> {t.markPaid}</button>
                   )}
                   {fee.status === "submitted" && (
-                    <button className="admin-btn admin-btn-danger-outline" type="button" disabled={busy} onClick={() => void decide(fee, "due")}><RotateCcw size={15} /> {t.markDue}</button>
+                    <span className="admin-reference admin-step">
+                      <input value={notes[fee.id] ?? ""} onChange={(event) => setNotes({ ...notes, [fee.id]: event.target.value })} placeholder={t.adminNotReceivedNote} aria-label={t.adminNotReceivedNote} maxLength={300} dir="auto" />
+                      <button className="admin-btn admin-btn-danger-outline" type="button" disabled={busy} onClick={() => void decide(fee, "due")}><RotateCcw size={15} /> {t.markDue}</button>
+                    </span>
                   )}
                   {/* A booking payment is never waived: it holds the rent and deposit. */}
                   {fee.kind !== "upfront" && (fee.status === "due" || fee.status === "submitted") && (

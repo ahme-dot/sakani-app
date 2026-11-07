@@ -201,3 +201,9 @@
     max-width: 62vw;
   }
 }
+
+/* What's in the way of a host's place being booked, under its row. */
+.site-shell .owner-listing-blocked { margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff7e8; color: #6b4a0b; font-size: 13px; line-height: 1.6; }
+.site-shell .owner-listing-blocked a { color: #14213d; font-weight: 700; text-decoration: underline; }
+.book-gender-warning { margin: 0; padding: 10px 12px; border-radius: 10px; background: #fff7e8; color: #6b4a0b; font-size: 13px; line-height: 1.6; }
+.admin-today-list .admin-today-messages { display: flex; flex-wrap: wrap; grid-column: 1 / -1; gap: 8px; }

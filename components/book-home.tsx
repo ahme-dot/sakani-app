@@ -31,6 +31,8 @@ type Props = {
   freeBeds?: number;
   /** False until the host has an account with a phone and an InstaPay address: the place can't be booked yet. */
   hostReady?: boolean;
+  /** Who the place is for. */
+  gender?: "male" | "female" | "mixed";
 };
 
 type Created = { booking_id: string; pay_token: string; total: number; rent: number; fee: number; deposit: number };
@@ -43,7 +45,7 @@ const MAX_PEOPLE = 6;
  * A signed-in guest books and pays straight away (first month + Sakani fee, by InstaPay).
  * Sakani holds the money: it is refunded within 24 hours if anything goes wrong, and the host is paid after move-in.
  */
-export default function BookHome({ locale, listingId, booked, monthlyPrice, deposit, fees, isDemo = false, minMonths = 1, availableFrom = null, freeBeds, hostReady = true }: Props) {
+export default function BookHome({ locale, listingId, booked, monthlyPrice, deposit, fees, isDemo = false, minMonths = 1, availableFrom = null, freeBeds, hostReady = true, gender }: Props) {
   const t = SITE_COPY[locale];
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const account = useAccount(supabase);
@@ -58,6 +60,9 @@ export default function BookHome({ locale, listingId, booked, monthlyPrice, depo
   const peopleChoices = Array.from({ length: Math.max(Math.min(freeBeds ?? MAX_PEOPLE, MAX_PEOPLE), 1) }, (_, index) => index + 1);
   const earliestLabel = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium" }).format(new Date(earliest));
   const dateError = error === t.bookMoveInRequired || error === t.bookMoveInPast || error === t.notAvailableYet(earliestLabel);
+  // A warning, never a block. Nothing is said if the guest hasn't told us, or the place is for everyone.
+  const guestGender = account.status === "signedIn" ? account.profile?.gender : null;
+  const genderWarning = !guestGender || guestGender === gender || (gender !== "male" && gender !== "female") ? "" : gender === "male" ? t.bookGenderWarnMale : t.bookGenderWarnFemale;
   const next = encodeURIComponent(`/${locale}/listings/${listingId}#book`);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -181,6 +186,7 @@ export default function BookHome({ locale, listingId, booked, monthlyPrice, depo
             <div className="is-total"><dt>{t.bookTotalNow}</dt><dd>{numberFormat.format(amounts.guestTotal)} {t.currency}</dd></div>
           </dl>
           <p className="book-fee-note">{t.bookFeeNote}</p>
+          {genderWarning && <p className="book-gender-warning" role="note">{genderWarning}</p>}
           <label className="book-agree">
             <input type="checkbox" name="agree" required />
             <span>{t.bookAgreePrefix} <Link href={`/${locale}/agreements/guest`} target="_blank">{t.bookAgreeLink}</Link></span>

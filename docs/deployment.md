@@ -32,6 +32,25 @@ Never put a Supabase service-role key or any payment secret in a `NEXT_PUBLIC_` 
 - **Admin → Errors** shows errors that happened in visitors' browsers. The same error coming back means something needs fixing.
 - **Admin → Team**: give helpers **Review only** access. They can review listings, chat and handle reports, but the database refuses any change they try to make to money, policies, legal pages or the team.
 
+## Team alerts on Telegram
+
+The database tells the team's Telegram chat about new bookings, transfers to check, cancellation requests, reported problems, listings to review, new support tickets and small edits to published places. Each message has the listing's title and a link to the admin panel, with no names, phones or amounts. Until the steps below are done, nothing is sent and nothing else changes. A failed alert never stops a booking or a payment.
+
+1. In Telegram, open **@BotFather**, send `/newbot` and follow the steps. It gives you a token.
+2. Create a group for the team, add the bot, and send any message in the group.
+3. Open `https://api.telegram.org/bot<TOKEN>/getUpdates` in your browser and copy the `chat` → `id` number (a group's starts with a minus).
+4. In Supabase → SQL Editor, run this once with your values:
+
+```sql
+update public.team_alert_settings
+set bot_token = '<TOKEN>', chat_id = '<CHAT ID>', site_url = 'https://your-address'
+where id = 1;
+```
+
+The token controls the bot: type it only into Telegram's address above and the SQL Editor. Never paste it in a chat, an email or a file in this repository. If it leaks, send `/revoke` to @BotFather and run the `update` again.
+
+Check that it works by creating a test booking. Nothing arrives? Database → Extensions: `pg_net` must be on (the migration tries to turn it on, and only prints a notice if it can't).
+
 ## First-time setup
 
 1. Create the Supabase project; run every migration in `supabase/migrations/` in order.
@@ -54,6 +73,7 @@ Moving the site to a new address has side effects. Plan it before real people de
 5. Cloudflare Turnstile: add the new domain to the widget, or the spam check fails on sign-up.
 6. Google Search Console: add the new address and submit `https://new-domain/sitemap.xml`.
 7. Reprint or replace any flyers and QR codes that carry the old address.
+8. Update `site_url` in `public.team_alert_settings` (see Team alerts on Telegram), so alerts link to the new address.
 
 ## Backups
 

@@ -21,7 +21,7 @@ All amounts come from one formula: `lib/finance.ts` (code) and `public.commissio
 | Pending | `rental_fees.status = due` |
 | Awaiting verification | `submitted` |
 | Paid | `paid` |
-| Failed | the team chooses **Not received** → back to `due` (the guest is notified) |
+| Failed | the team chooses **Not received**, with a short reason if they want → back to `due` (the guest is notified, and reads the reason on the pay page) |
 | Refund pending | booking `refund_pending` |
 | Refunded | `refunded` (fee and booking) |
 

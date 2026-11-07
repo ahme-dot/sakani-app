@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import {
@@ -33,7 +34,7 @@ import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { PHONE_PATTERN, type AccountRole, type Profile } from "@/lib/account";
 import { GOVERNORATES, governorateLabel } from "@/lib/egypt";
 import { DOCUMENT_VERSION } from "@/lib/documents";
-import { cairoDay } from "@/lib/finance";
+import { cairoDay, hostDecideBy } from "@/lib/finance";
 import { compressImage, storagePathFromPublicUrl } from "@/lib/images";
 import { RENTAL_FEE_COLUMNS, refundableAmount, type RentalFee } from "@/lib/payments";
 import { useListingTitles } from "@/lib/listing-titles";
@@ -86,6 +87,7 @@ type GuestBooking = {
   refund_reference: string | null;
   contract_signed_at: string | null;
   host_decision: "pending" | "accepted" | "declined" | null;
+  paid_at: string | null;
   created_at: string;
 };
 
@@ -120,7 +122,7 @@ type HostListing = { id: string; title_ar: string; title_en: string; status: str
 
 const AVATAR_BUCKET = "sakani-avatars";
 const PROFILE_COLUMNS = "id,role,full_name,phone,avatar_url,bio,governorate,gender,occupation,languages,instapay_address,id_verified,created_at";
-const BOOKING_COLUMNS = "id,listing_id,listing_title,move_in,months,guests,status,total_amount,refund_amount,deposit_amount,fee_id,refund_due_at,refund_reference,contract_signed_at,host_decision,created_at";
+const BOOKING_COLUMNS = "id,listing_id,listing_title,move_in,months,guests,status,total_amount,refund_amount,deposit_amount,fee_id,refund_due_at,refund_reference,contract_signed_at,host_decision,paid_at,created_at";
 
 /** The signed-in account: about me, then bookings and saved places (guests) or booking requests, payouts and places (hosts). */
 export default function ProfilePage({ locale, supabase, user, profile: initialProfile, notice, onSignOut }: Props) {
@@ -136,7 +138,10 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
     initialProfile ?? { id: user.id, role: "host", full_name: (user.user_metadata?.full_name as string | undefined) ?? "", phone: "" },
   );
   const role: AccountRole = profile.role;
-  const [editing, setEditing] = useState(false);
+  const searchParams = useSearchParams();
+  // A notice names the booking to show; a host's "add your InstaPay" link opens the details form.
+  const targetBooking = searchParams.get("booking");
+  const [editing, setEditing] = useState(() => searchParams.get("fix") === "payout");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(notice ?? "");
   const [error, setError] = useState("");
@@ -232,6 +237,19 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
       active = false;
     };
   }, [supabase, user.id, version]);
+
+  // The lists arrive after the page, so the browser's own jump to #requests or #bookings found nothing to jump to.
+  const listsLoaded = hostBookings !== null && bookings !== null;
+  useEffect(() => {
+    if (!listsLoaded) return;
+    const section = window.location.hash.slice(1);
+    if (!targetBooking && section !== "requests" && section !== "bookings") return;
+    const frame = window.requestAnimationFrame(() => {
+      const row = targetBooking ? document.querySelector(`[data-booking="${CSS.escape(targetBooking)}"]`) : null;
+      (row ?? document.getElementById(section))?.scrollIntoView({ block: row ? "center" : "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [listsLoaded, targetBooking]);
 
   useEffect(() => {
     if (role !== "guest") return;
@@ -390,6 +408,9 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
     { done: Boolean(profile.id_verified), icon: BadgeCheck, label: t.idVerified },
   ];
 
+  // What the database also asks for before this host's places can be booked. Blank until the full profile is in.
+  const missingDetails = profile.instapay_address === undefined ? [] : [...(profile.phone.trim() ? [] : [t.hostSetupPhone]), ...(profile.instapay_address.trim() ? [] : [t.hostSetupInstapay])];
+
   const hostRequests = (
     <section className="profile-section" id="requests" aria-labelledby="host-requests-title">
       <h2 id="host-requests-title"><CalendarCheck size={20} /> {t.hostRequestsTitle}</h2>
@@ -398,7 +419,7 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
       ) : (
         <ul className="profile-list profile-bookings">
           {hostBookings.map((booking) => (
-            <li key={booking.id}>
+            <li key={booking.id} data-booking={booking.id}>
               <div>
                 <strong>{titleOf(booking.listing_id, booking.listing_title)}</strong>
                 <span>{booking.guest_first_name && booking.guest_first_name !== "Guest" ? booking.guest_first_name : t.noName} · {stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
@@ -500,12 +521,13 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
             const stayStarted = booking.status === "confirmed" || booking.status === "moved_in" || booking.status === "completed";
             const canReport = booking.status === "payment_review" || booking.status === "confirmed" || booking.status === "moved_in";
             return (
-              <li key={booking.id}>
+              <li key={booking.id} data-booking={booking.id}>
                 <div>
                   <strong>{booking.listing_id ? <Link href={`/${locale}/listings/${booking.listing_id}`}>{titleOf(booking.listing_id, booking.listing_title)}</Link> : booking.listing_title}</strong>
                   <span>{stay(booking.move_in, booking.months)} · {t.guestsCount(booking.guests)}</span>
                   {booking.total_amount !== null && <small>{t.bookingPaidAmount(egp(booking.total_amount))}</small>}
                   {(booking.status === "refund_pending" || booking.status === "refunded") && <small>{t.refundAmountLine(egp(refundableAmount(booking)))}</small>}
+                  {booking.status === "payment_review" && booking.host_decision === "pending" && booking.paid_at && <small className="profile-refund">{t.guestHostDeadline(timeFormat.format(hostDecideBy(booking.paid_at)))}</small>}
                   {booking.status === "refund_pending" && booking.refund_due_at && <small className="profile-refund">{t.refundBy(timeFormat.format(new Date(booking.refund_due_at)))}</small>}
                   {booking.status === "refunded" && booking.refund_reference && <small>{t.refundDone(booking.refund_reference)}</small>}
                   {booking.status === "pending_payment" && (fee?.received_amount ?? 0) > 0 && <small className="profile-refund">{t.amountDiffersGuest(egp(fee?.received_amount), egp(fee?.amount))}</small>}
@@ -758,6 +780,12 @@ export default function ProfilePage({ locale, supabase, user, profile: initialPr
                       <div>
                         <strong>{locale === "ar" ? listing.title_ar : listing.title_en}</strong>
                         <small>{numberFormat.format(listing.monthly_price)} {t.perMonth}</small>
+                        {missingDetails.length > 0 && (listing.status === "approved" || listing.status === "paused" || listing.status === "pending") && (
+                          <small className="profile-refund">
+                            {t.hostRowNotReady} {missingDetails.join(locale === "ar" ? "، " : ", ")}.{" "}
+                            <button className="text-button" type="button" onClick={() => { setEditing(true); setMessage(""); document.getElementById("profile-title")?.scrollIntoView({ block: "start" }); }}>{t.hostSetupOpen}</button>
+                          </small>
+                        )}
                       </div>
                       <span className={`status-chip is-${listing.status}`}>{t.listingStatus[listing.status as keyof typeof t.listingStatus] ?? listing.status}</span>
                     </li>

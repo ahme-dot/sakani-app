@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
-import { adminToken, api, guestSession, hasAdmin, sampleListing, startsToday, testHost, testHostListing } from "./helpers";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, TEST_TAG, adminToken, api, guestSession, hasAdmin, sampleListing, startsToday, testHost, testHostListing } from "./helpers";
 
 // Migration 20261111000000: paying the host doesn't end a stay, who counts as living somewhere, hosts need an
 // account, refunds that aren't the guest's fault, a host's "no" on an unverified transfer, and rented pages.
@@ -244,7 +245,7 @@ test.describe("launch fixes", () => {
     }
   });
 
-  test("item 13: an owner can edit a published place, and it goes back to review", async () => {
+  test("item 13: an owner can edit a published place, and a change that needs a review sends it back", async () => {
     const owner = await guestSession();
     const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", {
       token: owner.access_token, method: "POST", body: sampleListing(owner.user.id, "Edit published"),
@@ -252,11 +253,166 @@ test.describe("launch fixes", () => {
     const listingId = created.data[0].id;
     try {
       await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "approved" } });
-      await api(`/rest/v1/properties?id=eq.${listingId}`, { token: owner.access_token, method: "PATCH", body: { monthly_price: 3600 } });
-      const row = (await api<Array<{ status: string; monthly_price: number }>>(`/rest/v1/properties?select=status,monthly_price&id=eq.${listingId}`, { token: admin })).data[0];
-      expect(row).toEqual({ status: "pending", monthly_price: 3600 });
+      await api(`/rest/v1/properties?id=eq.${listingId}`, { token: owner.access_token, method: "PATCH", body: { description_en: "A new description, long enough to count as one." } });
+      const row = (await api<Array<{ status: string }>>(`/rest/v1/properties?select=status&id=eq.${listingId}`, { token: admin })).data[0];
+      expect(row).toEqual({ status: "pending" });
     } finally {
       await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "DELETE" });
     }
+  });
+});
+
+// Migration 20261112000000: team alerts, InstaPay at sign-up, small edits, the monthly reminder.
+test.describe("workflow", () => {
+  test.skip(!hasAdmin, "needs admin login");
+  let admin = "";
+  test.beforeAll(async () => {
+    admin = await adminToken();
+  });
+
+  const listingRow = async (id: string) => (await api<Array<{ status: string; verified: boolean; monthly_price: number; title_en: string }>>(`/rest/v1/properties?select=status,verified,monthly_price,title_en&id=eq.${id}`, { token: admin })).data[0];
+
+  /** A place of a fresh anonymous owner, in the status asked for. */
+  async function ownedListing(title: string, status: string, extra: Record<string, unknown> = {}) {
+    const owner = await guestSession();
+    const created = await api<Array<{ id: string }>>("/rest/v1/properties?select=id", { token: owner.access_token, method: "POST", body: sampleListing(owner.user.id, title) });
+    const listingId = created.data[0].id;
+    await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status, ...extra } });
+    const edit = (body: Record<string, unknown>) => api(`/rest/v1/properties?id=eq.${listingId}`, { token: owner.access_token, method: "PATCH", body });
+    return { owner, listingId, edit };
+  }
+  const remove = (listingId: string) => api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "DELETE" });
+
+  test("team alerts: the function and its settings are out of reach of visitors and accounts", async () => {
+    const user = await guestSession();
+    for (const token of [undefined, user.access_token]) {
+      const call = await api("/rest/v1/rpc/team_alert", { token, method: "POST", body: { alert_text: "[E2E TEST] should never send" } });
+      expect([401, 403, 404]).toContain(call.status);
+      const settings = await api("/rest/v1/team_alert_settings?select=bot_token,chat_id", { token });
+      expect([401, 403, 404]).toContain(settings.status);
+      const change = await api("/rest/v1/team_alert_settings?id=eq.1", { token, method: "PATCH", body: { chat_id: "1" } });
+      expect([401, 403, 404]).toContain(change.status);
+    }
+    // Not even the team, from the site: the token only lives in the SQL Editor.
+    expect([401, 403, 404]).toContain((await api("/rest/v1/team_alert_settings?select=bot_token", { token: admin })).status);
+  });
+
+  test("small edits keep a published place live and its badge, and are written to the audit log", async () => {
+    const { listingId, edit } = await ownedListing("Small edit", "approved", { verified: true });
+    try {
+      // What the listing form sends: the changed fields, and status pending.
+      expect((await edit({ monthly_price: 3700, deposit: 1500, wifi: false, fridge: true, status: "pending" })).status).toBeLessThan(300);
+      expect(await listingRow(listingId)).toMatchObject({ status: "approved", verified: true, monthly_price: 3700 });
+      const log = await api<Array<{ action: string; new_data: Record<string, unknown> }>>(`/rest/v1/audit_logs?select=action,new_data&entity=eq.properties&entity_id=eq.${listingId}`, { token: admin });
+      expect(log.data).toHaveLength(1);
+      expect(log.data[0].action).toBe("owner_small_edit");
+      expect(log.data[0].new_data).toMatchObject({ monthly_price: 3700, deposit: 1500 });
+
+      // A paused place stays paused.
+      await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "paused" } });
+      await edit({ monthly_price: 3800, status: "approved" });
+      expect(await listingRow(listingId)).toMatchObject({ status: "paused", monthly_price: 3800 });
+    } finally {
+      await remove(listingId);
+    }
+  });
+
+  test("anything else on a published place goes back to review", async () => {
+    const { listingId, edit } = await ownedListing("Review edit", "approved", { verified: true });
+    try {
+      const changes = [
+        { title_en: `${TEST_TAG} Review edit renamed` },
+        { area: "Maadi", monthly_price: 3550 },
+        { gender: "male" },
+        { property_type: "studio" },
+        { image_urls: ["https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800"] },
+      ];
+      for (const change of changes) {
+        await api(`/rest/v1/properties?id=eq.${listingId}`, { token: admin, method: "PATCH", body: { status: "approved", verified: true } });
+        await edit(change);
+        expect(await listingRow(listingId), JSON.stringify(change)).toMatchObject({ status: "pending", verified: false });
+      }
+    } finally {
+      await remove(listingId);
+    }
+  });
+
+  test("an owner can't publish a place, or give a published one any other status", async () => {
+    const pending = await ownedListing("Stays pending", "pending");
+    const published = await ownedListing("Stays approved", "approved");
+    try {
+      await pending.edit({ status: "approved" });
+      expect((await listingRow(pending.listingId)).status).toBe("pending");
+      await pending.edit({ status: "approved", monthly_price: 3600 });
+      expect((await listingRow(pending.listingId)).status).toBe("pending");
+
+      for (const status of ["pending", "rejected", "paused", "rented", "reserved", "suspended"]) {
+        await published.edit({ status });
+        expect((await listingRow(published.listingId)).status, status).toBe("approved");
+      }
+      // The badge and the owner are not the owner's to change either.
+      await published.edit({ verified: true, owner_id: pending.owner.user.id, monthly_price: 3900 });
+      const row = await listingRow(published.listingId);
+      expect(row).toMatchObject({ status: "approved", verified: false, monthly_price: 3900 });
+      const owners = await api<Array<{ owner_id: string }>>(`/rest/v1/properties?select=owner_id&id=eq.${published.listingId}`, { token: admin });
+      expect(owners.data[0].owner_id).toBe(published.owner.user.id);
+    } finally {
+      await remove(pending.listingId);
+      await remove(published.listingId);
+    }
+  });
+
+  test("monthly reminder: a stale place's owner is asked once, confirming stops it, demo places are left out", async () => {
+    const stale = await ownedListing("Still there", "approved");
+    const demo = await ownedListing("Demo place", "approved", { is_demo: true });
+    const old = new Date(Date.now() - 40 * 86_400_000).toISOString();
+    const notices = async (owner: { access_token: string }) => (await api<Array<{ data: { listing_id: string; title: string; title_en: string } }>>("/rest/v1/notifications?select=data&kind=eq.listing_still_available", { token: owner.access_token })).data;
+    const release = () => api("/rest/v1/rpc/admin_release_ended_rentals", { token: admin, method: "POST", body: {} });
+    try {
+      for (const id of [stale.listingId, demo.listingId]) await api(`/rest/v1/properties?id=eq.${id}`, { token: admin, method: "PATCH", body: { updated_at: old } });
+      await release();
+      const first = await notices(stale.owner);
+      expect(first).toHaveLength(1);
+      expect(first[0].data).toMatchObject({ listing_id: stale.listingId });
+      expect(first[0].data.title_en).toContain("Still there");
+      expect(await notices(demo.owner)).toHaveLength(0);
+
+      await release();
+      expect(await notices(stale.owner)).toHaveLength(1);
+
+      // Confirming stamps the place, so it isn't stale any more, whatever the notices say.
+      expect((await api("/rest/v1/rpc/confirm_listing", { token: stale.owner.access_token, method: "POST", body: { target_listing: stale.listingId } })).status).toBeLessThan(300);
+      const stamp = await api<Array<{ updated_at: string }>>(`/rest/v1/properties?select=updated_at&id=eq.${stale.listingId}`, { token: admin });
+      expect(Date.now() - new Date(stamp.data[0].updated_at).getTime()).toBeLessThan(3_600_000);
+    } finally {
+      await remove(stale.listingId);
+      await remove(demo.listingId);
+    }
+  });
+
+  test("host sign-up asks for InstaPay, and guests aren't asked", async ({ page }) => {
+    await page.goto("/en/account?mode=signup&role=host");
+    const field = page.locator('input[name="instapay"]');
+    await expect(field).toBeVisible();
+    await page.fill('input[name="name"]', "E2E Host");
+    await page.fill('input[name="email"]', "e2e-never-sent@example.com");
+    await page.fill('input[name="password"]', "a-long-enough-password");
+    await page.click('button[type="submit"]');
+    await expect(page.locator(".field-error")).toContainText("InstaPay");
+    await expect(field).toBeFocused();
+
+    await page.locator('input[name="role"][value="guest"]').check({ force: true });
+    await expect(field).toHaveCount(0);
+  });
+
+  test("the InstaPay address given at sign-up reaches the profile", async () => {
+    // A fixed account, like the test host, so runs don't pile up accounts. It needs its email confirmed once.
+    const [local, domain] = ADMIN_EMAIL.split("@");
+    const credentials = { email: `${local}+sakani-test-signup@${domain}`, password: createHash("sha256").update(`sakani-test-signup:${ADMIN_PASSWORD}`).digest("hex") };
+    await api("/auth/v1/signup", { method: "POST", body: { ...credentials, data: { role: "host", full_name: "E2E Signup", phone: "01000000078", instapay_address: "e2e-signup@instapay" } } });
+    const session = await api<{ access_token?: string; user?: { id: string } }>("/auth/v1/token?grant_type=password", { method: "POST", body: credentials });
+    test.skip(!session.data?.access_token, "the sign-up account's email isn't confirmed yet");
+    const profile = await api<Array<{ role: string; instapay_address: string }>>(`/rest/v1/profiles?select=role,instapay_address&id=eq.${session.data.user!.id}`, { token: session.data.access_token });
+    expect(profile.data[0]).toEqual({ role: "host", instapay_address: "e2e-signup@instapay" });
   });
 });

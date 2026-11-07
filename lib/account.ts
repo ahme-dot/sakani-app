@@ -12,6 +12,8 @@ export type Profile = {
   role: AccountRole;
   full_name: string;
   phone: string;
+  /** What the person chose on their profile, if anything. */
+  gender?: "male" | "female" | null;
 };
 
 export type AccountState =
@@ -23,7 +25,7 @@ export const PHONE_PATTERN = /^[+0-9 ()-]{8,20}$/;
 export const LISTING_DRAFT_KEY = "sakani-listing-draft";
 
 export async function fetchProfile(client: SupabaseClient, userId: string): Promise<Profile | null> {
-  const { data, error } = await client.from("profiles").select("id,role,full_name,phone").eq("id", userId).maybeSingle();
+  const { data, error } = await client.from("profiles").select("id,role,full_name,phone,gender").eq("id", userId).maybeSingle();
   // Before the hosts-and-guests migration the table does not exist; the site then treats everyone as a host.
   if (error && error.code !== "42P01" && error.code !== "PGRST205") console.error("Could not load profile:", error);
   return (data as Profile | null) ?? null;

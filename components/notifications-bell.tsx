@@ -72,11 +72,13 @@ export default function NotificationsBell({ locale }: { locale: SiteLocale }) {
     // A host without an account follows bookings on the host page.
     if (account.status !== "signedIn") return `/${locale}/host`;
     if (notice.kind === "team_reply") return `/${locale}/messages`;
-    if (notice.kind === "listing_available") return `/${locale}/host#owner`;
+    if (notice.kind === "listing_available" || notice.kind === "listing_still_available") return `/${locale}/host#owner`;
     if (notice.kind === "payout_changed") return `/${locale}/account`;
-    if (notice.kind === "new_review" || HOST_NOTICES.includes(notice.kind)) return `/${locale}/account#requests`;
+    // ?booking= is the row to bring into view. Both sides get some notices of the same kind, so the row decides, not the #.
+    const booking = notice.booking_id ? `?booking=${notice.booking_id}` : "";
+    if (notice.kind === "new_review" || HOST_NOTICES.includes(notice.kind)) return `/${locale}/account${booking}#requests`;
     if (notice.kind === "agreement_ready" || notice.kind === "agreement_signed" || notice.kind === "deposit_transferred") return notice.booking_id ? `/${locale}/documents/${notice.booking_id}` : `/${locale}/account`;
-    return `/${locale}/account#bookings`;
+    return `/${locale}/account${booking}#bookings`;
   };
 
   return (

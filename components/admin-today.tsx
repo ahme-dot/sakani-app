@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { AlertTriangle, CalendarCheck, CalendarClock, CheckCircle2, FileWarning, Flag, HandCoins, Hourglass, IdCard, Inbox, KeyRound, LayoutList, LoaderCircle, MessagesSquare, ShieldAlert, Undo2, Wallet } from "lucide-react";
-import { cairoDay, stayEnd } from "@/lib/finance";
+import { AlertTriangle, CalendarCheck, CalendarClock, CheckCircle2, FileWarning, Flag, HandCoins, Hourglass, IdCard, Inbox, KeyRound, LayoutList, LoaderCircle, MessageCircle, MessagesSquare, ShieldAlert, Undo2, Wallet } from "lucide-react";
+import { cairoDay, hostDecideBy, stayEnd } from "@/lib/finance";
+import { useListingTitles } from "@/lib/listing-titles";
+import { SITE_URL, whatsappLink } from "@/lib/site";
+import { fetchPrivateContacts } from "@/lib/supabase/listings";
 import { SITE_COPY, type SiteLocale } from "@/messages/site";
 
 export type TodayTarget = "listings" | "requests" | "chat" | "reports" | "inbox" | "identity" | "errors";
@@ -38,12 +41,13 @@ type Counts = {
   hostHoursLeft: number;
   depositsAtEnd: number;
 };
-type ActiveBooking = { id: string; status: string; move_in: string | null; months: number | null; contract_signed_at: string | null; deposit_amount: number; paid_at: string | null; host_decision: string };
+type ActiveBooking = { id: string; listing_id: string | null; listing_title: string; status: string; move_in: string | null; months: number | null; contract_signed_at: string | null; deposit_amount: number; paid_at: string | null; host_decision: string };
 
 /** How close to move-in an unsigned contract becomes a job for the team. */
 const CONTRACT_WARNING_DAYS = 3;
 const ENDING_WARNING_DAYS = 7;
-const HOST_ANSWER_HOURS = 24;
+/** Hosts listed under "waiting for an answer", each with a WhatsApp button. */
+const SILENT_HOSTS_SHOWN = 5;
 
 const count = (result: { count: number | null }) => result.count ?? 0;
 
@@ -53,6 +57,9 @@ export default function AdminToday({ locale, supabase, pendingListings, unreadCh
   const numberFormat = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG");
   const timeFormat = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-EG", { dateStyle: "medium", timeStyle: "short" });
   const [counts, setCounts] = useState<Counts | null>(null);
+  const [silentHosts, setSilentHosts] = useState<ActiveBooking[]>([]);
+  const [hostNumbers, setHostNumbers] = useState<Record<string, string>>({});
+  const titleOf = useListingTitles(supabase, silentHosts.map((row) => row.listing_id), locale);
 
   useEffect(() => {
     let active = true;
@@ -64,7 +71,7 @@ export default function AdminToday({ locale, supabase, pendingListings, unreadCh
       supabase.from("listing_requests").select("refund_due_at").eq("status", "refund_pending").order("refund_due_at", { ascending: true }),
       supabase.from("listing_requests").select("id", { count: "exact", head: true }).in("status", ["moved_in", "completed"]).is("paid_out_at", null),
       // One list for everything worked out from dates. "completed" stays in it: an unsent deposit outlives the stay.
-      supabase.from("listing_requests").select("id,status,move_in,months,contract_signed_at,deposit_amount,paid_at,host_decision").in("status", ["payment_review", "confirmed", "moved_in", "completed"]).order("created_at", { ascending: false }).limit(2000),
+      supabase.from("listing_requests").select("id,listing_id,listing_title,status,move_in,months,contract_signed_at,deposit_amount,paid_at,host_decision").in("status", ["payment_review", "confirmed", "moved_in", "completed"]).order("created_at", { ascending: false }).limit(2000),
       supabase.from("deposit_transfers").select("booking_id,status"),
       supabase.from("identity_verifications").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("client_errors").select("id", { count: "exact", head: true }).gt("at", new Date(Date.now() - 864e5).toISOString()),
@@ -77,7 +84,14 @@ export default function AdminToday({ locale, supabase, pendingListings, unreadCh
       const today = cairoDay();
       const ends = (row: ActiveBooking) => (row.move_in ? stayEnd(row.move_in, row.months) : "");
       const silent = rows.filter((row) => row.status === "payment_review" && row.host_decision === "pending" && row.paid_at);
-      const hoursLeft = silent.map((row) => Math.ceil((new Date(row.paid_at!).getTime() + HOST_ANSWER_HOURS * 3_600_000 - Date.now()) / 3_600_000));
+      const hoursLeft = silent.map((row) => Math.ceil((hostDecideBy(row.paid_at!).getTime() - Date.now()) / 3_600_000));
+      if (canHandleMoney) {
+        const first = silent.slice(0, SILENT_HOSTS_SHOWN);
+        setSilentHosts(first);
+        void fetchPrivateContacts(supabase, first.map((row) => row.listing_id).filter((id): id is string => Boolean(id))).then((numbers) => {
+          if (active) setHostNumbers(numbers);
+        });
+      }
       const refundRows = (refunds.data ?? []) as Array<{ refund_due_at: string | null }>;
       setCounts({
         transfers: count(transfers),
@@ -100,7 +114,7 @@ export default function AdminToday({ locale, supabase, pendingListings, unreadCh
     return () => {
       active = false;
     };
-  }, [supabase]);
+  }, [supabase, canHandleMoney]);
 
   if (!counts) return <div className="portal-loading"><LoaderCircle className="spinner" size={22} />{t.loading}</div>;
 
@@ -139,6 +153,20 @@ export default function AdminToday({ locale, supabase, pendingListings, unreadCh
               </div>
               <span className="admin-today-count">{numberFormat.format(value)}</span>
               <button className="admin-btn admin-btn-primary" type="button" onClick={() => onOpen(target, "tab" in rest ? (rest.tab as string) : undefined)}>{t.todayOpen}</button>
+              {key === "host-silent" && silentHosts.some((row) => row.listing_id && hostNumbers[row.listing_id]) && (
+                <div className="admin-today-messages">
+                  {silentHosts.map((row) => {
+                    const number = row.listing_id ? hostNumbers[row.listing_id] : undefined;
+                    if (!number) return null;
+                    const place = titleOf(row.listing_id, row.listing_title);
+                    return (
+                      <a key={row.id} className="admin-btn admin-btn-ghost" href={whatsappLink(number, t.waHostRequest(place, timeFormat.format(hostDecideBy(row.paid_at!)), `${SITE_URL}/${locale}/account#requests`))} target="_blank" rel="noreferrer">
+                        <MessageCircle size={15} /> {t.waHostButton} · {place}
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
             </li>
           ))}
         </ul>

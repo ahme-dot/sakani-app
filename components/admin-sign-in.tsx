@@ -45,7 +45,8 @@ export default function AdminSignIn({ locale }: { locale: SiteLocale }) {
     setError("");
     setNotice("");
     try {
-      const redirectTo = `${window.location.origin}/${locale}/update-password`;
+      // ?next=admin: a dead link then leads back here, not to the guests' sign-in.
+      const redirectTo = `${window.location.origin}/${locale}/update-password?next=admin`;
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo,
         ...(captchaToken ? { captchaToken } : {}),
@@ -119,13 +120,14 @@ export default function AdminSignIn({ locale }: { locale: SiteLocale }) {
       if (adminError) {
         console.error("Could not verify admin access:", adminError);
         setError(t.adminLoadError);
-        const { error: signOutError } = await supabase.auth.signOut();
+        // This browser only: the check failing here is no reason to end the admin's other sessions.
+        const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
         if (signOutError) console.error("Could not clear non-verified admin session:", signOutError);
         return;
       }
 
       if (!admin) {
-        const { error: signOutError } = await supabase.auth.signOut();
+        const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
         if (signOutError) console.error("Could not sign out non-admin user:", signOutError);
         setError(t.adminAccessDenied);
         return;

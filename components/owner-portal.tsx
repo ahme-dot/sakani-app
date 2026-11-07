@@ -241,7 +241,7 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
 
   async function signOutOwner() {
     if (!supabase) return;
-    const { error: signOutError } = await supabase.auth.signOut();
+    const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
     if (signOutError) {
       console.error("Could not end owner session:", signOutError);
       setError(t.authError);
@@ -254,8 +254,7 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
   }
 
   function startEditing(listing: OwnerListing) {
-    // properties_guard sends every owner edit back to review, so a live listing leaves the search.
-    if ((listing.status === "approved" || listing.status === "paused") && !window.confirm(t.editPublishedWarn)) return;
+    // The warning comes on saving, once it's known whether the changes need a review.
     setEditing(listing);
     setMessage("");
     setError("");
@@ -437,7 +436,7 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
               {setupSteps.length > 0 && ownerListings.length > 0 && (
                 <div className="owner-guest-notice">
                   <p><strong>{t.hostSetupTitle}</strong> {t.hostSetupText} {setupSteps.join(locale === "ar" ? "، " : ", ")}.</p>
-                  <Link className="button button-primary" href={user.is_anonymous ? `/${locale}/account?mode=signup` : `/${locale}/account`}>{user.is_anonymous ? t.ownerGuestCta : t.hostSetupOpen}</Link>
+                  <Link className="button button-primary" href={user.is_anonymous ? `/${locale}/account?mode=signup` : `/${locale}/account?fix=payout`}>{user.is_anonymous ? t.ownerGuestCta : t.hostSetupOpen}</Link>
                 </div>
               )}
 
@@ -489,10 +488,12 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                 supabase={supabase!}
                 ownerId={user.id}
                 editing={editing}
+                hostContact={hostContact}
+                onHostContactSaved={(saved) => setHostContact((current) => (current ? { ...current, ...saved } : current))}
                 onCancel={editing ? stopEditing : undefined}
-                onSaved={async ({ created }) => {
+                onSaved={async ({ created, reviewed }) => {
                   setError("");
-                  setMessage(created ? t.listingSubmitted : t.listingUpdated);
+                  setMessage(created ? t.listingSubmitted : reviewed ? t.listingUpdated : t.listingUpdatedLive);
                   setFormOpen(false);
                   stopEditing();
                   await refreshListings();
@@ -562,6 +563,12 @@ export default function OwnerPortal({ locale, showIntro = true }: Props) {
                         )}
                       </div>
                     </div>
+                    {setupSteps.length > 0 && (listing.status === "approved" || listing.status === "paused" || listing.status === "pending") && (
+                      <p className="owner-listing-blocked" role="status">
+                        {t.hostRowNotReady} {setupSteps.join(locale === "ar" ? "، " : ", ")}.{" "}
+                        <Link href={user.is_anonymous ? `/${locale}/account?mode=signup` : `/${locale}/account?fix=payout`}>{user.is_anonymous ? t.ownerGuestCta : t.hostSetupOpen}</Link>
+                      </p>
+                    )}
                     {reportingId === listing.id && (
                       <div className="owner-rented-panel" role="group" aria-label={t.rentedPanelTitle}>
                         <strong>{t.rentedPanelTitle}</strong>
