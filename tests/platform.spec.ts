@@ -151,7 +151,7 @@ test.describe("platform", () => {
 test("policy pages and agreements open for everyone", async ({ page }) => {
   for (const path of ["/ar/legal/cancellation-policy", "/en/legal/deposit-policy", "/ar/legal/commission-disclosure"]) {
     await page.goto(path);
-    await expect(page.locator(".document h1")).toBeVisible();
+    await expect(page.locator(".legal-article h1")).toBeVisible();
   }
 });
 

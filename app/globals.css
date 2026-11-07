@@ -10869,3 +10869,9 @@ a.auth-submit, a.auth-submit:hover { color: #fff; }
   .site-shell .footer-bottom a { display: inline-flex; min-height: 44px; align-items: center; }
   .site-shell .footer-lang { min-height: 44px; }
 }
+
+/* Fields can't outgrow the sign-in column: an input's natural width pushed them past the card at 768px. */
+.auth-form { grid-template-columns: minmax(0, 1fr); }
+.auth-field { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.auth-field-row, .auth-input { min-width: 0; }
+.auth-input input { width: 100%; min-width: 0; }
